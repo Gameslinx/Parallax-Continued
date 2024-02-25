@@ -153,8 +153,8 @@ Shader "Custom/Parallax"
                 VertexBiplanarParams params;
                 GET_VERTEX_BIPLANAR_PARAMS(params, worldUVs, o.worldNormal);
 
+                // Defines 'displacedWorldPos'
                 CALCULATE_VERTEX_DISPLACEMENT
-
                 o.pos = UnityWorldToClipPos(displacedWorldPos);
             
                 TRANSFER_VERTEX_TO_FRAGMENT(o);
