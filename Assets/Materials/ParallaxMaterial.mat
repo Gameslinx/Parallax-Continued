@@ -68,7 +68,7 @@ Material:
     - _DetailNormalMapScale: 1
     - _DisplacementScale: 0.046
     - _DstBlend: 0
-    - _EnvironmentMapFactor: 0.17
+    - _EnvironmentMapFactor: 0.26
     - _FresnelPower: 0.7
     - _GlossMapScale: 1
     - _Glossiness: 0.5

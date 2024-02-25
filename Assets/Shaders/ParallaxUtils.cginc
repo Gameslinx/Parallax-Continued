@@ -24,6 +24,13 @@
 #define TERRAIN_TEX_BLEND_OFFSET    0.4
 #define PARALLAX_SHARPENING_FACTOR 0.85
 
+#define HULL_SHADER_ATTRIBUTES                          \
+    [domain("tri")]                                     \
+    [outputcontrolpoints(3)]                            \
+    [outputtopology("triangle_cw")]                     \
+    [patchconstantfunc("PatchConstantFunction")]        \
+    [partitioning("fractional_odd")]                    
+
 // True if point is outside bounds defined by lower and higher
 bool IsOutOfBounds(float3 p, float3 lower, float3 higher)
 {
@@ -87,6 +94,10 @@ float3 CalculatePhongPosition(float3 bary, float3 p0PositionWS, float3 p0NormalW
         bary.z * PhongProjectedPosition(flatPositionWS, p2PositionWS, p2NormalWS);
     return lerp(flatPositionWS, smoothedPositionWS, 0.333);
 }
+
+#define CALCULATE_VERTEX_DISPLACEMENT                                                                                                                         \
+    float4 displacement = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, o.worldNormal, texLevelBlend);     \
+    float3 displacedWorldPos = o.worldPos + displacement.g * o.worldNormal * _DisplacementScale;
 
 //
 //  Biplanar Mapping Functions
@@ -278,12 +289,14 @@ float3 SampleBiplanarNormal(sampler2D tex, PixelBiplanarParams params, float3 wo
 //  Lighting Functions
 //
 
+#define GET_SHADOW LIGHT_ATTENUATION(i)
+
 float FresnelEffect(float3 worldNormal, float3 viewDir, float power)
 {
     return pow((1.0 - saturate(dot(worldNormal, viewDir))), power);
 }
 
-float3 CalculateLighting(float4 col, float3 worldNormal, float3 viewDir)
+float3 CalculateLighting(float4 col, float3 worldNormal, float3 viewDir, float shadow)
 {
 	// Main light
     float NdotL = max(0, dot(worldNormal, _WorldSpaceLightPos0));

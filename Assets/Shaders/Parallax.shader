@@ -43,7 +43,11 @@ Shader "Custom/Parallax"
 
         Pass
         {
+            Tags { "LightMode" = "ForwardBase" }
             CGPROGRAM
+
+            #pragma multi_compile_fwdbase
+
             #pragma vertex Vertex_Shader
             #pragma hull Hull_Shader
             #pragma domain Domain_Shader
@@ -51,6 +55,9 @@ Shader "Custom/Parallax"
             
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
+            #include "AutoLight.cginc"
+
+            #include "ParallaxStructs.cginc"
             #include "ParallaxVariables.cginc"
             #include "ParallaxUtils.cginc"
 
@@ -85,9 +92,7 @@ Shader "Custom/Parallax"
                 float3 worldNormal : NORMAL;
                 float3 viewDir : TEXCOORD1;
 
-                float3 wPos1 : TEXCOORD2;
-                float3 wPos2 : TEXCOORD3;
-                float blend : TEXCOORD4;
+                LIGHTING_COORDS(4, 5)
             };
             
             // Do expensive shit here!!
@@ -126,11 +131,7 @@ Shader "Custom/Parallax"
                 return f;
             }
 
-            [domain("tri")]
-            [outputcontrolpoints(3)]
-            [outputtopology("triangle_cw")]
-            [patchconstantfunc("PatchConstantFunction")]
-            [partitioning("fractional_odd")]
+            HULL_SHADER_ATTRIBUTES
             TessellationControlPoint Hull_Shader(InputPatch<TessellationControlPoint, 3> patch, uint id : SV_OutputControlPointID)
             {
                 return patch[id];
@@ -147,21 +148,17 @@ Shader "Custom/Parallax"
                 o.viewDir = BARYCENTRIC_INTERPOLATE(viewDir);
 
                 float terrainDistance = length(o.viewDir);
-                DO_WORLD_UV_CALCULATIONS(terrainDistance / 5, o.worldPos)
+                DO_WORLD_UV_CALCULATIONS(terrainDistance * 0.2, o.worldPos)
 
                 VertexBiplanarParams params;
                 GET_VERTEX_BIPLANAR_PARAMS(params, worldUVs, o.worldNormal);
 
-                o.wPos1 = worldUVsLevel0;
-                o.wPos2 = worldUVsLevel1;
-                //float3 worldUVsLevel0
+                CALCULATE_VERTEX_DISPLACEMENT
 
-                float4 displacement = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, o.worldNormal, texLevelBlend);
-                float3 displacedWorldPos = o.worldPos + displacement.g * o.worldNormal * _DisplacementScale;
-
-                o.blend = displacement.g;
                 o.pos = UnityWorldToClipPos(displacedWorldPos);
             
+                TRANSFER_VERTEX_TO_FRAGMENT(o);
+
                 return o;
             }
 
@@ -170,9 +167,9 @@ Shader "Custom/Parallax"
                 i.worldNormal = normalize(i.worldNormal);
                 // Calculate scaling params
                 float terrainDistance = length(i.viewDir);
-                //terrainDistance = min(terrainDistance, 5);
+
                 // Retrieve UV levels for texture sampling
-                DO_WORLD_UV_CALCULATIONS( terrainDistance / 5, i.worldPos)
+                DO_WORLD_UV_CALCULATIONS(terrainDistance * 0.2, i.worldPos)
                 
                 float3 viewDir = normalize(i.viewDir);
 
@@ -182,32 +179,8 @@ Shader "Custom/Parallax"
                 fixed4 col = SampleBiplanarTexture(_MainTex, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
                 float3 normal = SampleBiplanarNormal(_BumpMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
 
-                float3 result = CalculateLighting(col, normal, viewDir);
+                float3 result = CalculateLighting(col, normal, viewDir, GET_SHADOW);
 
-                //float3 wpos2 = worldUVsLevel0 + dpdy1;
-
-                //return float4(params.dpdx0 * 5 + params.dpdy0 * 5, 1);
-
-                //params.dpdx0 = ddx(i.worldPos) * (_Tiling / texScale0);
-                //params.dpdy0 = ddy(i.worldPos) * (_Tiling / texScale0);
-
-                //params.dpdx0 = ddx(worldUVsLevel0);
-                //params.dpdy0 = ddy(worldUVsLevel0);
-
-                //float calibratedMipLevel = floor(GetMipLevel(worldUVsLevel0 * 4096.0f, params.dpdx0, params.dpdy0)) / 5;
-                //return calibratedMipLevel;
-                //return GetMipLevel()
-
-                //col = lerp(tex2D(_MainTex, worldUVsLevel0.zx), tex2D(_MainTex, worldUVsLevel1.zx), texLevelBlend);
-                //normal = lerp(UnpackNormal(tex2D(_BumpMap, worldUVsLevel0.zx)), UnpackNormal(tex2D(_BumpMap, worldUVsLevel1.zx)), texLevelBlend);
-                //normal.rgb = normal.rbg;
-                
-                //return float4(worldUVsLevel0, 1);
-
-                //return i.blend;
-
-                return col * dot(normal, _WorldSpaceLightPos0);
-                //return float4(test + test2, 1);
                 return float4(result, 1);
             }
             ENDCG
