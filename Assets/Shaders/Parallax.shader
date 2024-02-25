@@ -66,6 +66,7 @@ Shader "Custom/Parallax"
             {
                 float4 vertex : POSITION;
                 float3 normal : NORMAL;
+                float3 color : COLOR;
             };
 
             // Vertex to hull shader
@@ -75,6 +76,7 @@ Shader "Custom/Parallax"
                 float3 worldPos : INTERNALTESSPOS;
                 float3 worldNormal : NORMAL;
                 float3 viewDir : TEXCOORD1;
+                float3 color : COLOR;
             };
 
             // Patch constant function
@@ -91,6 +93,7 @@ Shader "Custom/Parallax"
                 float3 worldPos : TEXCOORD0;
                 float3 worldNormal : NORMAL;
                 float3 viewDir : TEXCOORD1;
+                float3 color : COLOR;
 
                 LIGHTING_COORDS(4, 5)
             };
@@ -105,6 +108,7 @@ Shader "Custom/Parallax"
                 o.worldPos = mul(unity_ObjectToWorld, v.vertex);
                 o.worldNormal = normalize(mul(unity_ObjectToWorld, v.normal).xyz);
                 o.viewDir = _WorldSpaceCameraPos - o.worldPos;
+                o.color = v.color;
                 return o;
             }
 
@@ -146,6 +150,7 @@ Shader "Custom/Parallax"
                 o.worldPos = BARYCENTRIC_INTERPOLATE(worldPos);
                 o.worldNormal = normalize(BARYCENTRIC_INTERPOLATE(worldNormal));
                 o.viewDir = BARYCENTRIC_INTERPOLATE(viewDir);
+                o.color = BARYCENTRIC_INTERPOLATE(color);
 
                 float terrainDistance = length(o.viewDir);
                 DO_WORLD_UV_CALCULATIONS(terrainDistance * 0.2, o.worldPos)
@@ -161,7 +166,6 @@ Shader "Custom/Parallax"
 
                 return o;
             }
-
             fixed4 Frag_Shader (Interpolators i) : SV_Target
             {   
                 i.worldNormal = normalize(i.worldNormal);
@@ -180,10 +184,106 @@ Shader "Custom/Parallax"
                 float3 normal = SampleBiplanarNormal(_BumpMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
 
                 float3 result = CalculateLighting(col, normal, viewDir, GET_SHADOW);
-
                 return float4(result, 1);
             }
             ENDCG
         }
+        Pass
+        {
+            Tags { "LightMode" = "ShadowCaster" }
+            CGPROGRAM
+
+            #define PARALLAX_SHADOW_CASTER_PASS
+
+            #pragma vertex Vertex_Shader
+            #pragma hull Hull_Shader
+            #pragma domain Domain_Shader
+            #pragma fragment Frag_Shader
+            
+            #include "UnityCG.cginc"
+            #include "Lighting.cginc"
+            #include "AutoLight.cginc"
+
+            #include "ParallaxStructs.cginc"
+            #include "ParallaxVariables.cginc"
+            #include "ParallaxUtils.cginc"
+
+            PARALLAX_SHADOW_CASTER_STRUCT_APPDATA
+            PARALLAX_SHADOW_CASTER_STRUCT_CONTROL
+            PARALLAX_SHADOW_CASTER_STRUCT_FACTORS
+            PARALLAX_SHADOW_CASTER_STRUCT_INTERP
+
+            TessellationControlPoint Vertex_Shader (appdata v)
+            {
+                TessellationControlPoint o;
+
+                o.pos = UnityObjectToClipPos(v.vertex);
+                o.worldPos = mul(unity_ObjectToWorld, v.vertex);
+                o.worldNormal = normalize(mul(unity_ObjectToWorld, v.normal).xyz);
+                return o;
+            }
+
+            TessellationFactors PatchConstantFunction(InputPatch<TessellationControlPoint, 3> patch) 
+            {
+                TessellationFactors f;
+
+                if (ShouldClipPatch(patch[0].pos, patch[1].pos, patch[2].pos, patch[0].worldNormal, patch[1].worldNormal, patch[2].worldNormal, patch[0].worldPos, patch[1].worldPos, patch[2].worldPos))
+                {
+                    // Cull the patch - This should be set to 1 in the shadow caster
+                    f.edge[0] = f.edge[1] = f.edge[2] = f.inside = 1;
+                } 
+                else 
+                {
+                    float tessFactor0 =  EdgeTessellationFactor(_TessellationEdgeLength.x, 0, patch[1].worldPos, patch[1].pos, patch[2].worldPos, patch[2].pos);
+                    float tessFactor1 =  EdgeTessellationFactor(_TessellationEdgeLength.x, 0, patch[2].worldPos, patch[2].pos, patch[0].worldPos, patch[0].pos);
+                    float tessFactor2 =  EdgeTessellationFactor(_TessellationEdgeLength.x, 0, patch[0].worldPos, patch[0].pos, patch[1].worldPos, patch[1].pos);
+
+                    f.edge[0] = min(tessFactor0, _MaxTessellation);
+                    f.edge[1] = min(tessFactor1, _MaxTessellation);
+                    f.edge[2] = min(tessFactor2, _MaxTessellation);
+                    f.inside  = min((tessFactor0 + tessFactor1 + tessFactor2) * 0.333f, _MaxTessellation);
+                }
+                return f;
+            }
+
+            HULL_SHADER_ATTRIBUTES
+            TessellationControlPoint Hull_Shader(InputPatch<TessellationControlPoint, 3> patch, uint id : SV_OutputControlPointID)
+            {
+                return patch[id];
+            }
+
+            // Domain shader
+            [domain("tri")]
+            Interpolators Domain_Shader(TessellationFactors factors, OutputPatch<TessellationControlPoint, 3> patch, float3 barycentricCoordinates : SV_DomainLocation)
+            {
+                Interpolators o;
+
+                o.worldPos = BARYCENTRIC_INTERPOLATE(worldPos);
+                o.worldNormal = normalize(BARYCENTRIC_INTERPOLATE(worldNormal));
+
+                float terrainDistance = length(_WorldSpaceCameraPos - o.worldPos);
+                DO_WORLD_UV_CALCULATIONS(terrainDistance * 0.2, o.worldPos)
+
+                VertexBiplanarParams params;
+                GET_VERTEX_BIPLANAR_PARAMS(params, worldUVs, o.worldNormal);
+
+                // Defines 'displacedWorldPos'
+                CALCULATE_VERTEX_DISPLACEMENT
+
+                o.pos = UnityWorldToClipPos(displacedWorldPos);
+                o.pos = UnityApplyLinearShadowBias(o.pos);
+                
+
+                return o;
+            }
+
+            fixed4 Frag_Shader (Interpolators i) : SV_Target
+            {   
+                return 0;
+            }
+
+            ENDCG
+        }
     }
 }
+    

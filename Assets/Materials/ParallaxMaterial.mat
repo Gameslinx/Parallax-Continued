@@ -66,9 +66,9 @@ Material:
     - _BumpScale: 1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
-    - _DisplacementScale: 0.046
+    - _DisplacementScale: 0.054
     - _DstBlend: 0
-    - _EnvironmentMapFactor: 0.26
+    - _EnvironmentMapFactor: 0.36
     - _FresnelPower: 0.7
     - _GlossMapScale: 1
     - _Glossiness: 0.5

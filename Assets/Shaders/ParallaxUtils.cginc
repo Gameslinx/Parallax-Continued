@@ -55,7 +55,13 @@ bool ShouldBackFaceCull(float3 nrm1, float3 nrm2, float3 nrm3, float3 w1, float3
 {
     float3 faceNormal = (nrm1 + nrm2 + nrm3) * 0.333f;
     float3 faceWorldPos = (w1 + w2 + w2) * 0.333f;
+    
+    // Can't backface cull the shadow caster pass
+#if !defined (PARALLAX_SHADOW_CASTER_PASS)
     return dot(faceNormal, normalize(_WorldSpaceCameraPos - faceWorldPos)) < BACKFACE_CLIP_TOLERANCE;
+#else
+    return 0;
+#endif
 }
 
 // True if should be clipped by frustum or winding cull
@@ -299,7 +305,7 @@ float FresnelEffect(float3 worldNormal, float3 viewDir, float power)
 float3 CalculateLighting(float4 col, float3 worldNormal, float3 viewDir, float shadow)
 {
 	// Main light
-    float NdotL = max(0, dot(worldNormal, _WorldSpaceLightPos0));
+    float NdotL = max(0, dot(worldNormal, _WorldSpaceLightPos0)) * shadow;
     float3 H = normalize(_WorldSpaceLightPos0 + viewDir);
     float NdotH = saturate(dot(worldNormal, H));
 
@@ -314,12 +320,13 @@ float3 CalculateLighting(float4 col, float3 worldNormal, float3 viewDir, float s
     float4 refrSkyData = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, refrDir);
     float3 refrColor = DecodeHDR(refrSkyData, unity_SpecCube0_HDR);
 
-    float spec = pow(NdotH, _SpecularPower) * _LightColor0.rgb * _SpecularIntensity * col.a;
+    float spec = pow(NdotH, _SpecularPower) * _LightColor0.rgb * _SpecularIntensity * col.a * shadow;
 
     float3 ambient = UNITY_LIGHTMODEL_AMBIENT.rgb * col.rgb;
     float3 diffuse = _LightColor0.rgb * col.rgb * NdotL;
     float3 specular = spec * _LightColor0.rgb;
-    float3 reflection = fresnel * reflColor * col.a * _EnvironmentMapFactor + (1 - fresnel) * refrColor * _RefractionIntensity; // For refraction
+    float3 reflection = fresnel * reflColor * col.a * _EnvironmentMapFactor + (1 - fresnel) * refrColor * _RefractionIntensity ; // For refraction
 
+    reflection *= shadow + UNITY_LIGHTMODEL_AMBIENT;
     return ambient + diffuse + specular + reflection;
 }
