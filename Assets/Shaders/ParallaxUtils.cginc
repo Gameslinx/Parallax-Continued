@@ -13,12 +13,16 @@
 
 // Clip tolerances
 #define BACKFACE_CLIP_TOLERANCE -0.05
-#define FRUSTUM_CLIP_TOLERANCE  0.5
+#define FRUSTUM_CLIP_TOLERANCE   0.5
 
 #define BARYCENTRIC_INTERPOLATE(fieldName) \
 		patch[0].fieldName * barycentricCoordinates.x + \
 		patch[1].fieldName * barycentricCoordinates.y + \
 		patch[2].fieldName * barycentricCoordinates.z
+
+#define TERRAIN_TEX_BLEND_FREQUENCY 0.2
+#define TERRAIN_TEX_BLEND_OFFSET    0.4
+#define PARALLAX_SHARPENING_FACTOR 0.85
 
 // True if point is outside bounds defined by lower and higher
 bool IsOutOfBounds(float3 p, float3 lower, float3 higher)
@@ -127,28 +131,55 @@ float3 CombineNormals(float3 n1, float3 n2)
 
 #define BIPLANAR_BLEND_FACTOR 4.0f
 
-#define GET_VERTEX_BIPLANAR_PARAMS(params, worldPos, normal)            \
-    params.absWorldNormal = abs(normal);                                \
+#define GET_VERTEX_BIPLANAR_PARAMS(params, worldPos, normal)                            \
+    params.absWorldNormal = abs(normal);                                                \
     params.ma = (params.absWorldNormal.x > params.absWorldNormal.y && params.absWorldNormal.x > params.absWorldNormal.z) ? int3(0, 1, 2) : (params.absWorldNormal.y > params.absWorldNormal.z) ? int3(1, 2, 0) : int3(2, 0, 1);   \
     params.mi = (params.absWorldNormal.x < params.absWorldNormal.y && params.absWorldNormal.x < params.absWorldNormal.z) ? int3(0, 1, 2) : (params.absWorldNormal.y < params.absWorldNormal.z) ? int3(1, 2, 0) : int3(2, 0, 1);   \
-    params.me = 3 - params.mi - params.ma;                              \
+    params.me = 3 - params.mi - params.ma;                                              \
     params.blend = BIPLANAR_BLEND_FACTOR;
 
-#define GET_PIXEL_BIPLANAR_PARAMS(params, worldPos0, worldPos1, normal)              \
-    params.absWorldNormal = abs(normal);                                             \
-    params.dpdx0 = ddx(worldPos0);                                                   \
-    params.dpdy0 = ddy(worldPos0);                                                   \
-    params.dpdx1 = ddx(worldPos1);                                                   \
-    params.dpdy1 = ddy(worldPos1);                                                   \
+// We can't calculate ddx and ddy for worldUVsLevel0 and worldUVsLevel1 because it results in a 1 pixel band around the texture transition
+// So we instead calculate ddx and ddy for the original world coords and transform them the same way we do with the world coords themselves
+// Which visually is slightly inaccurate but i'll take a little blurring over artifacting
+
+// (ddx(worldPos0) / distFromTerrain) * (_Tiling / scale0) * distFromTerrain
+
+// Get pixel shader biplanar params, and transform partial derivs by the world coord transform
+#define GET_PIXEL_BIPLANAR_PARAMS(params, worldPos0, worldPos1, normal, scale0, scale1, distFromTerrain)                                 \
+    params.absWorldNormal = abs(normal);                                                                    \
+    params.dpdx0 = (ddx(worldPos0) / distFromTerrain) * (_Tiling / scale0) * distFromTerrain;                                                      \
+    params.dpdy0 = (ddy(worldPos0) / distFromTerrain) * (_Tiling / scale0) * distFromTerrain;                                                      \
+    params.dpdx1 = (ddx(worldPos0) / distFromTerrain) * (_Tiling / scale1) * distFromTerrain;                                                      \
+    params.dpdy1 = (ddy(worldPos0) / distFromTerrain) * (_Tiling / scale1) * distFromTerrain;                                                      \
     params.ma = (params.absWorldNormal.x > params.absWorldNormal.y && params.absWorldNormal.x > params.absWorldNormal.z) ? int3(0, 1, 2) : (params.absWorldNormal.y > params.absWorldNormal.z) ? int3(1, 2, 0) : int3(2, 0, 1);   \
     params.mi = (params.absWorldNormal.x < params.absWorldNormal.y && params.absWorldNormal.x < params.absWorldNormal.z) ? int3(0, 1, 2) : (params.absWorldNormal.y < params.absWorldNormal.z) ? int3(1, 2, 0) : int3(2, 0, 1);   \
-    params.me = 3 - params.mi - params.ma;                              \
+    params.me = 3 - params.mi - params.ma;                                                                  \
     params.blend = BIPLANAR_BLEND_FACTOR;
 
 #define TEX2D_GRAD_COORDS_LEVEL0(axis, params, coords) float2(coords[axis.y], coords[axis.z]), float2(params.dpdx0[axis.y], params.dpdx0[axis.z]), float2(params.dpdy0[axis.y], params.dpdy0[axis.z])
 #define TEX2D_GRAD_COORDS_LEVEL1(axis, params, coords) float2(coords[axis.y], coords[axis.z]), float2(params.dpdx1[axis.y], params.dpdx1[axis.z]), float2(params.dpdy1[axis.y], params.dpdy1[axis.z])
 
 #define TEX2D_LOD_COORDS(axis, coords, level) float4(coords[axis.y], coords[axis.z], 0, level)
+
+// Get the transformed world space coords for texture levels 0 and 1
+// that define the zoom levels for the terrain to reduce tiling
+
+// exponent * 0.5 is the same as pow(2, floorLogDistance - 1) to select the previous zoom level. It just avoids the use of pow twice
+#define DO_WORLD_UV_CALCULATIONS(terrainDistance, worldPos)                                                                             \
+    float logDistance = log2(terrainDistance * TERRAIN_TEX_BLEND_FREQUENCY + TERRAIN_TEX_BLEND_OFFSET);                                 \
+    float floorLogDistance = floor(logDistance);                                                                                        \
+    float exponent = pow(2, floorLogDistance);                                                                                          \
+    float texScale0 = exponent * 0.5;                                                                                                   \
+    float texScale1 = exponent;                                                                                                         \
+    float3 worldUVsLevel0 = (worldPos - _TerrainShaderOffset) * _Tiling / texScale0;                                                    \
+    float3 worldUVsLevel1 = (worldPos - _TerrainShaderOffset) * _Tiling / texScale1;                                                    \
+    float texLevelBlend = saturate((logDistance - floorLogDistance) * 1);
+
+float GetMipLevel(float3 texCoord, float3 dpdx, float3 dpdy)
+{
+    float md = max(dot(dpdx, dpdx), dot(dpdy, dpdy));
+    return 0.5f * log2(md);
+}
 
 float4 SampleBiplanarTexture(sampler2D tex, PixelBiplanarParams params, float3 worldPos0, float3 worldPos1, float3 worldNormal, float blend)
 {
@@ -204,13 +235,13 @@ float3 SampleBiplanarNormal(sampler2D tex, PixelBiplanarParams params, float3 wo
     float3 x0 = UnpackNormal(tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL0(params.ma, params, worldPos0)));
     float3 y0 = UnpackNormal(tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL1(params.me, params, worldPos0)));
     
-    // Sample zoom level 1
+    // Sample zoom level 1 
     float3 x1 = UnpackNormal(tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL0(params.ma, params, worldPos1)));
     float3 y1 = UnpackNormal(tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL1(params.me, params, worldPos1)));
     
     // Blend zoom levels
-    float3 x = lerp(x0, x1, blend);
-    float3 y = lerp(y0, y1, blend);
+    float3 x = lerp(x0, x1, blend) * 2;
+    float3 y = lerp(y0, y1, blend) * 2;
     
     // Don't include this in the final build!
     x.g *= -1;

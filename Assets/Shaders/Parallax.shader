@@ -84,6 +84,10 @@ Shader "Custom/Parallax"
                 float3 worldPos : TEXCOORD0;
                 float3 worldNormal : NORMAL;
                 float3 viewDir : TEXCOORD1;
+
+                float3 wPos1 : TEXCOORD2;
+                float3 wPos2 : TEXCOORD3;
+                float blend : TEXCOORD4;
             };
             
             // Do expensive shit here!!
@@ -139,19 +143,23 @@ Shader "Custom/Parallax"
                 Interpolators o;
 
                 o.worldPos = BARYCENTRIC_INTERPOLATE(worldPos);
-                o.worldNormal = BARYCENTRIC_INTERPOLATE(worldNormal);
+                o.worldNormal = normalize(BARYCENTRIC_INTERPOLATE(worldNormal));
                 o.viewDir = BARYCENTRIC_INTERPOLATE(viewDir);
 
-                float3 worldUVs = (o.worldPos - _TerrainShaderOffset) * _Tiling;
+                float terrainDistance = length(o.viewDir);
+                DO_WORLD_UV_CALCULATIONS(terrainDistance / 5, o.worldPos)
 
                 VertexBiplanarParams params;
                 GET_VERTEX_BIPLANAR_PARAMS(params, worldUVs, o.worldNormal);
 
-                float terrainDistance = length(o.viewDir);
+                o.wPos1 = worldUVsLevel0;
+                o.wPos2 = worldUVsLevel1;
+                //float3 worldUVsLevel0
 
-                float4 displacement = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVs, o.worldNormal, 0);
+                float4 displacement = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, o.worldNormal, texLevelBlend);
                 float3 displacedWorldPos = o.worldPos + displacement.g * o.worldNormal * _DisplacementScale;
 
+                o.blend = displacement.g;
                 o.pos = UnityWorldToClipPos(displacedWorldPos);
             
                 return o;
@@ -159,25 +167,47 @@ Shader "Custom/Parallax"
 
             fixed4 Frag_Shader (Interpolators i) : SV_Target
             {   
+                i.worldNormal = normalize(i.worldNormal);
                 // Calculate scaling params
                 float terrainDistance = length(i.viewDir);
-                float logDistance = floor(log2(terrainDistance * 0.2 + 4));
-                float exponent = pow(2, logDistance);
-                float texScale0 = exponent;
-                float texScale1 = exponent * 0.5;
-
-                float3 worldUVsLevel0 = (i.worldPos - _TerrainShaderOffset) * _Tiling / texScale0;
-                float3 worldUVsLevel1 = (i.worldPos - _TerrainShaderOffset) * _Tiling / texScale1;
+                //terrainDistance = min(terrainDistance, 5);
+                // Retrieve UV levels for texture sampling
+                DO_WORLD_UV_CALCULATIONS( terrainDistance / 5, i.worldPos)
                 
                 float3 viewDir = normalize(i.viewDir);
 
                 PixelBiplanarParams params;
-                GET_PIXEL_BIPLANAR_PARAMS(params, worldUVsLevel0, worldUVsLevel1, i.worldNormal);
-                
-                fixed4 col = SampleBiplanarTexture(_MainTex, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, 0);
-                float3 normal = SampleBiplanarNormal(_BumpMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, 0);
+                GET_PIXEL_BIPLANAR_PARAMS(params, i.worldPos, worldUVsLevel1, i.worldNormal, texScale0, texScale1, terrainDistance * PARALLAX_SHARPENING_FACTOR);
+
+                fixed4 col = SampleBiplanarTexture(_MainTex, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+                float3 normal = SampleBiplanarNormal(_BumpMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
 
                 float3 result = CalculateLighting(col, normal, viewDir);
+
+                //float3 wpos2 = worldUVsLevel0 + dpdy1;
+
+                //return float4(params.dpdx0 * 5 + params.dpdy0 * 5, 1);
+
+                //params.dpdx0 = ddx(i.worldPos) * (_Tiling / texScale0);
+                //params.dpdy0 = ddy(i.worldPos) * (_Tiling / texScale0);
+
+                //params.dpdx0 = ddx(worldUVsLevel0);
+                //params.dpdy0 = ddy(worldUVsLevel0);
+
+                //float calibratedMipLevel = floor(GetMipLevel(worldUVsLevel0 * 4096.0f, params.dpdx0, params.dpdy0)) / 5;
+                //return calibratedMipLevel;
+                //return GetMipLevel()
+
+                //col = lerp(tex2D(_MainTex, worldUVsLevel0.zx), tex2D(_MainTex, worldUVsLevel1.zx), texLevelBlend);
+                //normal = lerp(UnpackNormal(tex2D(_BumpMap, worldUVsLevel0.zx)), UnpackNormal(tex2D(_BumpMap, worldUVsLevel1.zx)), texLevelBlend);
+                //normal.rgb = normal.rbg;
+                
+                //return float4(worldUVsLevel0, 1);
+
+                //return i.blend;
+
+                return col * dot(normal, _WorldSpaceLightPos0);
+                //return float4(test + test2, 1);
                 return float4(result, 1);
             }
             ENDCG
