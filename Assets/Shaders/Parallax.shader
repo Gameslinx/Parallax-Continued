@@ -41,6 +41,10 @@ Shader "Custom/Parallax"
         Tags { "RenderType"="Opaque" }
         LOD 100
 
+        //
+        //  Forward Base Pass
+        //
+
         Pass
         {
             Tags { "LightMode" = "ForwardBase" }
@@ -178,16 +182,22 @@ Shader "Custom/Parallax"
                 float3 viewDir = normalize(i.viewDir);
 
                 PixelBiplanarParams params;
-                GET_PIXEL_BIPLANAR_PARAMS(params, i.worldPos, worldUVsLevel1, i.worldNormal, texScale0, texScale1, terrainDistance * PARALLAX_SHARPENING_FACTOR);
+                GET_PIXEL_BIPLANAR_PARAMS(params, i.worldPos, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texScale0, texScale1);
 
                 fixed4 col = SampleBiplanarTexture(_MainTex, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
                 float3 normal = SampleBiplanarNormal(_BumpMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
 
                 float3 result = CalculateLighting(col, normal, viewDir, GET_SHADOW);
+
                 return float4(result, 1);
             }
             ENDCG
         }
+
+        //
+        //  Shadow Caster Pass
+        //
+
         Pass
         {
             Tags { "LightMode" = "ShadowCaster" }
@@ -272,7 +282,6 @@ Shader "Custom/Parallax"
 
                 o.pos = UnityWorldToClipPos(displacedWorldPos);
                 o.pos = UnityApplyLinearShadowBias(o.pos);
-                
 
                 return o;
             }
@@ -284,6 +293,10 @@ Shader "Custom/Parallax"
 
             ENDCG
         }
+
+        //
+        // Forward Add Pass
+        //
     }
 }
     

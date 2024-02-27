@@ -22,7 +22,6 @@
 
 #define TERRAIN_TEX_BLEND_FREQUENCY 0.2
 #define TERRAIN_TEX_BLEND_OFFSET    0.4
-#define PARALLAX_SHARPENING_FACTOR 0.85
 
 #define HULL_SHADER_ATTRIBUTES                          \
     [domain("tri")]                                     \
@@ -162,12 +161,12 @@ float3 CombineNormals(float3 n1, float3 n2)
 // (ddx(worldPos0) / distFromTerrain) * (_Tiling / scale0) * distFromTerrain
 
 // Get pixel shader biplanar params, and transform partial derivs by the world coord transform
-#define GET_PIXEL_BIPLANAR_PARAMS(params, worldPos0, worldPos1, normal, scale0, scale1, distFromTerrain)                                 \
+#define GET_PIXEL_BIPLANAR_PARAMS(params, worldPos, worldPos0, worldPos1, normal, scale0, scale1)                                 \
     params.absWorldNormal = abs(normal);                                                                    \
-    params.dpdx0 = (ddx(worldPos0) / distFromTerrain) * (_Tiling / scale0) * distFromTerrain;                                                      \
-    params.dpdy0 = (ddy(worldPos0) / distFromTerrain) * (_Tiling / scale0) * distFromTerrain;                                                      \
-    params.dpdx1 = (ddx(worldPos0) / distFromTerrain) * (_Tiling / scale1) * distFromTerrain;                                                      \
-    params.dpdy1 = (ddy(worldPos0) / distFromTerrain) * (_Tiling / scale1) * distFromTerrain;                                                      \
+    params.dpdx0 = (ddx(worldPos)) * (_Tiling / scale0) ;                                                      \
+    params.dpdy0 = (ddy(worldPos)) * (_Tiling / scale0) ;                                                      \
+    params.dpdx1 = (ddx(worldPos)) * (_Tiling / scale1) ;                                                      \
+    params.dpdy1 = (ddy(worldPos)) * (_Tiling / scale1) ;                                                      \
     params.ma = (params.absWorldNormal.x > params.absWorldNormal.y && params.absWorldNormal.x > params.absWorldNormal.z) ? int3(0, 1, 2) : (params.absWorldNormal.y > params.absWorldNormal.z) ? int3(1, 2, 0) : int3(2, 0, 1);   \
     params.mi = (params.absWorldNormal.x < params.absWorldNormal.y && params.absWorldNormal.x < params.absWorldNormal.z) ? int3(0, 1, 2) : (params.absWorldNormal.y < params.absWorldNormal.z) ? int3(1, 2, 0) : int3(2, 0, 1);   \
     params.me = 3 - params.mi - params.ma;                                                                  \
@@ -250,10 +249,10 @@ float3 SampleBiplanarNormal(sampler2D tex, PixelBiplanarParams params, float3 wo
 {
     // Sample zoom level 0
     float3 x0 = UnpackNormal(tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL0(params.ma, params, worldPos0)));
-    float3 y0 = UnpackNormal(tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL1(params.me, params, worldPos0)));
+    float3 y0 = UnpackNormal(tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL0(params.me, params, worldPos0)));
     
     // Sample zoom level 1 
-    float3 x1 = UnpackNormal(tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL0(params.ma, params, worldPos1)));
+    float3 x1 = UnpackNormal(tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL1(params.ma, params, worldPos1)));
     float3 y1 = UnpackNormal(tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL1(params.me, params, worldPos1)));
     
     // Blend zoom levels
@@ -308,7 +307,7 @@ float3 CalculateLighting(float4 col, float3 worldNormal, float3 viewDir, float s
     float NdotL = max(0, dot(worldNormal, _WorldSpaceLightPos0)) * shadow;
     float3 H = normalize(_WorldSpaceLightPos0 + viewDir);
     float NdotH = saturate(dot(worldNormal, H));
-
+    
 	// Fresnel reflections
     float3 reflDir = reflect(-viewDir, worldNormal);
     float4 reflSkyData = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, reflDir);
@@ -328,5 +327,6 @@ float3 CalculateLighting(float4 col, float3 worldNormal, float3 viewDir, float s
     float3 reflection = fresnel * reflColor * col.a * _EnvironmentMapFactor + (1 - fresnel) * refrColor * _RefractionIntensity ; // For refraction
 
     reflection *= shadow + UNITY_LIGHTMODEL_AMBIENT;
-    return ambient + diffuse + specular + reflection;
+
+    return diffuse + ambient + specular + reflection;
 }
