@@ -100,7 +100,7 @@ float3 CalculatePhongPosition(float3 bary, float3 p0PositionWS, float3 p0NormalW
     return lerp(flatPositionWS, smoothedPositionWS, 0.333);
 }
 
-#define CALCULATE_VERTEX_DISPLACEMENT                                                                                                                         \
+#define CALCULATE_VERTEX_DISPLACEMENT(o)                                                                                                                         \
     float4 displacement = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, o.worldNormal, texLevelBlend);     \
     float3 displacedWorldPos = o.worldPos + displacement.g * o.worldNormal * _DisplacementScale;
 
@@ -294,6 +294,9 @@ float3 SampleBiplanarNormal(sampler2D tex, PixelBiplanarParams params, float3 wo
 //  Lighting Functions
 //
 
+// From: https://github.com/TwoTailsGames/Unity-Built-in-Shaders/blob/master/CGIncludes/AutoLight.cginc#L266
+// Except the above hard defines v.vertex and that's inefficient for here, where the input is a triangle and not v
+// And we already know the world pos
 #define GET_SHADOW LIGHT_ATTENUATION(i)
 
 float FresnelEffect(float3 worldNormal, float3 viewDir, float power)
