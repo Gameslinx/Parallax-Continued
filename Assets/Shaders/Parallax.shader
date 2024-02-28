@@ -17,7 +17,7 @@ Shader "Custom/Parallax"
         [Space(10)]
         [Header(Texture Parameters)]
         [Space(10)]
-        _Tiling("Texture Tiling", Range(0.001, 30)) = 0.2
+        _Tiling("Texture Tiling", Range(0.001, 0.2)) = 0.2
         _DisplacementScale("Displacement Scale", Range(0, 0.3)) = 0
         _BiplanarBlendFactor("Biplanar Blend Factor", Range(0.01, 8)) = 1
 
@@ -162,7 +162,7 @@ Shader "Custom/Parallax"
                 fixed4 col = SampleBiplanarTexture(_MainTex, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
                 float3 normal = SampleBiplanarNormal(_BumpMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
 
-                float3 result = CalculateLighting(col, normal, viewDir, GET_SHADOW);
+                float3 result = CalculateLighting(col, normal, viewDir, GET_SHADOW, _WorldSpaceLightPos0);
 
                 return float4(result, 1);
             }
@@ -391,7 +391,6 @@ Shader "Custom/Parallax"
             fixed4 Frag_Shader (Interpolators i) : SV_Target
             {   
                 i.worldNormal = normalize(i.worldNormal);
-                i.lightDir = normalize(i.lightDir);
                 // Calculate scaling params
                 float terrainDistance = length(i.viewDir);
 
@@ -399,6 +398,7 @@ Shader "Custom/Parallax"
                 DO_WORLD_UV_CALCULATIONS(terrainDistance * 0.2, i.worldPos)
                 
                 float3 viewDir = normalize(i.viewDir);
+                float3 lightDir = normalize(i.lightDir);
 
                 PixelBiplanarParams params;
                 GET_PIXEL_BIPLANAR_PARAMS(params, i.worldPos, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texScale0, texScale1);
@@ -409,7 +409,7 @@ Shader "Custom/Parallax"
                 float atten = LIGHT_ATTENUATION(i);
                 //UNITY_LIGHT_ATTENUATION(atten, i, i.worldPos.xyz);
 
-                float3 result = CalculateLighting(col, normal, viewDir, 1) * atten;
+                float3 result = CalculateLighting(col, normal, viewDir, 1, lightDir) * atten;
                 //return atten;
                 return float4(result, atten);
             }

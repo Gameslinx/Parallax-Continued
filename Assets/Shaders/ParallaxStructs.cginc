@@ -1,4 +1,15 @@
 //
+//  Structs for parallax shader stages
+//
+
+// Single:  One surface texture
+// Double:  Blend between two altitude based textures
+// Full:    Blend between three altitude based textures
+// All have slope based textures
+
+#pragma multi_compile PARALLAX_SINGLE PARALLAX_DOUBLE PARALLAX_FULL
+
+//
 //  Patch Constant Struct
 //
 

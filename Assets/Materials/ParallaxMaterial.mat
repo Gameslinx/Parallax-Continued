@@ -68,7 +68,7 @@ Material:
     - _DetailNormalMapScale: 1
     - _DisplacementScale: 0.048
     - _DstBlend: 0
-    - _EnvironmentMapFactor: 0.36
+    - _EnvironmentMapFactor: 0.29
     - _FresnelPower: 0.7
     - _GlossMapScale: 1
     - _Glossiness: 0.5
@@ -81,8 +81,8 @@ Material:
     - _RefractionIntensity: 0
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
-    - _SpecularIntensity: 0.54
-    - _SpecularPower: 5
+    - _SpecularIntensity: 0.35
+    - _SpecularPower: 11
     - _SrcBlend: 1
     - _TessellationEdgeLength: 5.1
     - _TessellationFactor: 1

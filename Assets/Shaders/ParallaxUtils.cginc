@@ -304,17 +304,26 @@ float FresnelEffect(float3 worldNormal, float3 viewDir, float power)
     return pow((1.0 - saturate(dot(worldNormal, viewDir))), power);
 }
 
-float3 CalculateLighting(float4 col, float3 worldNormal, float3 viewDir, float shadow)
+// We get the reflection color in the directional pass anyway
+#if defined (DIRECTIONAL)
+    #define GET_REFLECTION_COLOR                                                    \
+        float3 reflDir = reflect(-viewDir, worldNormal);                            \
+        float4 reflSkyData = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, reflDir);        \
+        float3 reflColor = DecodeHDR(reflSkyData, unity_SpecCube0_HDR);             
+#else
+    #define GET_REFLECTION_COLOR                                                    \
+        float3 reflColor = 0;
+#endif
+
+float3 CalculateLighting(float4 col, float3 worldNormal, float3 viewDir, float shadow, float3 lightDir)
 {
 	// Main light
-    float NdotL = max(0, dot(worldNormal, _WorldSpaceLightPos0)) * shadow;
-    float3 H = normalize(_WorldSpaceLightPos0 + viewDir);
+    float NdotL = max(0, dot(worldNormal, lightDir)) * shadow;
+    float3 H = normalize(lightDir + viewDir);
     float NdotH = saturate(dot(worldNormal, H));
     
 	// Fresnel reflections
-    float3 reflDir = reflect(-viewDir, worldNormal);
-    float4 reflSkyData = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, reflDir);
-    float3 reflColor = DecodeHDR(reflSkyData, unity_SpecCube0_HDR);
+    GET_REFLECTION_COLOR
     float fresnel = FresnelEffect(worldNormal, viewDir, _FresnelPower);
 
 	// Fresnel refraction - Unused
@@ -328,8 +337,6 @@ float3 CalculateLighting(float4 col, float3 worldNormal, float3 viewDir, float s
     float3 diffuse = _LightColor0.rgb * col.rgb * NdotL;
     float3 specular = spec * _LightColor0.rgb;
     float3 reflection = fresnel * reflColor * col.a * _EnvironmentMapFactor + (1 - fresnel) * refrColor * _RefractionIntensity ; // For refraction
-
     reflection *= shadow + UNITY_LIGHTMODEL_AMBIENT;
-
     return diffuse + ambient + specular + reflection;
 }
