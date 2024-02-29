@@ -287,8 +287,71 @@ float3 SampleBiplanarNormal(sampler2D tex, PixelBiplanarParams params, float3 wo
 //  Ingame Calcs
 //
 
+// Calculate Slope
+// Vaue of 0 means flat land, 1 means slope
+float GetSlope(float3 worldPos, float3 worldNormal)
+{
+    // We abs in the very strange case of overhangs
+    float slope = abs(dot(normalize(worldPos - _PlanetOrigin), worldNormal));
+    slope = pow(slope, _SteepPower);
+    slope = saturate((slope - _SteepMidpoint) * _SteepContrast + _SteepMidpoint);
+    return slope;
+}
+
+// Get blend as a percentage between two altitudes
+float GetPercentageAltitudeBetween(float altitude, float lowerLimit, float upperLimit)
+{
+    float percentage = (altitude - lowerLimit) / (upperLimit - lowerLimit);
+    return saturate(percentage);
+}
+
 // Get Blend Factors
-//float GetBlendFactor()
+float3 GetAltitudeMask(float3 worldPos, float3 worldNormal)
+{
+    // Land mask - Low-mid blend in red, mid-high blend in green, steep in blue
+    float3 landMask = float3(0, 0, 0);
+    float altitude = length(worldPos - _PlanetOrigin) - _PlanetRadius;
+    
+    landMask.r = GetPercentageAltitudeBetween(altitude, _LowMidBlendStart, _LowMidBlendEnd);
+    landMask.g = GetPercentageAltitudeBetween(altitude, _MidHighBlendStart, _MidHighBlendEnd);
+    landMask.b = GetSlope(worldPos, worldNormal);
+    
+    return landMask;
+}
+
+//
+// Texture Set Calcs
+// When using lighter shader variations these aren't included
+//
+
+#define BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)                                                                                                        \
+    fixed4 diffuseName = SampleBiplanarTexture(diffuseSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);                                                       \
+    float3 normalName = SampleBiplanarNormal(normalSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);      
+
+// If we are sampling a low texture, else declare nothing
+#if defined (PARALLAX_SINGLE_LOW) || defined (PARALLAX_DOUBLE_LOWMID) || defined (PARALLAX_FULL)
+    #define DECLARE_LOW_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler) BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
+#else
+    #define DECLARE_LOW_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
+#endif
+
+// If we are sampling a mid texture, else declare nothing
+#if defined (PARALLAX_SINGLE_MID) || defined (PARALLAX_DOUBLE_LOWMID) || defined (PARALLAX_DOUBLE_MIDHIGH) || defined (PARALLAX_FULL)
+    #define DECLARE_MID_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler) BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
+#else
+    #define DECLARE_MID_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
+#endif
+
+// If we are sampling a high texture, else declare nothing
+#if defined (PARALLAX_SINGLE_HIGH) || defined (PARALLAX_DOUBLE_MIDHIGH) || defined (PARALLAX_FULL)
+    #define DECLARE_HIGH_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler) BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
+#else
+    #define DECLARE_HIGH_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
+#endif
+
+// We are always sampling the slope texture
+#define DECLARE_STEEP_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler) BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
+
 
 //
 //  Lighting Functions
@@ -310,9 +373,17 @@ float FresnelEffect(float3 worldNormal, float3 viewDir, float power)
         float3 reflDir = reflect(-viewDir, worldNormal);                            \
         float4 reflSkyData = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, reflDir);        \
         float3 reflColor = DecodeHDR(reflSkyData, unity_SpecCube0_HDR);             
+
+    #define GET_REFRACTION_COLOR                                                    \
+        float3 refrDir = refract(-viewDir, worldNormal, eta);                       \
+        float4 refrSkyData = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, refrDir);        \
+        float3 refrColor = DecodeHDR(refrSkyData, unity_SpecCube0_HDR);             
 #else
     #define GET_REFLECTION_COLOR                                                    \
         float3 reflColor = 0;
+
+    #define GET_REFRACTION_COLOR                                                    \
+        float3 refrColor = 0;
 #endif
 
 float3 CalculateLighting(float4 col, float3 worldNormal, float3 viewDir, float shadow, float3 lightDir)
@@ -324,12 +395,8 @@ float3 CalculateLighting(float4 col, float3 worldNormal, float3 viewDir, float s
     
 	// Fresnel reflections
     GET_REFLECTION_COLOR
+    GET_REFRACTION_COLOR
     float fresnel = FresnelEffect(worldNormal, viewDir, _FresnelPower);
-
-	// Fresnel refraction - Unused
-    float3 refrDir = refract(-viewDir, worldNormal, eta);
-    float4 refrSkyData = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, refrDir);
-    float3 refrColor = DecodeHDR(refrSkyData, unity_SpecCube0_HDR);
 
     float spec = pow(NdotH, _SpecularPower) * _LightColor0.rgb * _SpecularIntensity * col.a * shadow;
 

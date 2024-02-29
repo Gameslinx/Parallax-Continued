@@ -9,8 +9,11 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: ParallaxMaterial
   m_Shader: {fileID: 4800000, guid: b9860552776eb2c4f998cf8c4044ee5a, type: 3}
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_ValidKeywords:
+  - PARALLAX_SINGLE_LOW
+  m_InvalidKeywords:
+  - PARALLAX_SHADER_VARIANT_PARALLAX_SINGLE
+  - _PARALLAX_SHADER_VARIANT_PARALLAX_SINGLE
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -44,6 +47,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _InfluenceMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _MainTex:
         m_Texture: {fileID: 2800000, guid: 5035656d647b7a242bf6e3099fb0239a, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -62,6 +69,8 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - PARALLAX_SHADER_VARIANT: 0
+    - PARALLAX_SINGLE: 0
     - _BiplanarBlendFactor: 4
     - _BumpScale: 1
     - _Cutoff: 0.5
@@ -73,17 +82,26 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
+    - _LowMidBlendEnd: 1.43
+    - _LowMidBlendStart: 0.79
     - _MaxTessellation: 64
     - _Metallic: 0
+    - _MidHighBlendEnd: 4.11
+    - _MidHighBlendStart: 2.91
     - _Mode: 0
     - _OcclusionStrength: 1
+    - _PARALLAX_SHADER_VARIANT: 0
     - _Parallax: 0.02
+    - _PlanetRadius: 1000
     - _RefractionIntensity: 0
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SpecularIntensity: 0.35
     - _SpecularPower: 11
     - _SrcBlend: 1
+    - _SteepContrast: 2.85
+    - _SteepMidpoint: 0.01
+    - _SteepPower: 7.45
     - _TessellationEdgeLength: 5.1
     - _TessellationFactor: 1
     - _Tiling: 0.1
@@ -92,5 +110,6 @@ Material:
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _PlanetOrigin: {r: 0, g: -1000, b: 0, a: 1}
     - _TerrainShaderOffset: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []

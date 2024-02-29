@@ -7,7 +7,7 @@
 // Full:    Blend between three altitude based textures
 // All have slope based textures
 
-#pragma multi_compile PARALLAX_SINGLE PARALLAX_DOUBLE PARALLAX_FULL
+#pragma multi_compile PARALLAX_SINGLE_LOW  PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
 
 //
 //  Patch Constant Struct

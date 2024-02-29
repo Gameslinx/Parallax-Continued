@@ -12,6 +12,7 @@ Shader "Custom/Parallax"
         [Space(10)]
         _MainTex("Texture", 2D) = "white" {}
         _BumpMap("Bump Map", 2D) = "bump" {}
+        _InfluenceMap("Influence Map", 2D) = "grey" {}
         _DisplacementMap("Displacement Map", 2D) = "black" {}
 
         [Space(10)]
@@ -20,6 +21,19 @@ Shader "Custom/Parallax"
         _Tiling("Texture Tiling", Range(0.001, 0.2)) = 0.2
         _DisplacementScale("Displacement Scale", Range(0, 0.3)) = 0
         _BiplanarBlendFactor("Biplanar Blend Factor", Range(0.01, 8)) = 1
+
+        [Space(10)]
+        [Header(Texture Blending Parameters)]
+        [Space(10)]
+        _LowMidBlendStart("Low-Mid Fade Blend Start", Range(0, 10)) = 1
+        _LowMidBlendEnd("Low-Mid Fade Blend End", Range(0, 10)) = 2
+        [Space(10)]
+        _MidHighBlendStart("Mid-High Blend Start", Range(0, 10)) = 4
+        _MidHighBlendEnd("Mid-High Blend End", Range(0, 10)) = 5
+        [Space(10)]
+        _SteepPower("Steep Power", Range(0.001, 10)) = 1
+        _SteepContrast("Steep Contrast", Range(-5, 5)) = 1
+        _SteepMidpoint("Steep Midpoint", Range(-1, 1)) = 0
 
         [Space(10)]
         [Header(Lighting Parameters)]
@@ -34,7 +48,9 @@ Shader "Custom/Parallax"
         [Space(10)]
         [Header(Other Params)]
         [Space(10)]
-        _TerrainShaderOffset("Terrain Shader Offset", VECTOR) = (0, 0, 0)
+        _TerrainShaderOffset("Terrain Shader Offset", vector) = (0, 0, 0)
+        _PlanetOrigin("Planet Origin", vector) = (0, 0, 0)
+        _PlanetRadius("Planet Radius", Range(0.01, 5000)) = 5 
     }
     SubShader
     {
@@ -147,22 +163,35 @@ Shader "Custom/Parallax"
             }
             fixed4 Frag_Shader (Interpolators i) : SV_Target
             {   
-                i.worldNormal = normalize(i.worldNormal);
-                // Calculate scaling params
                 float terrainDistance = length(i.viewDir);
+
+                i.worldNormal = normalize(i.worldNormal);
+                float3 viewDir = normalize(i.viewDir);
+                
+                float3 landMask = GetAltitudeMask(i.worldPos, i.worldNormal);
 
                 // Retrieve UV levels for texture sampling
                 DO_WORLD_UV_CALCULATIONS(terrainDistance * 0.2, i.worldPos)
                 
-                float3 viewDir = normalize(i.viewDir);
-
+                // Get biplanar params for texture sampling
                 PixelBiplanarParams params;
                 GET_PIXEL_BIPLANAR_PARAMS(params, i.worldPos, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texScale0, texScale1);
 
-                fixed4 col = SampleBiplanarTexture(_MainTex, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
-                float3 normal = SampleBiplanarNormal(_BumpMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+                // Red low, green mid, blue high, alpha steep
+                float4 globalInfluence = SampleBiplanarTexture(_InfluenceMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
 
-                float3 result = CalculateLighting(col, normal, viewDir, GET_SHADOW, _WorldSpaceLightPos0);
+                //
+                // Localised altitude based textures
+                // Totals 16 texture samples, BUH!
+                //
+
+                // These declarations perform the texture samples, and within them are checks to see if they should be skipped or not
+                DECLARE_LOW_TEXTURE_SET(lowDiffuse, lowNormal, _MainTex, _BumpMap)
+                DECLARE_MID_TEXTURE_SET(midDiffuse, midNormal, _MainTex, _BumpMap)
+                DECLARE_HIGH_TEXTURE_SET(highDiffuse, highNormal, _MainTex, _BumpMap)
+                DECLARE_STEEP_TEXTURE_SET(steepDiffuse, steepNormal, _MainTex, _BumpMap)
+
+                float3 result = CalculateLighting(lowDiffuse, lowNormal, viewDir, GET_SHADOW, _WorldSpaceLightPos0);
 
                 return float4(result, 1);
             }
