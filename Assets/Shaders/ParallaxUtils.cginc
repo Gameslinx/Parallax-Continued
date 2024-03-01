@@ -327,10 +327,19 @@ float3 GetAltitudeMask(float3 worldPos, float3 worldNormal, float altitude, floa
 // Texture Set Calcs
 // When using lighter shader variations these aren't included
 //
+#if defined (INFLUENCE_MAPPING)
+    #define BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)                                                                                                        \
+        fixed4 diffuseName = SampleBiplanarTexture(diffuseSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);                                                       \
+        float3 normalName = SampleBiplanarNormal(normalSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);                                                          \
+        float diffuseName##Lum = (diffuseName.r * 0.21f + diffuseName.g * 0.72f + diffuseName.b * 0.07f) + 0.5f;                                                                                \
+        diffuseName.rgb = lerp(vertexColor * diffuseName##Lum, diffuseName.rgb, diffuseName##InfluenceValue);
+#else
+    #define BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)                                                                                                        \
+        fixed4 diffuseName = SampleBiplanarTexture(diffuseSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);                                                       \
+        float3 normalName = SampleBiplanarNormal(normalSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+#endif
 
-#define BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)                                                                                                        \
-    fixed4 diffuseName = SampleBiplanarTexture(diffuseSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);                                                       \
-    float3 normalName = SampleBiplanarNormal(normalSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);      
+
 
 #define UNUSED_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)  \
     fixed4 diffuseName = 0;                                                         \
@@ -361,6 +370,19 @@ float3 GetAltitudeMask(float3 worldPos, float3 worldNormal, float altitude, floa
 
 // We are always sampling the slope texture
 #define DECLARE_STEEP_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler) BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
+
+// Get global influence texture and values, otherwise declare nothing
+#if defined (INFLUENCE_MAPPING)
+    #define DECLARE_INFLUENCE_TEXTURE float4 globalInfluence = SampleBiplanarTexture(_InfluenceMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+    #define DECLARE_INFLUENCE_VALUES                                \
+        float lowDiffuseInfluenceValue = globalInfluence.r;         \
+        float midDiffuseInfluenceValue = globalInfluence.g;         \
+        float highDiffuseInfluenceValue = globalInfluence.b;        \
+        float steepDiffuseInfluenceValue = globalInfluence.a;
+#else
+    #define DECLARE_INFLUENCE_TEXTURE
+    #define DECLARE_INFLUENCE_VALUES
+#endif
 
 //
 //  Texture Blend Calcs

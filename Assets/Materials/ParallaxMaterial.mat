@@ -9,8 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: ParallaxMaterial
   m_Shader: {fileID: 4800000, guid: b9860552776eb2c4f998cf8c4044ee5a, type: 3}
-  m_ValidKeywords:
-  - PARALLAX_SINGLE_LOW
+  m_ValidKeywords: []
   m_InvalidKeywords:
   - PARALLAX_SHADER_VARIANT_PARALLAX_SINGLE
   - _PARALLAX_SHADER_VARIANT_PARALLAX_SINGLE
@@ -64,7 +63,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _InfluenceMap:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 05d5a254f91303a459c15164bae46170, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
@@ -109,13 +108,13 @@ Material:
     - _DetailNormalMapScale: 1
     - _DisplacementScale: 0.048
     - _DstBlend: 0
-    - _EnvironmentMapFactor: 0.47
+    - _EnvironmentMapFactor: 0.56
     - _FresnelPower: 0.7
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
     - _LowMidBlendEnd: -0.2
-    - _LowMidBlendStart: -0.57
+    - _LowMidBlendStart: -0.3
     - _MaxTessellation: 64
     - _Metallic: 0
     - _MidHighBlendEnd: 1.3

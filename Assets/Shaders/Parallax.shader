@@ -32,7 +32,7 @@ Shader "Custom/Parallax"
         _BumpMapSteep("Steep Bump Map", 2D) = "bump" {}
 
         [Space(10)]
-        _InfluenceMap("Influence Map", 2D) = "grey" {}
+        _InfluenceMap("Influence Map", 2D) = "white" {}
         _DisplacementMap("Displacement Map", 2D) = "black" {}
 
         [Space(10)]
@@ -186,12 +186,16 @@ Shader "Custom/Parallax"
                 float terrainDistance = length(i.viewDir);
                 float altitude = length(i.worldPos - _PlanetOrigin) - _PlanetRadius;
 
+                // Maybe gamma correct at some point
+                float3 vertexColor = i.color;
+
                 // Middle between lowMidEnd and midHighStart
                 float midpoint = altitude / (_MidHighBlendStart + _LowMidBlendEnd);
 
                 i.worldNormal = normalize(i.worldNormal);
                 float3 viewDir = normalize(i.viewDir);
                 
+                // Red low-mid blend, green mid-high blend, blue steep
                 float3 landMask = GetAltitudeMask(i.worldPos, i.worldNormal, altitude, midpoint);
 
                 // Retrieve UV levels for texture sampling
@@ -201,8 +205,9 @@ Shader "Custom/Parallax"
                 PixelBiplanarParams params;
                 GET_PIXEL_BIPLANAR_PARAMS(params, i.worldPos, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texScale0, texScale1);
 
-                // Red low, green mid, blue high, alpha steep
-                float4 globalInfluence = SampleBiplanarTexture(_InfluenceMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+                // Declares float4 'globalInfluence' if influence mapping is enabled
+                DECLARE_INFLUENCE_TEXTURE
+                DECLARE_INFLUENCE_VALUES
 
                 //
                 // Localised altitude based textures
@@ -220,7 +225,7 @@ Shader "Custom/Parallax"
                 float3 altitudeNormal = BLEND_TEXTURES(landMask, lowNormal, midNormal, highNormal);
 
                 fixed4 finalDiffuse = lerp(altitudeDiffuse, steepDiffuse, landMask.b);
-                float3 finalNormal = lerp(altitudeNormal, steepNormal, landMask.b);
+                float3 finalNormal = lerp(altitudeNormal, steepNormal, landMask.b); 
 
                 float3 result = CalculateLighting(finalDiffuse, finalNormal, viewDir, GET_SHADOW, _WorldSpaceLightPos0);
                 return float4(result, 1);
