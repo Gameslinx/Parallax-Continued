@@ -295,7 +295,7 @@ float GetSlope(float3 worldPos, float3 worldNormal)
     float slope = abs(dot(normalize(worldPos - _PlanetOrigin), worldNormal));
     slope = pow(slope, _SteepPower);
     slope = saturate((slope - _SteepMidpoint) * _SteepContrast + _SteepMidpoint);
-    return slope;
+    return 1 - slope;
 }
 
 // Get blend as a percentage between two altitudes
@@ -306,18 +306,22 @@ float GetPercentageAltitudeBetween(float altitude, float lowerLimit, float upper
 }
 
 // Get Blend Factors
-float3 GetAltitudeMask(float3 worldPos, float3 worldNormal)
+float3 GetAltitudeMask(float3 worldPos, float3 worldNormal, float altitude, float midpoint)
 {
+    float lowMidBlend = GetPercentageAltitudeBetween(altitude, _LowMidBlendStart, _LowMidBlendEnd);
+    float midHighBlend = GetPercentageAltitudeBetween(altitude, _MidHighBlendStart, _MidHighBlendEnd);
+    float slope = GetSlope(worldPos, worldNormal);
+
     // Land mask - Low-mid blend in red, mid-high blend in green, steep in blue
-    float3 landMask = float3(0, 0, 0);
-    float altitude = length(worldPos - _PlanetOrigin) - _PlanetRadius;
-    
-    landMask.r = GetPercentageAltitudeBetween(altitude, _LowMidBlendStart, _LowMidBlendEnd);
-    landMask.g = GetPercentageAltitudeBetween(altitude, _MidHighBlendStart, _MidHighBlendEnd);
-    landMask.b = GetSlope(worldPos, worldNormal);
-    
-    return landMask;
+    return float3(lowMidBlend, midHighBlend, slope);
 }
+
+// Blend textures based on landmask
+#define BLEND_ALL_TEXTURES(landMask, lowTex, midTex, highTex)                                                           \
+    lerp(lowTex, midTex, landMask.r) * (midpoint < 0.5) + lerp(midTex, highTex, landMask.g) * (midpoint >= 0.5);
+
+#define BLEND_TWO_TEXTURES(blend, tex1, tex2)                                                                    \
+    lerp(tex1, tex2, blend);
 
 //
 // Texture Set Calcs
@@ -328,38 +332,71 @@ float3 GetAltitudeMask(float3 worldPos, float3 worldNormal)
     fixed4 diffuseName = SampleBiplanarTexture(diffuseSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);                                                       \
     float3 normalName = SampleBiplanarNormal(normalSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);      
 
+#define UNUSED_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)  \
+    fixed4 diffuseName = 0;                                                         \
+    float3 normalName = 0;
+
+#define BLEND_DIFFUSE_INPUT_PARAMS landMask, lowDiffuse, midDiffuse, highDiffuse
+
 // If we are sampling a low texture, else declare nothing
 #if defined (PARALLAX_SINGLE_LOW) || defined (PARALLAX_DOUBLE_LOWMID) || defined (PARALLAX_FULL)
     #define DECLARE_LOW_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler) BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
 #else
-    #define DECLARE_LOW_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
+    #define DECLARE_LOW_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler) UNUSED_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
 #endif
 
 // If we are sampling a mid texture, else declare nothing
 #if defined (PARALLAX_SINGLE_MID) || defined (PARALLAX_DOUBLE_LOWMID) || defined (PARALLAX_DOUBLE_MIDHIGH) || defined (PARALLAX_FULL)
     #define DECLARE_MID_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler) BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
 #else
-    #define DECLARE_MID_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
+    #define DECLARE_MID_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler) UNUSED_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
 #endif
 
 // If we are sampling a high texture, else declare nothing
 #if defined (PARALLAX_SINGLE_HIGH) || defined (PARALLAX_DOUBLE_MIDHIGH) || defined (PARALLAX_FULL)
     #define DECLARE_HIGH_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler) BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
 #else
-    #define DECLARE_HIGH_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
+    #define DECLARE_HIGH_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler) UNUSED_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
 #endif
 
 // We are always sampling the slope texture
 #define DECLARE_STEEP_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler) BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
 
+//
+//  Texture Blend Calcs
+//  When some textures aren't being blended, their values are unused and anything is optimized out at compile time
+//
+
+#define BLEND_TWO_TEX(tex1, tex2, blend)    lerp(tex1, tex2, blend)
+
+#if defined (PARALLAX_SINGLE_LOW)
+    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex) lowTex
+#endif
+
+#if defined (PARALLAX_SINGLE_MID)
+    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex) midTex
+#endif
+
+#if defined (PARALLAX_SINGLE_HIGH)
+    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex) highTex
+#endif
+
+#if defined (PARALLAX_DOUBLE_LOWMID)
+    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex) BLEND_TWO_TEXTURES(landMask.r, lowTex, midTex)
+#endif
+
+#if defined (PARALLAX_DOUBLE_MIDHIGH)
+    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex) BLEND_TWO_TEXTURES(landMask.g, midTex, highTex)
+#endif
+
+#if defined (PARALLAX_FULL)
+    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex) BLEND_ALL_TEXTURES(landMask, lowTex, midTex, highTex)
+#endif
 
 //
 //  Lighting Functions
 //
 
-// From: https://github.com/TwoTailsGames/Unity-Built-in-Shaders/blob/master/CGIncludes/AutoLight.cginc#L266
-// Except the above hard defines v.vertex and that's inefficient for here, where the input is a triangle and not v
-// And we already know the world pos
 #define GET_SHADOW LIGHT_ATTENUATION(i)
 
 float FresnelEffect(float3 worldNormal, float3 viewDir, float power)

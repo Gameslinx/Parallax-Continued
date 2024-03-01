@@ -8,10 +8,30 @@ Shader "Custom/Parallax"
         _TessellationEdgeLength("Tessellation Edge Length (Pixels)", Range(0.01, 100)) = 1
 
         [Space(10)]
-        [Header(Textures)]
+        [Header(Low Textures)]
         [Space(10)]
-        _MainTex("Texture", 2D) = "white" {}
-        _BumpMap("Bump Map", 2D) = "bump" {}
+        _MainTexLow("Low Texture", 2D) = "white" {}
+        _BumpMapLow("Low Bump Map", 2D) = "bump" {}
+
+        [Space(10)]
+        [Header(Mid Textures)]
+        [Space(10)]
+        _MainTexMid("Mid Texture", 2D) = "white" {}
+        _BumpMapMid("Mid Bump Map", 2D) = "bump" {}
+
+        [Space(10)]
+        [Header(High Textures)]
+        [Space(10)]
+        _MainTexHigh("High Texture", 2D) = "white" {}
+        _BumpMapHigh("High Bump Map", 2D) = "bump" {}
+
+        [space(10)]
+        [Header(Steep Textures)]
+        [Space(10)]
+        _MainTexSteep("Steep Texture", 2D) = "white" {}
+        _BumpMapSteep("Steep Bump Map", 2D) = "bump" {}
+
+        [Space(10)]
         _InfluenceMap("Influence Map", 2D) = "grey" {}
         _DisplacementMap("Displacement Map", 2D) = "black" {}
 
@@ -25,11 +45,11 @@ Shader "Custom/Parallax"
         [Space(10)]
         [Header(Texture Blending Parameters)]
         [Space(10)]
-        _LowMidBlendStart("Low-Mid Fade Blend Start", Range(0, 10)) = 1
-        _LowMidBlendEnd("Low-Mid Fade Blend End", Range(0, 10)) = 2
+        _LowMidBlendStart("Low-Mid Fade Blend Start", Range(-5, 10)) = 1
+        _LowMidBlendEnd("Low-Mid Fade Blend End", Range(-5, 10)) = 2
         [Space(10)]
-        _MidHighBlendStart("Mid-High Blend Start", Range(0, 10)) = 4
-        _MidHighBlendEnd("Mid-High Blend End", Range(0, 10)) = 5
+        _MidHighBlendStart("Mid-High Blend Start", Range(-5, 10)) = 4
+        _MidHighBlendEnd("Mid-High Blend End", Range(-5, 10)) = 5
         [Space(10)]
         _SteepPower("Steep Power", Range(0.001, 10)) = 1
         _SteepContrast("Steep Contrast", Range(-5, 5)) = 1
@@ -164,11 +184,15 @@ Shader "Custom/Parallax"
             fixed4 Frag_Shader (Interpolators i) : SV_Target
             {   
                 float terrainDistance = length(i.viewDir);
+                float altitude = length(i.worldPos - _PlanetOrigin) - _PlanetRadius;
+
+                // Middle between lowMidEnd and midHighStart
+                float midpoint = altitude / (_MidHighBlendStart + _LowMidBlendEnd);
 
                 i.worldNormal = normalize(i.worldNormal);
                 float3 viewDir = normalize(i.viewDir);
                 
-                float3 landMask = GetAltitudeMask(i.worldPos, i.worldNormal);
+                float3 landMask = GetAltitudeMask(i.worldPos, i.worldNormal, altitude, midpoint);
 
                 // Retrieve UV levels for texture sampling
                 DO_WORLD_UV_CALCULATIONS(terrainDistance * 0.2, i.worldPos)
@@ -186,13 +210,19 @@ Shader "Custom/Parallax"
                 //
 
                 // These declarations perform the texture samples, and within them are checks to see if they should be skipped or not
-                DECLARE_LOW_TEXTURE_SET(lowDiffuse, lowNormal, _MainTex, _BumpMap)
-                DECLARE_MID_TEXTURE_SET(midDiffuse, midNormal, _MainTex, _BumpMap)
-                DECLARE_HIGH_TEXTURE_SET(highDiffuse, highNormal, _MainTex, _BumpMap)
-                DECLARE_STEEP_TEXTURE_SET(steepDiffuse, steepNormal, _MainTex, _BumpMap)
+                // They will be optimized out if unused
+                DECLARE_LOW_TEXTURE_SET(lowDiffuse, lowNormal, _MainTexLow, _BumpMapLow)
+                DECLARE_MID_TEXTURE_SET(midDiffuse, midNormal, _MainTexMid, _BumpMapMid)
+                DECLARE_HIGH_TEXTURE_SET(highDiffuse, highNormal, _MainTexHigh, _BumpMapHigh)
+                DECLARE_STEEP_TEXTURE_SET(steepDiffuse, steepNormal, _MainTexSteep, _BumpMapSteep)
 
-                float3 result = CalculateLighting(lowDiffuse, lowNormal, viewDir, GET_SHADOW, _WorldSpaceLightPos0);
+                fixed4 altitudeDiffuse = BLEND_TEXTURES(landMask, lowDiffuse, midDiffuse, highDiffuse);
+                float3 altitudeNormal = BLEND_TEXTURES(landMask, lowNormal, midNormal, highNormal);
 
+                fixed4 finalDiffuse = lerp(altitudeDiffuse, steepDiffuse, landMask.b);
+                float3 finalNormal = lerp(altitudeNormal, steepNormal, landMask.b);
+
+                float3 result = CalculateLighting(finalDiffuse, finalNormal, viewDir, GET_SHADOW, _WorldSpaceLightPos0);
                 return float4(result, 1);
             }
             ENDCG
@@ -309,141 +339,141 @@ Shader "Custom/Parallax"
         // And we must pass through vertex for TRANSFER_VERTEX_TO_FRAGMENT macro, which is adamant on using vertex instead of worldpos :/
         //
 
-        Pass
-        {
-            Tags { "LightMode" = "ForwardAdd" }
-            Blend SrcAlpha One
-            BlendOp Add
-            CGPROGRAM
-
-            #pragma multi_compile_fwdadd_fullshadows
-
-            #pragma vertex Vertex_Shader
-            #pragma hull Hull_Shader
-            #pragma domain Domain_Shader
-            #pragma fragment Frag_Shader
-            
-            #include "UnityCG.cginc"
-            #include "Lighting.cginc"
-            #include "AutoLight.cginc"
-
-            #include "ParallaxStructs.cginc"
-            #include "ParallaxVariables.cginc"
-            #include "ParallaxUtils.cginc"
-
-            // Input
-            PARALLAX_FORWARDADD_STRUCT_APPDATA
-
-            // Vertex to hull shader
-            PARALLAX_FORWARDADD_STRUCT_CONTROL
-
-            // Patch constant function
-            PARALLAX_STRUCT_PATCH_CONSTANT
-
-            // Interpolators to frag shader
-            PARALLAX_FORWARDADD_STRUCT_INTERP
-            
-            // Do expensive shit here!!
-            // Before tessellation!!
-            TessellationControlPoint Vertex_Shader (appdata v)
-            {
-                TessellationControlPoint o;
-
-                o.pos = UnityObjectToClipPos(v.vertex);
-                o.worldPos = mul(unity_ObjectToWorld, v.vertex);
-                o.worldNormal = normalize(mul(unity_ObjectToWorld, v.normal).xyz);
-                o.viewDir = _WorldSpaceCameraPos - o.worldPos;
-                o.lightDir = _WorldSpaceLightPos0 - o.worldPos;
-                o.color = v.color;
-                o.vertex = v.vertex;
-                return o;
-            }
-
-            TessellationFactors PatchConstantFunction(InputPatch<TessellationControlPoint, 3> patch) 
-            {
-                TessellationFactors f;
-
-                if (ShouldClipPatch(patch[0].pos, patch[1].pos, patch[2].pos, patch[0].worldNormal, patch[1].worldNormal, patch[2].worldNormal, patch[0].worldPos, patch[1].worldPos, patch[2].worldPos))
-                {
-                    // Cull the patch - This should be set to 1 in the shadow caster
-                    f.edge[0] = f.edge[1] = f.edge[2] = f.inside = 0;
-                } 
-                else 
-                {
-                    float tessFactor0 =  EdgeTessellationFactor(_TessellationEdgeLength.x, 0, patch[1].worldPos, patch[1].pos, patch[2].worldPos, patch[2].pos);
-                    float tessFactor1 =  EdgeTessellationFactor(_TessellationEdgeLength.x, 0, patch[2].worldPos, patch[2].pos, patch[0].worldPos, patch[0].pos);
-                    float tessFactor2 =  EdgeTessellationFactor(_TessellationEdgeLength.x, 0, patch[0].worldPos, patch[0].pos, patch[1].worldPos, patch[1].pos);
-
-                    f.edge[0] = min(tessFactor0, _MaxTessellation);
-                    f.edge[1] = min(tessFactor1, _MaxTessellation);
-                    f.edge[2] = min(tessFactor2, _MaxTessellation);
-                    f.inside  = min((tessFactor0 + tessFactor1 + tessFactor2) * 0.333f, _MaxTessellation);
-                }
-                return f;
-            }
-
-            HULL_SHADER_ATTRIBUTES
-            TessellationControlPoint Hull_Shader(InputPatch<TessellationControlPoint, 3> patch, uint id : SV_OutputControlPointID)
-            {
-                return patch[id];
-            }
-
-            // Domain shader
-            [domain("tri")]
-            Interpolators Domain_Shader(TessellationFactors factors, OutputPatch<TessellationControlPoint, 3> patch, float3 barycentricCoordinates : SV_DomainLocation)
-            {
-                // We have to use "v" instead of "o" because it's hardcoded into unity's macros...
-                Interpolators v;
-
-                v.worldPos = BARYCENTRIC_INTERPOLATE(worldPos);
-                v.worldNormal = normalize(BARYCENTRIC_INTERPOLATE(worldNormal));
-                v.viewDir = BARYCENTRIC_INTERPOLATE(viewDir);
-                v.color = BARYCENTRIC_INTERPOLATE(color);
-                v.lightDir = BARYCENTRIC_INTERPOLATE(lightDir);
-                v.vertex = BARYCENTRIC_INTERPOLATE(vertex);
-
-                float terrainDistance = length(v.viewDir);
-                DO_WORLD_UV_CALCULATIONS(terrainDistance * 0.2, v.worldPos)
-
-                VertexBiplanarParams params;
-                GET_VERTEX_BIPLANAR_PARAMS(params, worldUVs, v.worldNormal);
-
-                // Defines 'displacedWorldPos' 
-                CALCULATE_VERTEX_DISPLACEMENT(v)
-                //TRANSFER_SHADOW(o);
-                v.pos = UnityWorldToClipPos(displacedWorldPos);
-                
-                TRANSFER_VERTEX_TO_FRAGMENT(v);
-
-                return v;
-            }
-            fixed4 Frag_Shader (Interpolators i) : SV_Target
-            {   
-                i.worldNormal = normalize(i.worldNormal);
-                // Calculate scaling params
-                float terrainDistance = length(i.viewDir);
-
-                // Retrieve UV levels for texture sampling
-                DO_WORLD_UV_CALCULATIONS(terrainDistance * 0.2, i.worldPos)
-                
-                float3 viewDir = normalize(i.viewDir);
-                float3 lightDir = normalize(i.lightDir);
-
-                PixelBiplanarParams params;
-                GET_PIXEL_BIPLANAR_PARAMS(params, i.worldPos, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texScale0, texScale1);
-
-                fixed4 col = SampleBiplanarTexture(_MainTex, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
-                float3 normal = SampleBiplanarNormal(_BumpMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
-
-                float atten = LIGHT_ATTENUATION(i);
-                //UNITY_LIGHT_ATTENUATION(atten, i, i.worldPos.xyz);
-
-                float3 result = CalculateLighting(col, normal, viewDir, 1, lightDir) * atten;
-                //return atten;
-                return float4(result, atten);
-            }
-            ENDCG
-        }
+        //Pass
+        //{
+        //    Tags { "LightMode" = "ForwardAdd" }
+        //    Blend SrcAlpha One
+        //    BlendOp Add
+        //    CGPROGRAM
+        //
+        //    #pragma multi_compile_fwdadd_fullshadows
+        //
+        //    #pragma vertex Vertex_Shader
+        //    #pragma hull Hull_Shader
+        //    #pragma domain Domain_Shader
+        //    #pragma fragment Frag_Shader
+        //    
+        //    #include "UnityCG.cginc"
+        //    #include "Lighting.cginc"
+        //    #include "AutoLight.cginc"
+        //
+        //    #include "ParallaxStructs.cginc"
+        //    #include "ParallaxVariables.cginc"
+        //    #include "ParallaxUtils.cginc"
+        //
+        //    // Input
+        //    PARALLAX_FORWARDADD_STRUCT_APPDATA
+        //
+        //    // Vertex to hull shader
+        //    PARALLAX_FORWARDADD_STRUCT_CONTROL
+        //
+        //    // Patch constant function
+        //    PARALLAX_STRUCT_PATCH_CONSTANT
+        //
+        //    // Interpolators to frag shader
+        //    PARALLAX_FORWARDADD_STRUCT_INTERP
+        //    
+        //    // Do expensive shit here!!
+        //    // Before tessellation!!
+        //    TessellationControlPoint Vertex_Shader (appdata v)
+        //    {
+        //        TessellationControlPoint o;
+        //
+        //        o.pos = UnityObjectToClipPos(v.vertex);
+        //        o.worldPos = mul(unity_ObjectToWorld, v.vertex);
+        //        o.worldNormal = normalize(mul(unity_ObjectToWorld, v.normal).xyz);
+        //        o.viewDir = _WorldSpaceCameraPos - o.worldPos;
+        //        o.lightDir = _WorldSpaceLightPos0 - o.worldPos;
+        //        o.color = v.color;
+        //        o.vertex = v.vertex;
+        //        return o;
+        //    }
+        //
+        //    TessellationFactors PatchConstantFunction(InputPatch<TessellationControlPoint, 3> patch) 
+        //    {
+        //        TessellationFactors f;
+        //
+        //        if (ShouldClipPatch(patch[0].pos, patch[1].pos, patch[2].pos, patch[0].worldNormal, patch[1].worldNormal, patch[2].worldNormal, patch[0].worldPos, patch[1].worldPos, patch[2].worldPos))
+        //        {
+        //            // Cull the patch - This should be set to 1 in the shadow caster
+        //            f.edge[0] = f.edge[1] = f.edge[2] = f.inside = 0;
+        //        } 
+        //        else 
+        //        {
+        //            float tessFactor0 =  EdgeTessellationFactor(_TessellationEdgeLength.x, 0, patch[1].worldPos, patch[1].pos, patch[2].worldPos, patch[2].pos);
+        //            float tessFactor1 =  EdgeTessellationFactor(_TessellationEdgeLength.x, 0, patch[2].worldPos, patch[2].pos, patch[0].worldPos, patch[0].pos);
+        //            float tessFactor2 =  EdgeTessellationFactor(_TessellationEdgeLength.x, 0, patch[0].worldPos, patch[0].pos, patch[1].worldPos, patch[1].pos);
+        //
+        //            f.edge[0] = min(tessFactor0, _MaxTessellation);
+        //            f.edge[1] = min(tessFactor1, _MaxTessellation);
+        //            f.edge[2] = min(tessFactor2, _MaxTessellation);
+        //            f.inside  = min((tessFactor0 + tessFactor1 + tessFactor2) * 0.333f, _MaxTessellation);
+        //        }
+        //        return f;
+        //    }
+        //
+        //    HULL_SHADER_ATTRIBUTES
+        //    TessellationControlPoint Hull_Shader(InputPatch<TessellationControlPoint, 3> patch, uint id : SV_OutputControlPointID)
+        //    {
+        //        return patch[id];
+        //    }
+        //
+        //    // Domain shader
+        //    [domain("tri")]
+        //    Interpolators Domain_Shader(TessellationFactors factors, OutputPatch<TessellationControlPoint, 3> patch, float3 barycentricCoordinates : SV_DomainLocation)
+        //    {
+        //        // We have to use "v" instead of "o" because it's hardcoded into unity's macros...
+        //        Interpolators v;
+        //
+        //        v.worldPos = BARYCENTRIC_INTERPOLATE(worldPos);
+        //        v.worldNormal = normalize(BARYCENTRIC_INTERPOLATE(worldNormal));
+        //        v.viewDir = BARYCENTRIC_INTERPOLATE(viewDir);
+        //        v.color = BARYCENTRIC_INTERPOLATE(color);
+        //        v.lightDir = BARYCENTRIC_INTERPOLATE(lightDir);
+        //        v.vertex = BARYCENTRIC_INTERPOLATE(vertex);
+        //
+        //        float terrainDistance = length(v.viewDir);
+        //        DO_WORLD_UV_CALCULATIONS(terrainDistance * 0.2, v.worldPos)
+        //
+        //        VertexBiplanarParams params;
+        //        GET_VERTEX_BIPLANAR_PARAMS(params, worldUVs, v.worldNormal);
+        //
+        //        // Defines 'displacedWorldPos' 
+        //        CALCULATE_VERTEX_DISPLACEMENT(v)
+        //        //TRANSFER_SHADOW(o);
+        //        v.pos = UnityWorldToClipPos(displacedWorldPos); 
+        //        
+        //        TRANSFER_VERTEX_TO_FRAGMENT(v);
+        //
+        //        return v;
+        //    }
+        //    fixed4 Frag_Shader (Interpolators i) : SV_Target
+        //    {   
+        //        i.worldNormal = normalize(i.worldNormal);
+        //        // Calculate scaling params
+        //        float terrainDistance = length(i.viewDir);
+        //
+        //        // Retrieve UV levels for texture sampling
+        //        DO_WORLD_UV_CALCULATIONS(terrainDistance * 0.2, i.worldPos)
+        //        
+        //        float3 viewDir = normalize(i.viewDir);
+        //        float3 lightDir = normalize(i.lightDir);
+        //
+        //        PixelBiplanarParams params;
+        //        GET_PIXEL_BIPLANAR_PARAMS(params, i.worldPos, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texScale0, texScale1);
+        //
+        //        fixed4 col = SampleBiplanarTexture(_MainTex, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+        //        float3 normal = SampleBiplanarNormal(_BumpMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+        //
+        //        float atten = LIGHT_ATTENUATION(i);
+        //        //UNITY_LIGHT_ATTENUATION(atten, i, i.worldPos.xyz);
+        //
+        //        float3 result = CalculateLighting(col, normal, viewDir, 1, lightDir) * atten;
+        //        //return atten;
+        //        return float4(result, atten);
+        //    }
+        //    ENDCG
+        //}
     }
     //FallBack "VertexLit"
 }

@@ -1,8 +1,18 @@
 #define eta 0.7519
 
 // Samplers
-sampler2D _MainTex;
-sampler2D _BumpMap;
+sampler2D _MainTexLow;
+sampler2D _BumpMapLow;
+
+sampler2D _MainTexMid;
+sampler2D _BumpMapMid;
+
+sampler2D _MainTexHigh;
+sampler2D _BumpMapHigh;
+
+sampler2D _MainTexSteep;
+sampler2D _BumpMapSteep;
+
 sampler2D _DisplacementMap;
 sampler2D _InfluenceMap;
 
