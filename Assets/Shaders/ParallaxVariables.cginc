@@ -22,6 +22,7 @@ float _BiplanarBlendFactor;
 float _Tiling;
 
 float _DisplacementScale;
+float _DisplacementOffset;
 
 // Slope params
 float _SteepPower;
@@ -31,6 +32,7 @@ float _SteepMidpoint;
 // Tessellation params
 float _MaxTessellation;
 float _TessellationEdgeLength;
+float _MaxTessellationRange;
 
 // Lighting params
 float _FresnelPower;

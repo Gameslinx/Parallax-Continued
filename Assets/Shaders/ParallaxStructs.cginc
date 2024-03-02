@@ -1,3 +1,5 @@
+// Upgrade NOTE: replaced 'defined TESSELLATION' with 'defined (TESSELLATION)'
+
 //
 //  Structs for parallax shader stages
 //
@@ -10,6 +12,17 @@
 // For anyone wondering, the _ after multi_compile tells unity the keyword is a toggle, and avoids creating variants "_ON" and "_OFF"
 #pragma multi_compile PARALLAX_SINGLE_LOW  PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
 #pragma multi_compile _ INFLUENCE_MAPPING
+#pragma multi_compile_fog
+
+
+#define HULL_SHADER_ATTRIBUTES                          \
+    [domain("tri")]                                     \
+    [outputcontrolpoints(3)]                            \
+    [outputtopology("triangle_cw")]                     \
+    [patchconstantfunc("PatchConstantFunction")]        \
+    [partitioning("fractional_odd")]                    
+
+
 
 //
 //  Patch Constant Struct
@@ -42,6 +55,7 @@
         float3 worldNormal : NORMAL;                \
         float3 viewDir : TEXCOORD1;                 \
         float3 color : COLOR;                       \
+        float4 landMask : TEXCOORD3;                \
     };
 
 #define PARALLAX_FORWARDBASE_STRUCT_INTERP          \
@@ -53,6 +67,7 @@
         float3 viewDir : TEXCOORD1;                 \
         float3 color : COLOR;                       \
         LIGHTING_COORDS(4, 5)                       \
+        UNITY_FOG_COORDS(6)                         \
     };
 
 //
@@ -71,9 +86,10 @@
     {                                               \
         float4 pos : SV_POSITION;                   \
         float4 vertex : TEXCOORD1;                  \
-        float3 normal : TEXCOORD2;                     \
+        float3 normal : TEXCOORD2;                  \
         float3 worldPos : INTERNALTESSPOS;          \
         float3 worldNormal : NORMAL;                \
+        float4 landMask : TEXCOORD3;                \
     };
 
 #define PARALLAX_SHADOW_CASTER_STRUCT_INTERP        \
@@ -108,7 +124,8 @@
         float3 worldNormal : NORMAL;                \
         float3 viewDir : TEXCOORD1;                 \
         float3 lightDir : TEXCOORD2;                \
-        float4 vertex : TEXCOORD3;                  \
+        float4 vertex : TEXCOORD4;                  \
+        float4 landMask : TEXCOORD3;                \
         float3 color : COLOR;                       \
     };
 

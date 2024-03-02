@@ -23,13 +23,6 @@
 #define TERRAIN_TEX_BLEND_FREQUENCY 0.2
 #define TERRAIN_TEX_BLEND_OFFSET    0.4
 
-#define HULL_SHADER_ATTRIBUTES                          \
-    [domain("tri")]                                     \
-    [outputcontrolpoints(3)]                            \
-    [outputtopology("triangle_cw")]                     \
-    [patchconstantfunc("PatchConstantFunction")]        \
-    [partitioning("fractional_odd")]                    
-
 // True if point is outside bounds defined by lower and higher
 bool IsOutOfBounds(float3 p, float3 lower, float3 higher)
 {
@@ -71,12 +64,23 @@ bool ShouldClipPatch(float4 cp0, float4 cp1, float4 cp2, float3 n0, float3 n1, f
     return allOutside || ShouldBackFaceCull(n0, n1, n2, wp0, wp1, wp2);
 }
 
+// Remap
+float Remap(float value, float fromMin, float fromMax, float toMin, float toMax)
+{
+    value = saturate((value - fromMin) / (fromMax - fromMin));
+    return lerp(toMin, toMax, value);
+}
+
 // Calculate factor from edge length
 // Vector inputs are world space
 float EdgeTessellationFactor(float scale, float bias, float3 p0World, float4 p0Clip, float3 p1World, float4 p1Clip)
 {
-    float factor = distance(p0Clip.xyz / p0Clip.w, p1Clip.xyz / p1Clip.w) * (float)_ScreenParams.y / scale;
-    return max(1, factor * 0.5 + bias);
+    float screenSpaceDistance = distance(p0Clip.xyz / p0Clip.w, p1Clip.xyz / p1Clip.w);
+    float factor = screenSpaceDistance * (float) _ScreenParams.y / scale;
+    float worldSpaceDistance = distance(_WorldSpaceCameraPos, (p0World + p1World) * 0.5);
+    float distanceScalingFactor = 1 - saturate(worldSpaceDistance / _MaxTessellationRange);
+
+    return max(1, factor * distanceScalingFactor);
 }
 
 //
@@ -100,9 +104,11 @@ float3 CalculatePhongPosition(float3 bary, float3 p0PositionWS, float3 p0NormalW
     return lerp(flatPositionWS, smoothedPositionWS, 0.333);
 }
 
-#define CALCULATE_VERTEX_DISPLACEMENT(o)                                                                                                                         \
-    float4 displacement = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, o.worldNormal, texLevelBlend);     \
-    float3 displacedWorldPos = o.worldPos + displacement.g * o.worldNormal * _DisplacementScale;
+#define CALCULATE_VERTEX_DISPLACEMENT(o, landMask)                                                                                                                            \
+    float dislacementRange = 1 - min(1, terrainDistance / _MaxTessellationRange);                                                                                   \
+    float4 displacementTex = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, o.worldNormal, texLevelBlend);                      \
+    float displacement = BLEND_CHANNELS_IN_TEX(landMask, displacementTex);                                                                                          \
+    float3 displacedWorldPos = o.worldPos + (displacement + _DisplacementOffset) * o.worldNormal * _DisplacementScale * dislacementRange;
 
 //
 //  Biplanar Mapping Functions
@@ -306,19 +312,29 @@ float GetPercentageAltitudeBetween(float altitude, float lowerLimit, float upper
 }
 
 // Get Blend Factors
-float3 GetAltitudeMask(float3 worldPos, float3 worldNormal, float altitude, float midpoint)
+float4 GetAltitudeMask(float3 worldPos, float3 worldNormal, float altitude, float midpoint)
 {
     float lowMidBlend = GetPercentageAltitudeBetween(altitude, _LowMidBlendStart, _LowMidBlendEnd);
     float midHighBlend = GetPercentageAltitudeBetween(altitude, _MidHighBlendStart, _MidHighBlendEnd);
     float slope = GetSlope(worldPos, worldNormal);
 
     // Land mask - Low-mid blend in red, mid-high blend in green, steep in blue
-    return float3(lowMidBlend, midHighBlend, slope);
+    return float4(lowMidBlend, midHighBlend, slope, midpoint);
 }
+
+// Get land mask macro
+float4 GetLandMask(float3 worldPos, float3 worldNormal)
+{
+    float altitude = length(worldPos - _PlanetOrigin) - _PlanetRadius;
+    float midpoint = altitude / (_MidHighBlendStart + _LowMidBlendEnd);
+    return GetAltitudeMask(worldPos, worldNormal, altitude, midpoint);
+}
+
+    
 
 // Blend textures based on landmask
 #define BLEND_ALL_TEXTURES(landMask, lowTex, midTex, highTex)                                                           \
-    lerp(lowTex, midTex, landMask.r) * (midpoint < 0.5) + lerp(midTex, highTex, landMask.g) * (midpoint >= 0.5);
+    lerp(lowTex, midTex, landMask.r) * (landMask.a < 0.5) + lerp(midTex, highTex, landMask.g) * (landMask.a >= 0.5);
 
 #define BLEND_TWO_TEXTURES(blend, tex1, tex2)                                                                    \
     lerp(tex1, tex2, blend);
@@ -389,30 +405,34 @@ float3 GetAltitudeMask(float3 worldPos, float3 worldNormal, float altitude, floa
 //  When some textures aren't being blended, their values are unused and anything is optimized out at compile time
 //
 
-#define BLEND_TWO_TEX(tex1, tex2, blend)    lerp(tex1, tex2, blend)
-
 #if defined (PARALLAX_SINGLE_LOW)
-    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex) lowTex
+    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex)   lowTex
+    #define BLEND_CHANNELS_IN_TEX(landMask, tex)                tex.r
 #endif
 
 #if defined (PARALLAX_SINGLE_MID)
-    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex) midTex
+    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex)   midTex
+    #define BLEND_CHANNELS_IN_TEX(landMask, tex)                tex.g
 #endif
 
 #if defined (PARALLAX_SINGLE_HIGH)
-    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex) highTex
+    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex)   highTex
+    #define BLEND_CHANNELS_IN_TEX(landMask, tex)                tex.b
 #endif
 
 #if defined (PARALLAX_DOUBLE_LOWMID)
-    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex) BLEND_TWO_TEXTURES(landMask.r, lowTex, midTex)
+    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex)   BLEND_TWO_TEXTURES(landMask.r, lowTex, midTex)
+    #define BLEND_CHANNELS_IN_TEX(landMask, tex)                BLEND_TWO_TEXTURES(landMask.r, tex.r, tex.g)
 #endif
 
 #if defined (PARALLAX_DOUBLE_MIDHIGH)
-    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex) BLEND_TWO_TEXTURES(landMask.g, midTex, highTex)
+    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex)   BLEND_TWO_TEXTURES(landMask.g, midTex, highTex)
+    #define BLEND_CHANNELS_IN_TEX(landMask, tex)                BLEND_TWO_TEXTURES(landMask.g, tex.g, tex.b)
 #endif
 
 #if defined (PARALLAX_FULL)
-    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex) BLEND_ALL_TEXTURES(landMask, lowTex, midTex, highTex)
+    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex)   BLEND_ALL_TEXTURES(landMask, lowTex, midTex, highTex)
+    #define BLEND_CHANNELS_IN_TEX(landMask, tex)                BLEND_ALL_TEXTURES(landMask, tex.r, tex.g, tex.b)
 #endif
 
 //
