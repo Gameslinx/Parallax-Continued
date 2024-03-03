@@ -1,0 +1,47 @@
+{
+  "format": 1,
+  "restore": {
+    "E:\\Productivity\\Unity\\Parallax Continued\\Mod Source\\Parallax\\Parallax.csproj": {}
+  },
+  "projects": {
+    "E:\\Productivity\\Unity\\Parallax Continued\\Mod Source\\Parallax\\Parallax.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "E:\\Productivity\\Unity\\Parallax Continued\\Mod Source\\Parallax\\Parallax.csproj",
+        "projectName": "Parallax",
+        "projectPath": "E:\\Productivity\\Unity\\Parallax Continued\\Mod Source\\Parallax\\Parallax.csproj",
+        "packagesPath": "C:\\Users\\tuvee\\.nuget\\packages\\",
+        "outputPath": "E:\\Productivity\\Unity\\Parallax Continued\\Mod Source\\Parallax\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\tuvee\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net48"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net48": {
+            "targetAlias": "net48",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "net48": {
+          "targetAlias": "net48",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.304\\RuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}
