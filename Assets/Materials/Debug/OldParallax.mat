@@ -2,15 +2,17 @@
 %TAG !u! tag:unity3d.com,2011:
 --- !u!21 &2100000
 Material:
-  serializedVersion: 8
+  serializedVersion: 6
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: OldParallax
   m_Shader: {fileID: 4800000, guid: c563e09c35107304ca4629f618645564, type: 3}
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_ShaderKeywords: INFLUENCE_MAPPING INFLUENCE_MAPPING_OFF PARALLAX_DOUBLE_LOWMID
+    PARALLAX_DOUBLE_LOWMID_OFF PARALLAX_DOUBLE_MIDHIGH PARALLAX_DOUBLE_MIDHIGH_OFF
+    PARALLAX_FULL PARALLAX_FULL_OFF PARALLAX_SINGLE_HIGH PARALLAX_SINGLE_HIGH_OFF
+    PARALLAX_SINGLE_LOW PARALLAX_SINGLE_LOW_ON PARALLAX_SINGLE_MID PARALLAX_SINGLE_MID_OFF
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -92,7 +94,6 @@ Material:
         m_Texture: {fileID: 2800000, guid: 5035656d647b7a242bf6e3099fb0239a, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    m_Ints: []
     m_Floats:
     - _BumpScale: 1
     - _Cutoff: 0.5
@@ -143,4 +144,3 @@ Material:
     - _PlanetOrigin: {r: 0, g: -1000, b: 0, a: 1}
     - _SpecColor: {r: 1, g: 1, b: 1, a: 1}
     - _SurfaceTextureUVs: {r: 0, g: 0, b: 0, a: 1}
-  m_BuildTextureStacks: []

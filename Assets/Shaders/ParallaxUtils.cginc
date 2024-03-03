@@ -408,31 +408,30 @@ float4 GetLandMask(float3 worldPos, float3 worldNormal)
 #if defined (PARALLAX_SINGLE_LOW)
     #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex)   lowTex
     #define BLEND_CHANNELS_IN_TEX(landMask, tex)                tex.r
-#endif
 
-#if defined (PARALLAX_SINGLE_MID)
+#elif defined (PARALLAX_SINGLE_MID)
     #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex)   midTex
     #define BLEND_CHANNELS_IN_TEX(landMask, tex)                tex.g
-#endif
 
-#if defined (PARALLAX_SINGLE_HIGH)
+#elif defined (PARALLAX_SINGLE_HIGH)
     #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex)   highTex
     #define BLEND_CHANNELS_IN_TEX(landMask, tex)                tex.b
-#endif
 
-#if defined (PARALLAX_DOUBLE_LOWMID)
+#elif defined (PARALLAX_DOUBLE_LOWMID)
     #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex)   BLEND_TWO_TEXTURES(landMask.r, lowTex, midTex)
     #define BLEND_CHANNELS_IN_TEX(landMask, tex)                BLEND_TWO_TEXTURES(landMask.r, tex.r, tex.g)
-#endif
 
-#if defined (PARALLAX_DOUBLE_MIDHIGH)
+#elif defined (PARALLAX_DOUBLE_MIDHIGH)
     #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex)   BLEND_TWO_TEXTURES(landMask.g, midTex, highTex)
     #define BLEND_CHANNELS_IN_TEX(landMask, tex)                BLEND_TWO_TEXTURES(landMask.g, tex.g, tex.b)
-#endif
 
-#if defined (PARALLAX_FULL)
+#elif defined (PARALLAX_FULL)
     #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex)   BLEND_ALL_TEXTURES(landMask, lowTex, midTex, highTex)
     #define BLEND_CHANNELS_IN_TEX(landMask, tex)                BLEND_ALL_TEXTURES(landMask, tex.r, tex.g, tex.b)
+#else
+    // No keywords defined, fallback to low - But because of unused texture set, this will be black
+    #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex)   lowTex
+    #define BLEND_CHANNELS_IN_TEX(landMask, tex)                tex.r
 #endif
 
 //

@@ -2,17 +2,14 @@
 %TAG !u! tag:unity3d.com,2011:
 --- !u!21 &2100000
 Material:
-  serializedVersion: 8
+  serializedVersion: 6
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: ParallaxMaterial
   m_Shader: {fileID: 4800000, guid: b9860552776eb2c4f998cf8c4044ee5a, type: 3}
-  m_ValidKeywords: []
-  m_InvalidKeywords:
-  - PARALLAX_SHADER_VARIANT_PARALLAX_SINGLE
-  - _PARALLAX_SHADER_VARIANT_PARALLAX_SINGLE
+  m_ShaderKeywords: PARALLAX_SINGLE_LOW
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -51,6 +48,10 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DetailNormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DispTex:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -98,7 +99,22 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    m_Ints: []
+    - _SteepTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SurfaceTexture:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SurfaceTextureHigh:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SurfaceTextureMid:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Floats:
     - PARALLAX_SHADER_VARIANT: 0
     - PARALLAX_SINGLE: 0
@@ -110,23 +126,35 @@ Material:
     - _DisplacementScale: 0.051
     - _DstBlend: 0
     - _EnvironmentMapFactor: 0.56
+    - _FadeEnd: 9000
+    - _FadeStart: 6000
     - _FresnelPower: 0.7
+    - _Gloss: 0.2
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
+    - _Hapke: 1
+    - _HasEmission: 0
+    - _HighEnd: 3
+    - _HighStart: 2
+    - _LowEnd: 1
     - _LowMidBlendEnd: -0.2
     - _LowMidBlendStart: -0.3
+    - _LowStart: 0
     - _MaxTessellation: 32
-    - _MaxTessellationRange: 9.6
+    - _MaxTessellationRange: 7.6
     - _Metallic: 0
     - _MidHighBlendEnd: 1.3
     - _MidHighBlendStart: 0.86
     - _Mode: 0
+    - _NormalSpecularInfluence: 1
     - _OcclusionStrength: 1
     - _PARALLAX_SHADER_VARIANT: 0
     - _Parallax: 0.02
+    - _PlanetOpacity: 1
     - _PlanetRadius: 1000
     - _RefractionIntensity: 0
+    - _Shininess: 10
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SpecularIntensity: 0.52
@@ -135,14 +163,24 @@ Material:
     - _SteepContrast: 2.62
     - _SteepMidpoint: 0.81
     - _SteepPower: 7.18
+    - _Strength: 4
     - _TessellationEdgeLength: 5
     - _TessellationFactor: 1
+    - _TessellationMax: 64
+    - _TessellationRange: 99
     - _Tiling: 0.1
     - _UVSec: 0
     - _ZWrite: 1
+    - _displacement_offset: 0
+    - _displacement_scale: 1
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Debug: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _FresnelColor: {r: 0, g: 0, b: 0, a: 1}
+    - _LightPos: {r: 0, g: 0, b: 0, a: 1}
+    - _MetallicTint: {r: 0, g: 0, b: 0, a: 1}
     - _PlanetOrigin: {r: 0, g: -1000, b: 0, a: 1}
+    - _SpecColor: {r: 1, g: 1, b: 1, a: 1}
+    - _SurfaceTextureUVs: {r: 0, g: 0, b: 0, a: 1}
     - _TerrainShaderOffset: {r: 0, g: 0, b: 0, a: 1}
-  m_BuildTextureStacks: []

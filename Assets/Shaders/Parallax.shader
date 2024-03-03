@@ -88,6 +88,17 @@ Shader "Custom/Parallax"
             Tags { "LightMode" = "ForwardBase" }
             CGPROGRAM
 
+            // Single:  One surface texture
+            // Double:  Blend between two altitude based textures
+            // Full:    Blend between three altitude based textures
+            // All have slope based textures
+
+            // For anyone wondering, the _ after multi_compile tells unity the keyword is a toggle, and avoids creating variants "_ON" and "_OFF"
+            // I would move this to ParallaxStructs.cginc but as we're on unity 2019 you can't have preprocessor directives in cgincludes. Sigh
+            #pragma multi_compile PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
+            #pragma multi_compile _ INFLUENCE_MAPPING
+            #pragma multi_compile_fog
+
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
@@ -180,7 +191,7 @@ Shader "Custom/Parallax"
                 GET_VERTEX_BIPLANAR_PARAMS(params, worldUVs, o.worldNormal);
 
                 // Defines 'displacedWorldPos'
-                CALCULATE_VERTEX_DISPLACEMENT(o, landMask)
+                CALCULATE_VERTEX_DISPLACEMENT(o, landMask);
                 o.pos = UnityWorldToClipPos(displacedWorldPos);
             
                 TRANSFER_VERTEX_TO_FRAGMENT(o);
@@ -253,6 +264,10 @@ Shader "Custom/Parallax"
             Tags { "LightMode" = "ShadowCaster" }
             CGPROGRAM
         
+            #pragma multi_compile PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
+            #pragma multi_compile INFLUENCE_MAPPING
+            #pragma multi_compile_fog
+
             #define PARALLAX_SHADOW_CASTER_PASS
         
             #pragma vertex Vertex_Shader
@@ -364,6 +379,9 @@ Shader "Custom/Parallax"
             BlendOp Add
             CGPROGRAM
         
+            #pragma multi_compile PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
+            #pragma multi_compile INFLUENCE_MAPPING
+            #pragma multi_compile_fog
             #pragma multi_compile_fwdadd_fullshadows
         
             #pragma vertex Vertex_Shader

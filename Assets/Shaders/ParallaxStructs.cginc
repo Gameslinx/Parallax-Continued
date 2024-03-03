@@ -4,17 +4,6 @@
 //  Structs for parallax shader stages
 //
 
-// Single:  One surface texture
-// Double:  Blend between two altitude based textures
-// Full:    Blend between three altitude based textures
-// All have slope based textures
-
-// For anyone wondering, the _ after multi_compile tells unity the keyword is a toggle, and avoids creating variants "_ON" and "_OFF"
-#pragma multi_compile PARALLAX_SINGLE_LOW  PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
-#pragma multi_compile _ INFLUENCE_MAPPING
-#pragma multi_compile_fog
-
-
 #define HULL_SHADER_ATTRIBUTES                          \
     [domain("tri")]                                     \
     [outputcontrolpoints(3)]                            \

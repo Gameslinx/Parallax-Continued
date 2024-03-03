@@ -5,25 +5,21 @@ using UnityEditor;
 using UnityEditor.PackageManager.UI;
 using System.Reflection;
 using System.Linq;
+using UnityEngine.Rendering;
 
 public class KeywordsMenu : EditorWindow
 {
     private static KeywordsMenu mWindow;
     public static Material parallaxMaterial;
     public static Material lastParallaxMaterial;
-    static MethodInfo keywordMethodInfo;
-    string[] allKeywordNames;
-    string[] ignoredKeywords = {"DIRECTIONAL", "DIRECTIONAL_COOKIE", "DIRLIGHTMAP_COMBINED", "DYNAMICLIGHTMAP_ON", "LIGHTMAP_ON", "LIGHTMAP_SHADOW_MIXING", "LIGHTPROBE_SH", "POINT", "POINT_COOKIE",
-                                "SHADOWS_CUBE", "SHADOWS_DEPTH", "SHADOWS_SCREEN", "SHADOWS_SHADOWMASK", "SHADOWS_SOFT", "SPOT", "STEREO_CUBEMAP_RENDER_ON", "STEREO_INSTANCING_ON", "STEREO_MULTIVIEW_ON",
-                                "UNITY_SINGLE_PASS_STEREO", "VERTEXLIGHT_ON" };
-    Dictionary<string, bool> shaderKeywords = new Dictionary<string, bool>();
+    static Dictionary<string, bool> shaderKeywords = new Dictionary<string, bool>();
+    static List<string> storedKeywords = new List<string>();
 
     [MenuItem("Parallax/Edit Shader Keywords")]
     private static void Initialize()
     {
         mWindow = GetWindow<KeywordsMenu>("Edit Parallax Shader Keywords");
         mWindow.Show();
-        keywordMethodInfo = typeof(ShaderUtil).GetMethod("GetShaderGlobalKeywords", BindingFlags.Static | BindingFlags.NonPublic);
     }
     public void OnGUI()
     {
@@ -34,37 +30,60 @@ public class KeywordsMenu : EditorWindow
         {
             return;
         }
-        if (lastParallaxMaterial != parallaxMaterial)
+        string[] allEnabled = parallaxMaterial.shaderKeywords;
+        for (int i = 0; i < allEnabled.Length; i++)
         {
-            keywordMethodInfo = typeof(ShaderUtil).GetMethod("GetShaderGlobalKeywords", BindingFlags.Static | BindingFlags.NonPublic);
-            lastParallaxMaterial = parallaxMaterial;
-            Shader shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/Shaders/Parallax.shader");
-            allKeywordNames = (string[])keywordMethodInfo.Invoke(null, new object[] { shader });
-            shaderKeywords = new Dictionary<string, bool>();
-            for (int i = 0; i < allKeywordNames.Length; i++)
-            {
-                if (!ignoredKeywords.Contains(allKeywordNames[i]))
-                {
-                    shaderKeywords.Add(allKeywordNames[i], false);
-                }
-            }
+            Debug.Log(allEnabled[i]);
         }
-
-        int numKeywords = shaderKeywords.Count;
-        string[] keys = shaderKeywords.Keys.ToArray();
-        for (int i = 0; i < numKeywords; i++) 
+        if (parallaxMaterial != lastParallaxMaterial)
         {
-            EditorGUIUtility.labelWidth = 300;
-            shaderKeywords[keys[i]] = EditorGUILayout.Toggle(keys[i] + "", shaderKeywords[keys[i]]);
+            lastParallaxMaterial = parallaxMaterial;
 
-            if (shaderKeywords[keys[i]] == true)
-            {
-                parallaxMaterial.EnableKeyword(keys[i]);
-            }
-            else
+            storedKeywords.Clear();
+            shaderKeywords.Clear();
+
+            DefineAllKeywords();
+            AddAllKeywords();
+        }
+        string[] keys = shaderKeywords.Keys.ToArray();
+        for (int i = 0; i < keys.Length; i++)
+        {
+            shaderKeywords[keys[i]] = EditorGUILayout.Toggle(keys[i] + "", shaderKeywords[keys[i]]);
+            if (shaderKeywords[keys[i]] == false) 
             {
                 parallaxMaterial.DisableKeyword(keys[i]);
             }
+            else
+            {
+                parallaxMaterial.EnableKeyword(keys[i]);
+
+            }
+        }
+
+        //string[] allEnabled = parallaxMaterial.shaderKeywords;
+        //for (int i = 0; i < allEnabled.Length; i++)
+        //{
+        //    Debug.Log(allEnabled[i]);
+        //}
+    }
+    public static void DefineAllKeywords()
+    {
+        storedKeywords.Add("INFLUENCE_MAPPING");
+
+        storedKeywords.Add("PARALLAX_SINGLE_LOW");
+        storedKeywords.Add("PARALLAX_SINGLE_MID");
+        storedKeywords.Add("PARALLAX_SINGLE_HIGH");
+
+        storedKeywords.Add("PARALLAX_DOUBLE_LOWMID");
+        storedKeywords.Add("PARALLAX_DOUBLE_MIDHIGH");
+
+        storedKeywords.Add("PARALLAX_FULL");
+    }
+    public static void AddAllKeywords()
+    {
+        foreach(string key in storedKeywords)
+        {
+            shaderKeywords.Add(key, false);
         }
     }
 }

@@ -1,3 +1,0 @@
-# Parallax Continued
-
-License: ARR

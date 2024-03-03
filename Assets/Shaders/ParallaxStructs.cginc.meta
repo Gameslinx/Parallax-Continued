@@ -1,7 +1,9 @@
 fileFormatVersion: 2
 guid: cfe12a0ffe291a043bc40e93eabdb470
-ShaderIncludeImporter:
+ShaderImporter:
   externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
   userData: 
-  assetBundleName: parallax
+  assetBundleName: 
   assetBundleVariant: 
