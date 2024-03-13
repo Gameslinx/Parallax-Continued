@@ -30,11 +30,6 @@ public class KeywordsMenu : EditorWindow
         {
             return;
         }
-        string[] allEnabled = parallaxMaterial.shaderKeywords;
-        for (int i = 0; i < allEnabled.Length; i++)
-        {
-            Debug.Log(allEnabled[i]);
-        }
         if (parallaxMaterial != lastParallaxMaterial)
         {
             lastParallaxMaterial = parallaxMaterial;

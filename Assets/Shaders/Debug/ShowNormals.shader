@@ -56,6 +56,8 @@ Shader "Custom/ShowNormals"
             {
                 fixed4 col = tex2D(_MainTex, i.uv);
 
+                return float4(i.worldNormal, 1);
+
                 float3 normal = UnpackNormal(tex2D(_BumpMap, i.uv.xy * 40 * float2(2, 1)));
                 normal.xy *= 1;
                 normal.z = sqrt(max(0, 1 - normal.x * normal.x - normal.y * normal.y));

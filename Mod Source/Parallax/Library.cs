@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -9,6 +10,12 @@ using static GameEvents;
 
 namespace Parallax
 {
+    public class Variance
+    {
+        public string Prop { get; set; }
+        public object valA { get; set; }
+        public object valB { get; set; }
+    }
     // Debug logging with "[Parallax]"
     public static class ParallaxDebug
     {
@@ -22,7 +29,7 @@ namespace Parallax
         }
         public static void LogParseError(string name, string planetName, string type, string value)
         {
-            ParallaxDebug.LogError("Error parsing " + name + " on planet: " + planetName + " - Tried parsing as a " + type + " but no matching conversion was found. Value = " + value);
+            LogError("Error parsing " + name + " on planet: " + planetName + " - Tried parsing as a " + type + " but no matching conversion was found. Value = " + value);
         }
     }
     // Config loader try-parse vars

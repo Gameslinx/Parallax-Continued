@@ -125,7 +125,7 @@ Material:
     - _DisplacementOffset: -0.33
     - _DisplacementScale: 0.051
     - _DstBlend: 0
-    - _EnvironmentMapFactor: 0.56
+    - _EnvironmentMapFactor: 1
     - _FadeEnd: 9000
     - _FadeStart: 6000
     - _FresnelPower: 0.7
@@ -157,8 +157,8 @@ Material:
     - _Shininess: 10
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
-    - _SpecularIntensity: 0.52
-    - _SpecularPower: 11
+    - _SpecularIntensity: 1.09
+    - _SpecularPower: 23
     - _SrcBlend: 1
     - _SteepContrast: 2.62
     - _SteepMidpoint: 0.81

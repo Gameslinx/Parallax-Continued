@@ -265,10 +265,6 @@ float3 SampleBiplanarNormal(sampler2D tex, PixelBiplanarParams params, float3 wo
     float3 x = lerp(x0, x1, blend) * 2;
     float3 y = lerp(y0, y1, blend) * 2;
     
-    // Don't include this in the final build!
-    x.g *= -1;
-    y.g *= -1;
-    
     // Swizzle axes depending on plane
     x = normalize(float3(x.y + worldNormal[params.ma.z], x.x + worldNormal[params.ma.y], worldNormal[params.ma.x]));
     y = normalize(float3(y.y + worldNormal[params.me.z], y.x + worldNormal[params.me.y], worldNormal[params.me.x]));

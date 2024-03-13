@@ -128,7 +128,7 @@ Material:
     - _SteepPower: 7
     - _Strength: 4
     - _TessellationEdgeLength: 25
-    - _TessellationMax: 4
+    - _TessellationMax: 64
     - _TessellationRange: 5.6
     - _UVSec: 0
     - _ZWrite: 1

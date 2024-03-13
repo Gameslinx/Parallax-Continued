@@ -21,6 +21,15 @@ namespace Parallax
         // Holds global settings defined in ParallaxGlobalSettings.cfg
         public static ParallaxSettings parallaxGlobalSettings = new ParallaxSettings();
 
+        // Stores all parallax bodies by planet name
+        public static Dictionary<string, ParallaxBody> parallaxBodies = new Dictionary<string, ParallaxBody>();
+
+        // Stores transparent material for terrain quads
+        public static Material transparentMaterial;
+
+        // Debug wireframe material
+        public static Material wireframeMaterial;
+
         // Configs that start with 'Parallax' as the root node
         public UrlDir.UrlConfig globalNode;
         public void Awake()
@@ -35,6 +44,11 @@ namespace Parallax
             InitializeGlobalSettings(GetConfigByName("ParallaxGlobal"));
             InitializeTemplateConfigs(GetConfigByName("ParallaxShaderProperties"));
             LoadConfigs(GetConfigsByName("Parallax"));
+
+            transparentMaterial = new Material(Shader.Find("Unlit/Transparent"));
+            transparentMaterial.SetTexture("_MainTex", Resources.FindObjectsOfTypeAll<Texture>().FirstOrDefault(t => t.name == "Parallax/BlankAlpha"));
+
+            wireframeMaterial = new Material(AssetBundleLoader.parallaxTerrainShaders["Custom/Wireframe"]);
         }
         public static UrlDir.UrlConfig[] GetConfigsByName(string name)
         {
@@ -59,7 +73,7 @@ namespace Parallax
             ConfigNode floatsNode = nodes.GetNode("Floats");
             ConfigNode vectorsNode = nodes.GetNode("Vectors");
             ConfigNode colorsNode = nodes.GetNode("Colors");
-
+            
             string[] texturesNames = texturesNode.GetValues("name");
             string[] floatsNames = floatsNode.GetValues("name");
             string[] vectorsNames = vectorsNode.GetValues("name");
@@ -96,6 +110,8 @@ namespace Parallax
                     // TODO: Add emissive support here
                     ParallaxBody body = new ParallaxBody(planetName);
                     ParseNewBody(body, planetNode.GetNode("ShaderProperties"));
+                    body.LoadInitial();
+                    parallaxBodies.Add(planetName, body);
                 }
             }
         }
@@ -117,7 +133,7 @@ namespace Parallax
                 string configValue = bodyNode.GetValue(propertyName);
                 ParallaxDebug.Log("Parsing texture name: " + configValue);
                 ParallaxDebug.Log("Property name: " + propertyName);
-                shaderPropertiesTemplate.shaderTextures[propertyName] = configValue;
+                body.terrainShaderProperties.shaderTextures[propertyName] = configValue;
             }
             foreach (string propertyName in floatProperties)
             {
@@ -126,7 +142,7 @@ namespace Parallax
                 ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(float), out result);
                 ParallaxDebug.Log("Parsing float name: " + configValue);
                 ParallaxDebug.Log("Property name: " + propertyName);
-                shaderPropertiesTemplate.shaderFloats[propertyName] = (float)result;
+                body.terrainShaderProperties.shaderFloats[propertyName] = (float)result;
             }
             foreach (string propertyName in vectorProperties)
             {
@@ -135,7 +151,7 @@ namespace Parallax
                 ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(Vector3), out result);
                 ParallaxDebug.Log("Parsing vector name: " + configValue);
                 ParallaxDebug.Log("Property name: " + propertyName);
-                shaderPropertiesTemplate.shaderVectors[propertyName] = (Vector3)result;
+                body.terrainShaderProperties.shaderVectors[propertyName] = (Vector3)result;
             }
             foreach (string propertyName in colorProperties)
             {
@@ -144,8 +160,12 @@ namespace Parallax
                 ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(Color), out result);
                 ParallaxDebug.Log("Parsing color name: " + configValue);
                 ParallaxDebug.Log("Property name: " + propertyName);
-                shaderPropertiesTemplate.shaderColors[propertyName] = (Color)result;
+                body.terrainShaderProperties.shaderColors[propertyName] = (Color)result;
             }
+        }
+        void OnDestroy()
+        {
+
         }
     }
 }
