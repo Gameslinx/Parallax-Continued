@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TreeEditor;
 using UnityEngine;
+using static UnityEngine.GraphicsBuffer;
 
 namespace Parallax
 {
@@ -274,7 +275,6 @@ namespace Parallax
         public void SubdivideAndAppendTriangle(SubdividableTriangle triangle, int subdivisionLevel, Vector3 target, int maxSubdivisionLevel)
         {
             subdividedTris.Clear();
-            triangle.SetupInitialDistances(target);
             triangle.Subdivide(subdividedTris, subdivisionLevel, target, maxSubdivisionLevel);
 
             for (int i = 0; i < subdividedTris.Count; i++)
@@ -340,23 +340,25 @@ namespace Parallax
             child.Clear();
 
             SubdividableTriangle tri;
-            float distance = 0;
             Vector3 mousePos = transform.InverseTransformPoint(GetMousePosInWorld());
             for (int i = 0; i < triangles.Length; i++)
             {
                 tri = triangles[i];
-                distance = Vector3.Distance(tri.center, mousePos);
                 int maxSubdivisionLevel = 6;
-                int subdivisionLevel = (int)Mathf.Lerp(maxSubdivisionLevel, 0, Mathf.Clamp01(distance / 10.0f));
-                if (subdivisionLevel > 0)
-                {
+                
+                // Setup initial distances for linear interpolation
+                tri.SetupInitialDistances(mousePos);
+                //int subdivisionLevel = (int)Mathf.Lerp(maxSubdivisionLevel, 0, Mathf.Clamp01(distance / 10.0f));
+
+                //if (subdivisionLevel > 0)
+                //{
                     // With reducing distance from center, level starts at maxSubdivisionLevel and goes down
                     parent.SubdivideAndAppendTriangle(tri, 0, mousePos, maxSubdivisionLevel);
-                }
-                else
-                {
-                    parent.AppendTriangle(tri);
-                }
+                //}
+                //else
+                //{
+                //    parent.AppendTriangle(tri);
+                //}
             }
             DebugNoiseMesh();
             SetMeshData();
