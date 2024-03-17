@@ -127,6 +127,7 @@ public struct ConstructMeshJob : IJobParallelFor
     // Stores our subdivided triangles
     public NativeStream.Reader triArray;
 
+    // See comment in code body for reason
     [NativeDisableContainerSafetyRestriction]
     public NativeArray<float3> newVerts;
     [NativeDisableContainerSafetyRestriction]
@@ -191,6 +192,7 @@ public struct ReadMeshTriangleDataJob : IJobParallelFor
         // We must read back triangles in threes
         for (int i = 0; i < itemsInLocalStream; i += 3)
         {
+            // Compute output array index
             int zone = Interlocked.Add(ref InterlockedCounters.triangleReadbackCounter, 3);
             outputTris[zone] = newTris.Read<int>();
             outputTris[zone + 1] = newTris.Read<int>();
