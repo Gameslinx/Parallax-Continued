@@ -637,9 +637,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   newTris: 
-  newVerts: []
-  newNormals: []
-  newColors: []
+  newVerts1: []
+  newNormals1: []
+  newColors1: []
 --- !u!1 &1990325626
 GameObject:
   m_ObjectHideFlags: 0

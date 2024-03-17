@@ -223,6 +223,8 @@ namespace Parallax
         public List<Vector3> newVerts = new List<Vector3>(22000);
         public List<Vector3> newNormals = new List<Vector3>(22000);
         public List<Color> newColors = new List<Color>(22000);
+
+        public Vector3[] newVerts2;
         public void AppendTriangle(SubdividableTriangle tri)
         {
             int index1;
@@ -238,28 +240,68 @@ namespace Parallax
             newTris.Add(index3);
         }
         List<SubdividableTriangle> subdividedTris = new List<SubdividableTriangle>();
-        public void SubdivideAndAppendTriangle(SubdividableTriangle triangle, int subdivisionLevel, Vector3 target, int maxSubdivisionLevel, float dist1, float dist2, float dist3)
+        public void RemoveVertexPairs()
         {
-            subdividedTris.Clear();
-            triangle.Subdivide(subdividedTris, subdivisionLevel, target, maxSubdivisionLevel, dist1, dist2, dist3);
-
-            int count = newVertexIndices.Count - 1;
-
-            for (int i = 0; i < subdividedTris.Count; i++)
+            newVertexIndices.Clear();
+            Debug.Log("Subdivided tri length: " + subdividedTris.Count);
+            foreach (SubdividableTriangle tri in subdividedTris)
             {
-                SubdividableTriangle tri = subdividedTris[i];
-                int index1;
-                int index2;
-                int index3;
+                newVertexIndices.TryAdd(tri.v1, newVertexIndices.Count);
+                newVertexIndices.TryAdd(tri.v2, newVertexIndices.Count);
+                newVertexIndices.TryAdd(tri.v3, newVertexIndices.Count);
+            }
+            newVerts2 = new Vector3[newVertexIndices.Count];
+            Debug.Log("nvI length = " + newVertexIndices.Count);
+        }
+        public void ConstructMesh()
+        {
+            foreach (SubdividableTriangle triangle in subdividedTris)
+            {
+                int index1 = newVertexIndices[triangle.v1];
+                int index2 = newVertexIndices[triangle.v2];
+                int index3 = newVertexIndices[triangle.v3];
 
-                if (newVertexIndices.TryAdd(tri.v1, count + 1)) { count++; index1 = count; newVerts.Add(tri.v1); newNormals.Add(tri.n1); newColors.Add(tri.c1); } else { index1 = newVertexIndices[tri.v1]; }
-                if (newVertexIndices.TryAdd(tri.v2, count + 1)) { count++; index2 = count; newVerts.Add(tri.v2); newNormals.Add(tri.n2); newColors.Add(tri.c2); } else { index2 = newVertexIndices[tri.v2]; }
-                if (newVertexIndices.TryAdd(tri.v3, count + 1)) { count++; index3 = count; newVerts.Add(tri.v3); newNormals.Add(tri.n3); newColors.Add(tri.c3); } else { index3 = newVertexIndices[tri.v3]; }
+                newVerts2[index1] = triangle.v1;
+                newVerts2[index2] = triangle.v2;
+                newVerts2[index3] = triangle.v3;
 
                 newTris.Add(index1);
                 newTris.Add(index2);
                 newTris.Add(index3);
             }
+        }
+        public void SubdivideAndAppendTriangles(SubdividableTriangle[] triangles, int subdivisionLevel, Vector3 target, int maxSubdivisionLevel)
+        {
+            subdividedTris.Clear();
+            for (int i = 0; i < triangles.Length; i++)
+            {
+                SubdividableTriangle tri = triangles[i];
+                //int maxSubdivisionLevel = 6;
+                float dist1 = Mathf.Clamp01(Vector3.Distance(tri.v1, target) / 10.0f);
+                float dist2 = Mathf.Clamp01(Vector3.Distance(tri.v2, target) / 10.0f);
+                float dist3 = Mathf.Clamp01(Vector3.Distance(tri.v3, target) / 10.0f);
+
+                triangles[i].Subdivide(subdividedTris, subdivisionLevel, target, maxSubdivisionLevel, dist1, dist2, dist3);
+            }
+            
+
+            //int count = newVertexIndices.Count - 1;
+            //
+            //for (int i = 0; i < subdividedTris.Count; i++)
+            //{
+            //    SubdividableTriangle tri = subdividedTris[i];
+            //    int index1;
+            //    int index2;
+            //    int index3;
+            //
+            //    if (newVertexIndices.TryAdd(tri.v1, count + 1)) { count++; index1 = count; newVerts.Add(tri.v1); newNormals.Add(tri.n1); newColors.Add(tri.c1); } else { index1 = newVertexIndices[tri.v1]; }
+            //    if (newVertexIndices.TryAdd(tri.v2, count + 1)) { count++; index2 = count; newVerts.Add(tri.v2); newNormals.Add(tri.n2); newColors.Add(tri.c2); } else { index2 = newVertexIndices[tri.v2]; }
+            //    if (newVertexIndices.TryAdd(tri.v3, count + 1)) { count++; index3 = count; newVerts.Add(tri.v3); newNormals.Add(tri.n3); newColors.Add(tri.c3); } else { index3 = newVertexIndices[tri.v3]; }
+            //
+            //    newTris.Add(index1);
+            //    newTris.Add(index2);
+            //    newTris.Add(index3);
+            //}
         }
         public void Clear()
         {
@@ -319,16 +361,17 @@ namespace Parallax
             Vector3 mousePos = transform.InverseTransformPoint(GetMousePosInWorld());
             for (int i = 0; i < triangles.Length; i++)
             {
-                tri = triangles[i];
-                //int maxSubdivisionLevel = 6;
-                float dist1 = Mathf.Clamp01(Vector3.Distance(tri.v1, mousePos) / subdivisionRange);
-                float dist2 = Mathf.Clamp01(Vector3.Distance(tri.v2, mousePos) / subdivisionRange);
-                float dist3 = Mathf.Clamp01(Vector3.Distance(tri.v3, mousePos) / subdivisionRange);
+                
 
                 // With reducing distance from center, level starts at maxSubdivisionLevel and goes down
-                parent.SubdivideAndAppendTriangle(tri, 0, mousePos, maxSubdivisionLevel, dist1, dist2, dist3);
+                
                 //parent.AppendTriangle(tri);
             }
+            parent.SubdivideAndAppendTriangles(triangles, 0, mousePos, maxSubdivisionLevel);
+
+            parent.RemoveVertexPairs();
+            parent.ConstructMesh();
+
             DebugNoiseMesh();
             SetMeshData();
         }
@@ -383,10 +426,10 @@ namespace Parallax
         void SetMeshData()
         {
             currentMesh.Clear();
-            currentMesh.SetVertices(parent.newVerts);
+            currentMesh.SetVertices(parent.newVerts2);
             currentMesh.triangles = parent.newTris.ToArray();
-            currentMesh.SetNormals(parent.newNormals);
-            currentMesh.SetColors(parent.newColors);
+            //currentMesh.SetNormals(parent.newNormals);
+            //currentMesh.SetColors(parent.newColors);
         }
         void Restore()
         {

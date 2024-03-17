@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 
 [BurstCompile]
@@ -18,13 +20,6 @@ public struct SubdivideMeshJob : IJobParallelFor
 
     // subdividableTRIS
     public NativeStream.Writer tris;
-
-    [NativeDisableParallelForRestriction]
-    [NativeDisableContainerSafetyRestriction]
-    public NativeHashMap<Vector3, int> funny;
-    [WriteOnly]
-    [NativeDisableContainerSafetyRestriction]
-    public NativeHashMap<Vector3, int>.ParallelWriter funnyWriter;
 
     public Vector3 target;
     public float sqrSubdivisionRange;
@@ -45,8 +40,6 @@ public struct SubdivideMeshJob : IJobParallelFor
         // With reducing distance from center, level starts at maxSubdivisionLevel and goes down
         meshTriangle.Subdivide(ref tris, 0, target, maxSubdivisionLevel, dist1, dist2, dist3);
         tris.EndForEachIndex();
-
-        if (funnyWriter.TryAdd(Vector3.one * index, 4)) { } else { int index2 = funny[Vector3.one * index]; };
     }
     float SqrDistance(Vector3 d1, Vector3 d2)
     {
@@ -73,69 +66,136 @@ public struct SubdivideMeshJob : IJobParallelFor
         }
     }
 }
-// Read tris back from a NativeStream, and we don't care what order the data is in
-[BurstCompile]
-public struct ReadTrisJob : IJobParallelFor
+
+// Interlocked add does not work as expected inside a job, it must be referenced from outside
+
+//////////////////////////////
+//                          //
+//  EXTREMELY IMPORTANT!!!  //
+//                          //
+//////////////////////////////
+
+// These MUST be reset when a job is NOT executing and accessing it!
+public static class InterlockedCounters
 {
-    [ReadOnly] public NativeStream.Reader inputStream;
-    [NativeDisableParallelForRestriction]
-    public NativeArray<SubdividableTriangle> resultArray;
-    public int arrayIndex;
-    public void Execute(int index)
-    {
-        int index2 = inputStream.BeginForEachIndex(index);
-        for (int i = 0; i < index2; i++)
-        {
-            //int resultIntex = Interlocked.Increment(ref arrayIndex);
-            resultArray[Interlocked.Increment(ref arrayIndex)] = inputStream.Read<SubdividableTriangle>();
-        }
-        
-        // Fill the array with SubdividableTriangles - much faster than doing .ToArray() on main
-        inputStream.EndForEachIndex();
-    }
+    public static int triangleReadbackCounter = -3;
 }
 
+// We need to remove vertex pairs and also assign indices to the vertices
+// We can't do this in parallel. Womp womp.
+// This is by far the worst performing part of the parallel subdivision :(
+// Any help greatly appreciated
+[BurstCompile]
+public struct RemoveVertexPairsJob : IJob
+{
+    public NativeStream.Reader triReader;
+    public NativeHashMap<Vector3, int> vertices;
+    public int foreachCount;
+    public int count;
+    public void Execute()
+    {
+        // Read the value of the count right now
+        for (int index = 0; index < foreachCount; index++)
+        {
+            int itemsInLocalStream = triReader.BeginForEachIndex(index);
+
+            for (int i = 0; i < itemsInLocalStream; i++)
+            {
+                SubdividableTriangle val = triReader.Read<SubdividableTriangle>();
+                if (vertices.TryAdd(val.v1, count + 1))
+                {
+                    count++;
+                }
+                if (vertices.TryAdd(val.v2, count + 1))
+                {
+                    count++;
+                }
+                if (vertices.TryAdd(val.v3, count + 1))
+                {
+                    count++;
+                }
+            }
+
+            triReader.EndForEachIndex();
+        }
+    }
+}
+[BurstCompile]
 public struct ConstructMeshJob : IJobParallelFor
 {
     // Stores our subdivided triangles
-    NativeStream.Reader triArray;
+    public NativeStream.Reader triArray;
 
-    NativeStream.Writer newVerts;
-    NativeStream.Writer newNormals;
-    NativeStream.Writer newColors;
-
-    NativeStream.Writer newTris;
-
-    // The ~danger zone~
-    [NativeDisableParallelForRestriction]
     [NativeDisableContainerSafetyRestriction]
-    public NativeHashMap<Vector3, int> storedVertTris;
-    [WriteOnly]
+    public NativeArray<Vector3> newVerts;
     [NativeDisableContainerSafetyRestriction]
-    public NativeHashMap<Vector3, int>.ParallelWriter storedVertTrisWriter;
+    public NativeArray<Vector3> newNormals;
+    [NativeDisableContainerSafetyRestriction]
+    public NativeArray<Color> newColors;
+
+    public NativeStream.Writer newTris;
+
+    [ReadOnly] public NativeHashMap<Vector3, int> storedVertTris;
 
     // Stores the triangle index, shared across threads and incremented using Interlocked
-    int interlockedCount;
-
+    public int interlockedCount;
+    public int count;
     public void Execute(int index)
     {
         int itemsInLocalStream = triArray.BeginForEachIndex(index);
+        newTris.BeginForEachIndex(index);
 
-        int triIndex1;
-        int triIndex2;
-        int triIndex3;
-
-        for (int i = 0; i <= itemsInLocalStream; i++)
+        for (int i = 0; i < itemsInLocalStream; i++)
         {
             SubdividableTriangle tri = triArray.Read<SubdividableTriangle>();
 
-            if (storedVertTrisWriter.TryAdd(tri.v1, interlockedCount + 1)) { Interlocked.Increment(ref interlockedCount); triIndex1 = interlockedCount; newVerts.Write(tri.v1); newNormals.Write(tri.n1); newColors.Write(tri.c1); } else { triIndex1 = storedVertTris[tri.v1]; }
-            if (storedVertTrisWriter.TryAdd(tri.v2, interlockedCount + 1)) { Interlocked.Increment(ref interlockedCount); triIndex2 = interlockedCount; newVerts.Write(tri.v2); newNormals.Write(tri.n2); newColors.Write(tri.c2); } else { triIndex2 = storedVertTris[tri.v2]; }
-            if (storedVertTrisWriter.TryAdd(tri.v3, interlockedCount + 1)) { Interlocked.Increment(ref interlockedCount); triIndex3 = interlockedCount; newVerts.Write(tri.v3); newNormals.Write(tri.n3); newColors.Write(tri.c3); } else { triIndex3 = storedVertTris[tri.v3]; }
+            int index1 = storedVertTris[tri.v1];
+            int index2 = storedVertTris[tri.v2];
+            int index3 = storedVertTris[tri.v3];
 
-            newTris.Write(triIndex1);
-            newTris.Write(triIndex2);
-            newTris.Write(triIndex3);
+            // Yes, this is technically a race condition since other threads will also be writing here
+            // But because they'll be writing the same vertex, this is fine. But we need to disable safety checks for it
+            newVerts[index1] = tri.v1;
+            newVerts[index2] = tri.v2;
+            newVerts[index3] = tri.v3;
+
+            newNormals[index1] = tri.n1;
+            newNormals[index2] = tri.n2;
+            newNormals[index3] = tri.n3;
+
+            newColors[index1] = tri.c1;
+            newColors[index2] = tri.c2;
+            newColors[index3] = tri.c3;
+
+            newTris.Write(index1);
+            newTris.Write(index2);
+            newTris.Write(index3);
         }
+
+        newTris.EndForEachIndex();
+        triArray.EndForEachIndex();
+    }
+}
+
+// We can't burst compile this code as it accesses an external non-readonly static field, which is a managed type
+// Either we use an IJobParallelFor or we burst compile as an IJob without the counter
+public struct ReadMeshTriangleDataJob : IJobParallelFor
+{
+    public NativeStream.Reader newTris;
+    [NativeDisableParallelForRestriction] public NativeArray<int> outputTris;
+    public void Execute(int index)
+    {
+        int itemsInLocalStream = newTris.BeginForEachIndex(index);
+
+        // We must read back triangles in threes
+        for (int i = 0; i < itemsInLocalStream; i += 3)
+        {
+            int zone = Interlocked.Add(ref InterlockedCounters.triangleReadbackCounter, 3);
+            outputTris[zone] = newTris.Read<int>();
+            outputTris[zone + 1] = newTris.Read<int>();
+            outputTris[zone + 2] = newTris.Read<int>();
+        }
+
+        newTris.EndForEachIndex();
     }
 }
