@@ -14,27 +14,27 @@ using UnityEngine.Rendering;
 
 public struct SubdividableTriangle
 {
-    public Vector3 v1, v2, v3;
-    public Vector3 n1, n2, n3;
-    public Color c1, c2, c3;
-    public SubdividableTriangle(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 n1, Vector3 n2, Vector3 n3, Color c1, Color c2, Color c3)
+    public float3 v1, v2, v3;
+    public float3 n1, n2, n3;
+    public float4 c1, c2, c3;
+    public SubdividableTriangle(float3 v1, float3 v2, float3 v3, float3 n1, float3 n2, float3 n3, float4 c1, float4 c2, float4 c3)
     {
         this.v1 = v1; this.v2 = v2; this.v3 = v3;
         this.n1 = n1; this.n2 = n2; this.n3 = n3;
         this.c1 = c1; this.c2 = c2; this.c3 = c3;
     }
-    public void Subdivide(ref NativeStream.Writer tris, int level, Vector3 target, int maxSubdivisionLevel, float dist1, float dist2, float dist3)
+    public void Subdivide(ref NativeStream.Writer tris, int level, float3 target, int maxSubdivisionLevel, float dist1, float dist2, float dist3)
     {
         if (level == maxSubdivisionLevel) { return; }
 
         // Get which verts are actually in range
-        //float distancev1 = Vector3.Distance(v1, target);
+        //float distancev1 = float3.Distance(v1, target);
         int subdivisionLevelv1 = (int)Mathf.Lerp(maxSubdivisionLevel, 0, dist1 / 1.0f);
 
-        //float distancev2 = Vector3.Distance(v2, target);
+        //float distancev2 = float3.Distance(v2, target);
         int subdivisionLevelv2 = (int)Mathf.Lerp(maxSubdivisionLevel, 0, dist2 / 1.0f);
 
-        //float distancev3 = Vector3.Distance(v3, target);
+        //float distancev3 = float3.Distance(v3, target);
         int subdivisionLevelv3 = (int)Mathf.Lerp(maxSubdivisionLevel, 0, dist3 / 1.0f);
 
         if (AreTwoVertsOutOfRange(level, subdivisionLevelv1, subdivisionLevelv2, subdivisionLevelv3))
@@ -47,27 +47,33 @@ public struct SubdividableTriangle
             // Case 1: Line connecting v1 and midpoint between v2 and v3 - two tris
             if (subdivisionLevelv1 < subdivisionLevelv2)
             {
-                Vector3 midPoint = GetVertexBetween(v2, v3);
-                SubdividableTriangle v3v1midPoint = new SubdividableTriangle(v3, v1, midPoint, Vector3.zero, Vector3.zero, Vector3.zero, Color.black, Color.black, Color.black);
-                SubdividableTriangle v1v2midPoint = new SubdividableTriangle(v1, v2, midPoint, Vector3.zero, Vector3.zero, Vector3.zero, Color.black, Color.black, Color.black);
+                float3 midPointV = GetVertexBetween(v2, v3);
+                float3 midPointN = GetNormalBetween(n2, n3);
+                float4 midPointC = GetColorBetween(c2, c3);
+                SubdividableTriangle v3v1midPoint = new SubdividableTriangle(v3, v1, midPointV, n3, n1, midPointN, c3, c1, midPointC);
+                SubdividableTriangle v1v2midPoint = new SubdividableTriangle(v1, v2, midPointV, n1, n2, midPointN, c1, c2, midPointC);
                 tris.Write(v3v1midPoint);
                 tris.Write(v1v2midPoint);
                 return;
             }
             if (subdivisionLevelv2 < subdivisionLevelv3)
             {
-                Vector3 midPoint = GetVertexBetween(v1, v3);
-                SubdividableTriangle v1v2midPoint = new SubdividableTriangle(v1, v2, midPoint, Vector3.zero, Vector3.zero, Vector3.zero, Color.black, Color.black, Color.black);
-                SubdividableTriangle v2v3midPoint = new SubdividableTriangle(v2, v3, midPoint, Vector3.zero, Vector3.zero, Vector3.zero, Color.black, Color.black, Color.black);
+                float3 midPointV = GetVertexBetween(v1, v3);
+                float3 midPointN = GetNormalBetween(n1, n3);
+                float4 midPointC = GetColorBetween(c1, c3);
+                SubdividableTriangle v1v2midPoint = new SubdividableTriangle(v1, v2, midPointV, n1, n2, midPointN, c1, c2, midPointC);
+                SubdividableTriangle v2v3midPoint = new SubdividableTriangle(v2, v3, midPointV, n2, n3, midPointN, c2, c3, midPointC);
                 tris.Write(v1v2midPoint);
                 tris.Write(v2v3midPoint);
                 return;
             }
             if (subdivisionLevelv3 < subdivisionLevelv1)
             {
-                Vector3 midPoint = GetVertexBetween(v1, v2);
-                SubdividableTriangle v3v1midPoint = new SubdividableTriangle(v3, v1, midPoint, Vector3.zero, Vector3.zero, Vector3.zero, Color.black, Color.black, Color.black);
-                SubdividableTriangle v2v3midPoint = new SubdividableTriangle(v2, v3, midPoint, Vector3.zero, Vector3.zero, Vector3.zero, Color.black, Color.black, Color.black);
+                float3 midPointV = GetVertexBetween(v1, v2);
+                float3 midPointN = GetNormalBetween(n1, n2);
+                float4 midPointC = GetColorBetween(c1, c2);
+                SubdividableTriangle v3v1midPoint = new SubdividableTriangle(v3, v1, midPointV, n3, n1, midPointN, c3, c1, midPointC);
+                SubdividableTriangle v2v3midPoint = new SubdividableTriangle(v2, v3, midPointV, n2, n2, midPointN, c2, c3, midPointC);
                 tris.Write(v3v1midPoint);
                 tris.Write(v2v3midPoint);
                 return;
@@ -82,17 +88,17 @@ public struct SubdividableTriangle
         // Divide triangle into 4 new triangles
 
         // Top tri
-        Vector3 tv1 = GetVertexBetween(v1, v3);
-        Vector3 tv2 = GetVertexBetween(v3, v2);
-        Vector3 tv3 = v3;
+        float3 tv1 = GetVertexBetween(v1, v3);
+        float3 tv2 = GetVertexBetween(v3, v2);
+        float3 tv3 = v3;
 
-        Vector3 tn1 = GetNormalBetween(n1, n3);
-        Vector3 tn2 = GetNormalBetween(n3, n2);
-        Vector3 tn3 = n3;
+        float3 tn1 = GetNormalBetween(n1, n3);
+        float3 tn2 = GetNormalBetween(n3, n2);
+        float3 tn3 = n3;
 
-        Color tc1 = GetColorBetween(c1, c3);
-        Color tc2 = GetColorBetween(c3, c2);
-        Color tc3 = c3;
+        float4 tc1 = GetColorBetween(c1, c3);
+        float4 tc2 = GetColorBetween(c3, c2);
+        float4 tc3 = c3;
 
         float td1 = GetFloatBetween(dist1, dist3);
         float td2 = GetFloatBetween(dist3, dist2);
@@ -102,17 +108,17 @@ public struct SubdividableTriangle
         t.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, td1, td2, td3);
 
         // Lower left
-        Vector3 blv1 = v1;
-        Vector3 blv2 = GetVertexBetween(v1, v2);
-        Vector3 blv3 = GetVertexBetween(v1, v3);
+        float3 blv1 = v1;
+        float3 blv2 = GetVertexBetween(v1, v2);
+        float3 blv3 = GetVertexBetween(v1, v3);
 
-        Vector3 bln1 = n1;
-        Vector3 bln2 = GetNormalBetween(n1, n2);
-        Vector3 bln3 = GetNormalBetween(n1, n3);
+        float3 bln1 = n1;
+        float3 bln2 = GetNormalBetween(n1, n2);
+        float3 bln3 = GetNormalBetween(n1, n3);
 
-        Color blc1 = c1;
-        Color blc2 = GetColorBetween(c1, c2);
-        Color blc3 = GetColorBetween(c1, c3);
+        float4 blc1 = c1;
+        float4 blc2 = GetColorBetween(c1, c2);
+        float4 blc3 = GetColorBetween(c1, c3);
 
         float bld1 = dist1;
         float bld2 = GetFloatBetween(dist1, dist2);
@@ -122,17 +128,17 @@ public struct SubdividableTriangle
         bl.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, bld1, bld2, bld3);
 
         // Lower right
-        Vector3 brv1 = GetVertexBetween(v1, v2);
-        Vector3 brv2 = v2;
-        Vector3 brv3 = GetVertexBetween(v3, v2);
+        float3 brv1 = GetVertexBetween(v1, v2);
+        float3 brv2 = v2;
+        float3 brv3 = GetVertexBetween(v3, v2);
 
-        Vector3 brn1 = GetNormalBetween(n1, n2);
-        Vector3 brn2 = n2;
-        Vector3 brn3 = GetNormalBetween(n3, n2);
+        float3 brn1 = GetNormalBetween(n1, n2);
+        float3 brn2 = n2;
+        float3 brn3 = GetNormalBetween(n3, n2);
 
-        Color brc1 = GetColorBetween(c1, c2);
-        Color brc2 = c2;
-        Color brc3 = GetColorBetween(c3, c2);
+        float4 brc1 = GetColorBetween(c1, c2);
+        float4 brc2 = c2;
+        float4 brc3 = GetColorBetween(c3, c2);
 
         float brd1 = GetFloatBetween(dist1, dist2);
         float brd2 = dist2;
@@ -142,17 +148,17 @@ public struct SubdividableTriangle
         br.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, brd1, brd2, brd3);
 
         // Center tri
-        Vector3 cv1 = GetVertexBetween(v1, v2);
-        Vector3 cv2 = GetVertexBetween(v2, v3);
-        Vector3 cv3 = GetVertexBetween(v3, v1);
+        float3 cv1 = GetVertexBetween(v1, v2);
+        float3 cv2 = GetVertexBetween(v2, v3);
+        float3 cv3 = GetVertexBetween(v3, v1);
 
-        Vector3 cn1 = GetNormalBetween(n1, n2);
-        Vector3 cn2 = GetNormalBetween(n2, n3);
-        Vector3 cn3 = GetNormalBetween(n3, n1);
+        float3 cn1 = GetNormalBetween(n1, n2);
+        float3 cn2 = GetNormalBetween(n2, n3);
+        float3 cn3 = GetNormalBetween(n3, n1);
 
-        Color cc1 = GetColorBetween(c1, c2);
-        Color cc2 = GetColorBetween(c2, c3);
-        Color cc3 = GetColorBetween(c3, c1);
+        float4 cc1 = GetColorBetween(c1, c2);
+        float4 cc2 = GetColorBetween(c2, c3);
+        float4 cc3 = GetColorBetween(c3, c1);
 
         float cd1 = GetFloatBetween(dist1, dist2);
         float cd2 = GetFloatBetween(dist2, dist3);
@@ -199,15 +205,15 @@ public struct SubdividableTriangle
         }
         return false;
     }
-    public Vector3 GetVertexBetween(in Vector3 v1, in Vector3 v2)
+    public float3 GetVertexBetween(in float3 v1, in float3 v2)
     {
         return (v1 + v2) * 0.5f;
     }
-    public Vector3 GetNormalBetween(in Vector3 v1, in Vector3 v2)
+    public float3 GetNormalBetween(in float3 v1, in float3 v2)
     {
         return (v1 + v2) * 0.5f;
     }
-    public Color GetColorBetween(in Color v1, in Color v2)
+    public float4 GetColorBetween(in float4 v1, in float4 v2)
     {
         return (v1 + v2) * 0.5f;
     }
@@ -233,9 +239,9 @@ public class ParallelSubdivision : MonoBehaviour
 
     // Precomputed data
     NativeArray<SubdividableTriangle> meshTriangles;    // Do not dispose until OnDisable
-    NativeArray<Vector3> vertices;                      // Do not dispose until OnDisable
-    NativeArray<Vector3> normals;                       // Do not dispose until OnDisable
-    NativeArray<Color> colors;                          // Do not dispose until OnDisable
+    NativeArray<float3> vertices;                      // Do not dispose until OnDisable
+    NativeArray<float3> normals;                       // Do not dispose until OnDisable
+    NativeArray<float4> colors;                          // Do not dispose until OnDisable
     NativeArray<int> triangles;                         // Do not dispose until OnDisable
 
     // Subdivision data
@@ -244,15 +250,15 @@ public class ParallelSubdivision : MonoBehaviour
     NativeStream.Reader trisReader;                     // Is disposed with tris
 
     // Mesh generation data
-    NativeArray<Vector3> newVerts;                      // Dispose after building mesh
-    NativeArray<Vector3> newNormals;                    // Dispose after building mesh
-    NativeArray<Color> newColors;                       // Dispose after building mesh
+    NativeArray<float3> newVerts;                      // Dispose after building mesh
+    NativeArray<float3> newNormals;                    // Dispose after building mesh
+    NativeArray<float4> newColors;                       // Dispose after building mesh
 
     NativeStream newTriangles;                          // Dispose after building mesh
     NativeStream.Writer newTrianglesWriter;             // Disposed with newTriangles
     NativeStream.Reader newTrianglesReader;             // Disposed with newTriangles
 
-    NativeHashMap<Vector3, int> storedVertTris;         // Dispose after triangle readback
+    NativeHashMap<float3, int> storedVertTris;         // Dispose after triangle readback
 
     // Triangle readback data
     NativeArray<int> outputTriIndices;                  // Dispose after building mesh
@@ -289,13 +295,13 @@ public class ParallelSubdivision : MonoBehaviour
     }
     void Initialize()
     {
-        vertices = new NativeArray<Vector3>(mesh.vertices, Allocator.Persistent);
-        normals = new NativeArray<Vector3>(mesh.normals, Allocator.Persistent);
-        colors = new NativeArray<Color>(mesh.colors, Allocator.Persistent);
+        vertices = new NativeArray<Vector3>(mesh.vertices, Allocator.Persistent).Reinterpret<float3>();
+        normals = new NativeArray<Vector3>(mesh.normals, Allocator.Persistent).Reinterpret<float3>();
+        colors = new NativeArray<Color>(mesh.colors, Allocator.Persistent).Reinterpret<float4>();
         triangles = new NativeArray<int>(mesh.triangles, Allocator.Persistent);
         CreateTriangles();
     }
-    Vector3 GetMousePosInWorld()
+    float3 GetMousePosInWorld()
     {
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit;
@@ -305,7 +311,7 @@ public class ParallelSubdivision : MonoBehaviour
         }
         else
         {
-            return Vector3.zero;
+            return float3.zero;
         }
     }
     void CreateTriangles()
@@ -318,17 +324,25 @@ public class ParallelSubdivision : MonoBehaviour
             int index2 = triangles[i + 1];
             int index3 = triangles[i + 2];
 
-            Vector3 v1 = vertices[index1];
-            Vector3 v2 = vertices[index2];
-            Vector3 v3 = vertices[index3];
+            float3 v1 = vertices[index1];
+            float3 v2 = vertices[index2];
+            float3 v3 = vertices[index3];
 
-            Vector3 n1 = normals[index1];
-            Vector3 n2 = normals[index2];
-            Vector3 n3 = normals[index3];
+            float3 n1 = normals[index1];
+            float3 n2 = normals[index2];
+            float3 n3 = normals[index3];
 
-            Color c1 = Color.black;// colors[index1];
-            Color c2 = Color.black;// colors[index2];
-            Color c3 = Color.black;// colors[index3];
+            float4 c1 = float4.zero;// colors[index1];
+            float4 c2 = float4.zero;//colors[index2];
+            float4 c3 = float4.zero;//colors[index3];
+
+            c1.xyz = v1;
+            c2.xyz = v2;
+            c3.xyz = v3;
+
+            c1.w = 1;
+            c2.w = 1;
+            c3.w = 1;
 
             SubdividableTriangle tri = new SubdividableTriangle(v1, v2, v3, n1, n2, n3, c1, c2, c3);
             meshTriangles[i / 3] = tri;
@@ -341,16 +355,18 @@ public class ParallelSubdivision : MonoBehaviour
     bool isProcessingPairRemoval = false;
     bool isGeneratingMesh = false;
     bool firstRun = true;
-    int runs = 0;
+
+    float allStartTime = 0;
+    int frames = 0;
     void Update()
     {
-        //if (runs > 0) { return; }
-        // IMPORTANT
-        
+        frames++;
         
         // We're done, or running for the first time, so start everything off from step 1
         if (firstRun || (!isProcessingSubdivision && !isProcessingPairRemoval && !isGeneratingMesh))
         {
+            allStartTime = Time.realtimeSinceStartup;
+            frames = 0;
             DispatchSubdivision();
             isProcessingSubdivision = true;
             firstRun = false;
@@ -378,10 +394,11 @@ public class ParallelSubdivision : MonoBehaviour
             FreePostReadbackResources();
             isGeneratingMesh = false;
 
+            Debug.Log("End time (ms): " + ((Time.realtimeSinceStartup - allStartTime) * 1000) + " over " + frames + " frames");
+
             BuildMesh();
             FreePostMeshBuildResources();
         }
-        runs++;
         //float time = Time.realtimeSinceStartup;
         //DispatchSubdivision();
         //Debug.Log("Elapsed time 1 (ms): " + ((Time.realtimeSinceStartup - time) * 1000.0f));
@@ -400,7 +417,7 @@ public class ParallelSubdivision : MonoBehaviour
     }
     public void DispatchSubdivision()
     {
-        Vector3 target = transform.InverseTransformPoint(GetMousePosInWorld());
+        float3 target = transform.InverseTransformPoint(GetMousePosInWorld());
         int localSubdivisionLevel = maxSubdivisionLevel;
         tris = new NativeStream(meshTriangles.Length, Allocator.Persistent);
         trisWriter = tris.AsWriter();
@@ -429,7 +446,7 @@ public class ParallelSubdivision : MonoBehaviour
 
     void DispatchVertexPairRemoval()
     {
-        storedVertTris = new NativeHashMap<Vector3, int>(20000, Allocator.Persistent);
+        storedVertTris = new NativeHashMap<float3, int>(20000, Allocator.Persistent);
 
         removeVertexPairsJob = new RemoveVertexPairsJob()
         {
@@ -449,9 +466,9 @@ public class ParallelSubdivision : MonoBehaviour
     // we need one stream for EACH triangle to maintain order of addition in threes
     void DispatchMeshGeneration()
     {
-        newVerts = new NativeArray<Vector3>(storedVertTris.Length, Allocator.Persistent);
-        newNormals = new NativeArray<Vector3>(storedVertTris.Length, Allocator.Persistent);
-        newColors = new NativeArray<Color>(storedVertTris.Length, Allocator.Persistent);
+        newVerts = new NativeArray<float3>(storedVertTris.Length, Allocator.Persistent);
+        newNormals = new NativeArray<float3>(storedVertTris.Length, Allocator.Persistent);
+        newColors = new NativeArray<float4>(storedVertTris.Length, Allocator.Persistent);
 
         newTriangles = new NativeStream(trisReader.ForEachCount, Allocator.Persistent);
 

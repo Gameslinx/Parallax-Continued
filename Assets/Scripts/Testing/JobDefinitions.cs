@@ -14,14 +14,14 @@ using UnityEngine;
 public struct SubdivideMeshJob : IJobParallelFor
 {
     public NativeArray<SubdividableTriangle> meshTriangles;
-    public NativeArray<Vector3> originalVerts;
-    public NativeArray<Vector3> originalNormals;
-    public NativeArray<Color> originalColors;
+    public NativeArray<float3> originalVerts;
+    public NativeArray<float3> originalNormals;
+    public NativeArray<float4> originalColors;
 
     // subdividableTRIS
     public NativeStream.Writer tris;
 
-    public Vector3 target;
+    public float3 target;
     public float sqrSubdivisionRange;
     public int maxSubdivisionLevel;
 
@@ -41,7 +41,7 @@ public struct SubdivideMeshJob : IJobParallelFor
         meshTriangle.Subdivide(ref tris, 0, target, maxSubdivisionLevel, dist1, dist2, dist3);
         tris.EndForEachIndex();
     }
-    float SqrDistance(Vector3 d1, Vector3 d2)
+    float SqrDistance(float3 d1, float3 d2)
     {
         float dx = d2.x - d1.x;
         float dy = d2.y - d1.y;
@@ -89,11 +89,12 @@ public static class InterlockedCounters
 public struct RemoveVertexPairsJob : IJob
 {
     public NativeStream.Reader triReader;
-    public NativeHashMap<Vector3, int> vertices;
+    public NativeHashMap<float3, int> vertices;
     public int foreachCount;
     public int count;
     public void Execute()
     {
+        SubdividableTriangle val;
         // Read the value of the count right now
         for (int index = 0; index < foreachCount; index++)
         {
@@ -101,16 +102,16 @@ public struct RemoveVertexPairsJob : IJob
 
             for (int i = 0; i < itemsInLocalStream; i++)
             {
-                SubdividableTriangle val = triReader.Read<SubdividableTriangle>();
-                if (vertices.TryAdd(val.v1, count + 1))
+                val = triReader.Read<SubdividableTriangle>();
+                if (vertices.TryAdd(val.v1 * 0.001f, count + 1))
                 {
                     count++;
                 }
-                if (vertices.TryAdd(val.v2, count + 1))
+                if (vertices.TryAdd(val.v2 * 0.001f, count + 1))
                 {
                     count++;
                 }
-                if (vertices.TryAdd(val.v3, count + 1))
+                if (vertices.TryAdd(val.v3 * 0.001f, count + 1))
                 {
                     count++;
                 }
@@ -127,15 +128,15 @@ public struct ConstructMeshJob : IJobParallelFor
     public NativeStream.Reader triArray;
 
     [NativeDisableContainerSafetyRestriction]
-    public NativeArray<Vector3> newVerts;
+    public NativeArray<float3> newVerts;
     [NativeDisableContainerSafetyRestriction]
-    public NativeArray<Vector3> newNormals;
+    public NativeArray<float3> newNormals;
     [NativeDisableContainerSafetyRestriction]
-    public NativeArray<Color> newColors;
+    public NativeArray<float4> newColors;
 
     public NativeStream.Writer newTris;
 
-    [ReadOnly] public NativeHashMap<Vector3, int> storedVertTris;
+    [ReadOnly] public NativeHashMap<float3, int> storedVertTris;
 
     // Stores the triangle index, shared across threads and incremented using Interlocked
     public int interlockedCount;
@@ -149,9 +150,9 @@ public struct ConstructMeshJob : IJobParallelFor
         {
             SubdividableTriangle tri = triArray.Read<SubdividableTriangle>();
 
-            int index1 = storedVertTris[tri.v1];
-            int index2 = storedVertTris[tri.v2];
-            int index3 = storedVertTris[tri.v3];
+            int index1 = storedVertTris[tri.v1 * 0.001f];
+            int index2 = storedVertTris[tri.v2 * 0.001f];
+            int index3 = storedVertTris[tri.v3 * 0.001f];
 
             // Yes, this is technically a race condition since other threads will also be writing here
             // But because they'll be writing the same vertex, this is fine. But we need to disable safety checks for it
