@@ -225,6 +225,9 @@ public struct SubdividableTriangle
 
 public class ParallelSubdivision : MonoBehaviour
 {
+    // Unique identifier index for interlocked counter
+    int thisIndex = -1;
+
     // Jobs
     SubdivideMeshJob subdivideJob;
     ConstructMeshJob meshJob;
@@ -238,35 +241,39 @@ public class ParallelSubdivision : MonoBehaviour
     JobHandle removeVertexPairsJobHandle;
 
     // Precomputed data
-    NativeArray<SubdividableTriangle> meshTriangles;    // Do not dispose until OnDisable
-    NativeArray<float3> vertices;                      // Do not dispose until OnDisable
-    NativeArray<float3> normals;                       // Do not dispose until OnDisable
-    NativeArray<float4> colors;                          // Do not dispose until OnDisable
-    NativeArray<int> triangles;                         // Do not dispose until OnDisable
+    NativeArray<SubdividableTriangle> meshTriangles;        // Do not dispose until OnDisable
+    NativeArray<float3> vertices;                           // Do not dispose until OnDisable
+    NativeArray<float3> normals;                            // Do not dispose until OnDisable
+    NativeArray<float4> colors;                             // Do not dispose until OnDisable
+    NativeArray<int> triangles;                             // Do not dispose until OnDisable
 
     // Subdivision data
-    NativeStream tris;                                  // Dispose after triangle readback
-    NativeStream.Writer trisWriter;                     // Is disposed with tris
-    NativeStream.Reader trisReader;                     // Is disposed with tris
+    NativeStream tris;                                      // Dispose after triangle readback
+    NativeStream.Writer trisWriter;                         // Is disposed with tris
+    NativeStream.Reader trisReader;                         // Is disposed with tris
 
     // Mesh generation data
-    NativeArray<float3> newVerts;                      // Dispose after building mesh
-    NativeArray<float3> newNormals;                    // Dispose after building mesh
-    NativeArray<float4> newColors;                       // Dispose after building mesh
+    NativeArray<float3> newVerts;                           // Dispose after building mesh
+    NativeArray<float3> newNormals;                         // Dispose after building mesh
+    NativeArray<float4> newColors;                          // Dispose after building mesh
 
-    NativeStream newTriangles;                          // Dispose after building mesh
-    NativeStream.Writer newTrianglesWriter;             // Disposed with newTriangles
-    NativeStream.Reader newTrianglesReader;             // Disposed with newTriangles
+    NativeStream newTriangles;                              // Dispose after building mesh
+    NativeStream.Writer newTrianglesWriter;                 // Disposed with newTriangles
+    NativeStream.Reader newTrianglesReader;                 // Disposed with newTriangles
 
-    NativeHashMap<float3, int> storedVertTris;         // Dispose after triangle readback
+    NativeHashMap<float3, int> storedVertTris;              // Dispose after triangle readback
 
     // Triangle readback data
-    NativeArray<int> outputTriIndices;                  // Dispose after building mesh
+    NativeArray<int> outputTriIndices;                      // Dispose after building mesh
 
     Mesh mesh;
 
-    int maxSubdivisionLevel = 6;
-    float subdivisionRange = 10.0f;
+    int streamForeachCount = 0;
+
+    [Range(1, 7)]
+    public int maxSubdivisionLevel = 5;
+    [Range(1.0f, 20.0f)]
+    public float subdivisionRange = 10.0f;
 
     bool previousIsDone = true;
 
@@ -275,23 +282,18 @@ public class ParallelSubdivision : MonoBehaviour
         mesh = Instantiate(GetComponent<MeshFilter>().sharedMesh);
         mesh.MarkDynamic();
         this.gameObject.GetComponent<MeshFilter>().sharedMesh = mesh;
-        Initialize();
 
-        //float time = Time.realtimeSinceStartup;
-        //DispatchSubdivision();
-        //Debug.Log("Elapsed time 1 (ms): " + ((Time.realtimeSinceStartup - time) * 1000.0f));
-        //CompleteSubdivision();
-        //Debug.Log("Elapsed time 2 (ms): " + ((Time.realtimeSinceStartup - time) * 1000.0f));
-        //DispatchVertexPairRemoval();
-        //CompleteVertexPairRemoval();
-        //
-        //DispatchMeshGeneration();
-        //DispatchTriangleReadback(trisReader.ComputeItemCount() * 3);
-        //
-        //CompleteTriangleReadback();
-        //
-        //
-        //BuildMesh();
+        GetUniqueIdentifier();
+        Initialize();
+    }
+    void GetUniqueIdentifier()
+    {
+        InterlockedCounters.numParallelSubdivisionComponents++;
+        thisIndex = InterlockedCounters.numParallelSubdivisionComponents;
+        if (thisIndex > 63)
+        {
+            Debug.LogError("This index is too high - Only max 64 parallel subdivision components supported!");
+        }
     }
     void Initialize()
     {
@@ -299,7 +301,20 @@ public class ParallelSubdivision : MonoBehaviour
         normals = new NativeArray<Vector3>(mesh.normals, Allocator.Persistent).Reinterpret<float3>();
         colors = new NativeArray<Color>(mesh.colors, Allocator.Persistent).Reinterpret<float4>();
         triangles = new NativeArray<int>(mesh.triangles, Allocator.Persistent);
+
+        storedVertTris = new NativeHashMap<float3, int>(5, Allocator.Persistent);
+        
         CreateTriangles();
+
+        // Items are taken out of the native stream as they are read, so we don't need to clear them until OnDisable
+        // However if something goes horribly wrong and not all items are read, the stream is polluted and the mesh will become garbled
+        tris = new NativeStream(meshTriangles.Length, Allocator.Persistent);
+        trisWriter = tris.AsWriter();
+        trisReader = tris.AsReader();
+
+        newTriangles = new NativeStream(this.streamForeachCount, Allocator.Persistent);
+        newTrianglesWriter = newTriangles.AsWriter();
+        newTrianglesReader = newTriangles.AsReader();
     }
     float3 GetMousePosInWorld()
     {
@@ -318,6 +333,7 @@ public class ParallelSubdivision : MonoBehaviour
     {
         // Num triangles in the mesh
         meshTriangles = new NativeArray<SubdividableTriangle>(triangles.Length / 3, Allocator.Persistent);
+        streamForeachCount = triangles.Length / 3;
         for (int i = 0; i < triangles.Length; i += 3)
         {
             int index1 = triangles[i + 0];
@@ -332,13 +348,13 @@ public class ParallelSubdivision : MonoBehaviour
             float3 n2 = normals[index2];
             float3 n3 = normals[index3];
 
-            float4 c1 = float4.zero;// colors[index1];
-            float4 c2 = float4.zero;//colors[index2];
-            float4 c3 = float4.zero;//colors[index3];
+            float4 c1 = float4.zero;    //colors[index1];
+            float4 c2 = float4.zero;    //colors[index2];
+            float4 c3 = float4.zero;    //colors[index3];
 
-            c1.xyz = v1;
-            c2.xyz = v2;
-            c3.xyz = v3;
+            c1.xyz = 1;
+            c2.xyz = 1;
+            c3.xyz = 1;
 
             c1.w = 1;
             c2.w = 1;
@@ -348,80 +364,47 @@ public class ParallelSubdivision : MonoBehaviour
             meshTriangles[i / 3] = tri;
         }
     }
-    float lastTime = 0;
-    
 
     bool isProcessingSubdivision = false;
-    bool isProcessingPairRemoval = false;
     bool isGeneratingMesh = false;
     bool firstRun = true;
 
-    float allStartTime = 0;
-    int frames = 0;
     void Update()
     {
-        frames++;
-        
         // We're done, or running for the first time, so start everything off from step 1
-        if (firstRun || (!isProcessingSubdivision && !isProcessingPairRemoval && !isGeneratingMesh))
+        if (firstRun || (!isProcessingSubdivision && !isGeneratingMesh))
         {
-            allStartTime = Time.realtimeSinceStartup;
-            frames = 0;
             DispatchSubdivision();
+            DispatchVertexPairRemoval();
+            
             isProcessingSubdivision = true;
             firstRun = false;
         }
-        if (isProcessingSubdivision && subdivideJobHandle.IsCompleted)
-        {
-            CompleteSubdivision();
-            isProcessingSubdivision = false;
-
-            DispatchVertexPairRemoval();
-            isProcessingPairRemoval = true;
-        }
-        if (isProcessingPairRemoval && removeVertexPairsJobHandle.IsCompleted)
+        if (isProcessingSubdivision && removeVertexPairsJobHandle.IsCompleted && subdivideJobHandle.IsCompleted)
         {
             CompleteVertexPairRemoval();
-            isProcessingPairRemoval = false;
+            isProcessingSubdivision = false;
 
             DispatchMeshGeneration();
             DispatchTriangleReadback(trisReader.ComputeItemCount() * 3);
+
             isGeneratingMesh = true;
         }
         if (isGeneratingMesh && triangleDataReadJobHandle.IsCompleted && constructMeshJobHandle.IsCompleted)
         {
             CompleteTriangleReadback();
-            FreePostReadbackResources();
-            isGeneratingMesh = false;
 
-            Debug.Log("End time (ms): " + ((Time.realtimeSinceStartup - allStartTime) * 1000) + " over " + frames + " frames");
+            isGeneratingMesh = false;
 
             BuildMesh();
             FreePostMeshBuildResources();
         }
-        //float time = Time.realtimeSinceStartup;
-        //DispatchSubdivision();
-        //Debug.Log("Elapsed time 1 (ms): " + ((Time.realtimeSinceStartup - time) * 1000.0f));
-        //CompleteSubdivision();
-        //Debug.Log("Elapsed time 2 (ms): " + ((Time.realtimeSinceStartup - time) * 1000.0f));
-        //DispatchVertexPairRemoval();
-        //CompleteVertexPairRemoval();
-        //
-        //DispatchMeshGeneration();
-        //DispatchTriangleReadback(trisReader.ComputeItemCount() * 3);
-        //
-        //CompleteTriangleReadback();
-        //
-        //
-        //BuildMesh();
     }
     public void DispatchSubdivision()
     {
         float3 target = transform.InverseTransformPoint(GetMousePosInWorld());
         int localSubdivisionLevel = maxSubdivisionLevel;
-        tris = new NativeStream(meshTriangles.Length, Allocator.Persistent);
-        trisWriter = tris.AsWriter();
-        trisReader = tris.AsReader();
+        
 
         subdivideJob = new SubdivideMeshJob()
         {
@@ -432,8 +415,8 @@ public class ParallelSubdivision : MonoBehaviour
 
             tris = trisWriter,
 
-            maxSubdivisionLevel = localSubdivisionLevel,
-            sqrSubdivisionRange = 10,
+            maxSubdivisionLevel = this.maxSubdivisionLevel,
+            sqrSubdivisionRange = this.subdivisionRange,
             target = target
         };
 
@@ -446,20 +429,21 @@ public class ParallelSubdivision : MonoBehaviour
 
     void DispatchVertexPairRemoval()
     {
-        storedVertTris = new NativeHashMap<float3, int>(20000, Allocator.Persistent);
+        storedVertTris.Clear();
 
         removeVertexPairsJob = new RemoveVertexPairsJob()
         {
             triReader = trisReader,
             vertices = storedVertTris,
             count = -1,
-            foreachCount = trisReader.ForEachCount
+            foreachCount = this.streamForeachCount
         };
-        removeVertexPairsJobHandle = removeVertexPairsJob.Schedule();
+        removeVertexPairsJobHandle = removeVertexPairsJob.Schedule(subdivideJobHandle);
     }
     void CompleteVertexPairRemoval()
     {
         removeVertexPairsJobHandle.Complete();
+        Debug.Log("len: " + storedVertTris.Length);
     }
 
     // numTris = number of triangles in total we will be processing
@@ -470,9 +454,7 @@ public class ParallelSubdivision : MonoBehaviour
         newNormals = new NativeArray<float3>(storedVertTris.Length, Allocator.Persistent);
         newColors = new NativeArray<float4>(storedVertTris.Length, Allocator.Persistent);
 
-        newTriangles = new NativeStream(trisReader.ForEachCount, Allocator.Persistent);
-
-        newTrianglesWriter = newTriangles.AsWriter();
+        
 
         meshJob = new ConstructMeshJob()
         {
@@ -485,10 +467,10 @@ public class ParallelSubdivision : MonoBehaviour
             newTris = this.newTrianglesWriter,
 
             storedVertTris = this.storedVertTris,
-            count = this.trisReader.ForEachCount
+            count = this.streamForeachCount
         };
 
-        constructMeshJobHandle = meshJob.Schedule(trisReader.ForEachCount, 4);
+        constructMeshJobHandle = meshJob.Schedule(this.streamForeachCount, 4);
     }
     
     void CompleteMeshGeneration()
@@ -497,25 +479,20 @@ public class ParallelSubdivision : MonoBehaviour
     }
     void DispatchTriangleReadback(int count)
     {
-        InterlockedCounters.triangleReadbackCounter = -3;
+        InterlockedCounters.triangleReadbackCounters[thisIndex] = -3;
         outputTriIndices = new NativeArray<int>(count, Allocator.TempJob);
-        newTrianglesReader = newTriangles.AsReader();
+        
         triangleDataReadJob = new ReadMeshTriangleDataJob()
         {
             newTris = this.newTrianglesReader,
-            outputTris = this.outputTriIndices
+            outputTris = this.outputTriIndices,
+            uniqueIndex = thisIndex
         };
-        triangleDataReadJobHandle = triangleDataReadJob.Schedule(trisReader.ForEachCount, 4, constructMeshJobHandle);
+        triangleDataReadJobHandle = triangleDataReadJob.Schedule(this.streamForeachCount, 4, constructMeshJobHandle);
     }
     void CompleteTriangleReadback()
     {
         triangleDataReadJobHandle.Complete();
-    }
-    void FreePostReadbackResources()
-    {
-        tris.Dispose();
-        storedVertTris.Dispose();
-        newTriangles.Dispose();
     }
     void BuildMesh()
     {

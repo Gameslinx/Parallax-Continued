@@ -13,17 +13,17 @@ using UnityEngine;
 [BurstCompile]
 public struct SubdivideMeshJob : IJobParallelFor
 {
-    public NativeArray<SubdividableTriangle> meshTriangles;
-    public NativeArray<float3> originalVerts;
-    public NativeArray<float3> originalNormals;
-    public NativeArray<float4> originalColors;
+    [ReadOnly] public NativeArray<SubdividableTriangle> meshTriangles;
+    [ReadOnly] public NativeArray<float3> originalVerts;
+    [ReadOnly] public NativeArray<float3> originalNormals;
+    [ReadOnly] public NativeArray<float4> originalColors;
 
     // subdividableTRIS
-    public NativeStream.Writer tris;
+    [WriteOnly] public NativeStream.Writer tris;
 
-    public float3 target;
-    public float sqrSubdivisionRange;
-    public int maxSubdivisionLevel;
+    [ReadOnly] public float3 target;
+    [ReadOnly] public float sqrSubdivisionRange;
+    [ReadOnly] public int maxSubdivisionLevel;
 
     // Executes per triangle in the original mesh
     public void Execute(int index)
@@ -76,9 +76,22 @@ public struct SubdivideMeshJob : IJobParallelFor
 //////////////////////////////
 
 // These MUST be reset when a job is NOT executing and accessing it!
+// Used to output an arbitrary amount of data stored in a NativeStream to an array for setting mesh data, which only takes in a native array
 public static class InterlockedCounters
 {
-    public static int triangleReadbackCounter = -3;
+    public static int numParallelSubdivisionComponents = -1;
+    public static int[] triangleReadbackCounters = new int[64];
+    static InterlockedCounters()
+    {
+        ResetAllInterlockedCounters();
+    }
+    static void ResetAllInterlockedCounters()
+    {
+        for (int i = 0; i < triangleReadbackCounters.Length; i++)
+        {
+            triangleReadbackCounters[i] = -3;
+        }
+    }
 }
 
 // We need to remove vertex pairs and also assign indices to the vertices
@@ -88,9 +101,9 @@ public static class InterlockedCounters
 [BurstCompile]
 public struct RemoveVertexPairsJob : IJob
 {
-    public NativeStream.Reader triReader;
-    public NativeHashMap<float3, int> vertices;
-    public int foreachCount;
+    [ReadOnly] public NativeStream.Reader triReader;
+    [WriteOnly] public NativeHashMap<float3, int> vertices;
+    [ReadOnly] public int foreachCount;
     public int count;
     public void Execute()
     {
@@ -125,17 +138,17 @@ public struct RemoveVertexPairsJob : IJob
 public struct ConstructMeshJob : IJobParallelFor
 {
     // Stores our subdivided triangles
-    public NativeStream.Reader triArray;
+    [ReadOnly] public NativeStream.Reader triArray;
 
     // See comment in code body for reason
     [NativeDisableContainerSafetyRestriction]
-    public NativeArray<float3> newVerts;
+    [WriteOnly] public NativeArray<float3> newVerts;
     [NativeDisableContainerSafetyRestriction]
-    public NativeArray<float3> newNormals;
+    [WriteOnly] public NativeArray<float3> newNormals;
     [NativeDisableContainerSafetyRestriction]
-    public NativeArray<float4> newColors;
+    [WriteOnly] public NativeArray<float4> newColors;
 
-    public NativeStream.Writer newTris;
+    [WriteOnly] public NativeStream.Writer newTris;
 
     [ReadOnly] public NativeHashMap<float3, int> storedVertTris;
 
@@ -183,8 +196,9 @@ public struct ConstructMeshJob : IJobParallelFor
 // Either we use an IJobParallelFor or we burst compile as an IJob without the counter
 public struct ReadMeshTriangleDataJob : IJobParallelFor
 {
-    public NativeStream.Reader newTris;
-    [NativeDisableParallelForRestriction] public NativeArray<int> outputTris;
+    [ReadOnly] public NativeStream.Reader newTris;
+    [WriteOnly] [NativeDisableParallelForRestriction] public NativeArray<int> outputTris;
+    [ReadOnly] public int uniqueIndex;
     public void Execute(int index)
     {
         int itemsInLocalStream = newTris.BeginForEachIndex(index);
@@ -193,7 +207,7 @@ public struct ReadMeshTriangleDataJob : IJobParallelFor
         for (int i = 0; i < itemsInLocalStream; i += 3)
         {
             // Compute output array index
-            int zone = Interlocked.Add(ref InterlockedCounters.triangleReadbackCounter, 3);
+            int zone = Interlocked.Add(ref InterlockedCounters.triangleReadbackCounters[uniqueIndex], 3);
             outputTris[zone] = newTris.Read<int>();
             outputTris[zone + 1] = newTris.Read<int>();
             outputTris[zone + 2] = newTris.Read<int>();

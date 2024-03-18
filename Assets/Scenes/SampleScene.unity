@@ -636,10 +636,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a63f7199e1ebb144a81f087485ee36d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  newTris: 
-  newVerts1: []
-  newNormals1: []
-  newColors1: []
+  maxSubdivisionLevel: 7
+  subdivisionRange: 10
 --- !u!1 &1990325626
 GameObject:
   m_ObjectHideFlags: 0
