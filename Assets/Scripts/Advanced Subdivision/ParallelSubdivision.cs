@@ -23,20 +23,22 @@ public struct SubdividableTriangle
         this.n1 = n1; this.n2 = n2; this.n3 = n3;
         this.c1 = c1; this.c2 = c2; this.c3 = c3;
     }
-    public void Subdivide(ref NativeStream.Writer tris, int level, float3 target, int maxSubdivisionLevel, float dist1, float dist2, float dist3)
+    public void Subdivide(ref NativeStream.Writer tris, in int level, in float3 target, in int maxSubdivisionLevel, in float dist1, in float dist2, in float dist3)
     {
         if (level == maxSubdivisionLevel) { return; }
 
         // Get which verts are actually in range
-        //float distancev1 = float3.Distance(v1, target);
         int subdivisionLevelv1 = (int)Mathf.Lerp(maxSubdivisionLevel, 0, dist1 / 1.0f);
-
-        //float distancev2 = float3.Distance(v2, target);
         int subdivisionLevelv2 = (int)Mathf.Lerp(maxSubdivisionLevel, 0, dist2 / 1.0f);
-
-        //float distancev3 = float3.Distance(v3, target);
         int subdivisionLevelv3 = (int)Mathf.Lerp(maxSubdivisionLevel, 0, dist3 / 1.0f);
 
+        //
+        //  Mathematically this subdivision scheme works because there will never be a fully subdivided triangle with an edge that borders a triangle
+        //  that has two vertices out of range.
+        //  
+        //  This means we don't have a t junction when two vertices are out of range, but we do when we have one out of range.
+        //  And to remove that T junction with 1 vertex out of range, we just need to connect that far vertex to the midpoint of the edge opposite it
+        //
         if (AreTwoVertsOutOfRange(level, subdivisionLevelv1, subdivisionLevelv2, subdivisionLevelv3))
         {
             tris.Write(this);
@@ -44,7 +46,6 @@ public struct SubdividableTriangle
         }
         else if (IsOneVertexOutOfRange(level, subdivisionLevelv1, subdivisionLevelv2, subdivisionLevelv3))
         {
-            // Case 1: Line connecting v1 and midpoint between v2 and v3 - two tris
             if (subdivisionLevelv1 < subdivisionLevelv2)
             {
                 float3 midPointV = GetVertexBetween(v2, v3);
@@ -252,6 +253,9 @@ public class ParallelSubdivision : MonoBehaviour
     NativeStream.Writer trisWriter;                         // Is disposed with tris
     NativeStream.Reader trisReader;                         // Is disposed with tris
 
+    // Temp array for camera frustum planes
+    NativeArray<ParallaxPlane> frustumPlanes;
+
     // Mesh generation data
     NativeArray<float3> newVerts;                           // Dispose after building mesh
     NativeArray<float3> newNormals;                         // Dispose after building mesh
@@ -302,19 +306,11 @@ public class ParallelSubdivision : MonoBehaviour
         colors = new NativeArray<Color>(mesh.colors, Allocator.Persistent).Reinterpret<float4>();
         triangles = new NativeArray<int>(mesh.triangles, Allocator.Persistent);
 
-        storedVertTris = new NativeHashMap<float3, int>(5, Allocator.Persistent);
+        storedVertTris = new NativeHashMap<float3, int>(500, Allocator.Persistent);
         
         CreateTriangles();
-
-        // Items are taken out of the native stream as they are read, so we don't need to clear them until OnDisable
-        // However if something goes horribly wrong and not all items are read, the stream is polluted and the mesh will become garbled
-        tris = new NativeStream(meshTriangles.Length, Allocator.Persistent);
-        trisWriter = tris.AsWriter();
-        trisReader = tris.AsReader();
-
-        newTriangles = new NativeStream(this.streamForeachCount, Allocator.Persistent);
-        newTrianglesWriter = newTriangles.AsWriter();
-        newTrianglesReader = newTriangles.AsReader();
+        
+        frustumPlanes = new NativeArray<ParallaxPlane>(6, Allocator.Persistent);
     }
     float3 GetMousePosInWorld()
     {
@@ -368,7 +364,7 @@ public class ParallelSubdivision : MonoBehaviour
     bool isProcessingSubdivision = false;
     bool isGeneratingMesh = false;
     bool firstRun = true;
-
+    float time = 0;
     void Update()
     {
         // We're done, or running for the first time, so start everything off from step 1
@@ -376,7 +372,7 @@ public class ParallelSubdivision : MonoBehaviour
         {
             DispatchSubdivision();
             DispatchVertexPairRemoval();
-            
+            time = Time.realtimeSinceStartup;
             isProcessingSubdivision = true;
             firstRun = false;
         }
@@ -398,13 +394,25 @@ public class ParallelSubdivision : MonoBehaviour
 
             BuildMesh();
             FreePostMeshBuildResources();
+            FreePostReadbackResources();
+            Debug.Log("Time elapsed: " + ((Time.realtimeSinceStartup - time) * 1000.0f));
         }
     }
     public void DispatchSubdivision()
     {
-        float3 target = transform.InverseTransformPoint(GetMousePosInWorld());
+        float4x4 mat0 = gameObject.transform.localToWorldMatrix;
+        float4x4 mat1 = Camera.main.worldToCameraMatrix;
+        float4x4 mat2 = Camera.main.projectionMatrix;
+
+        float4x4 result = math.mul(mat2, mat1);
+
+        float3 target = transform.InverseTransformPoint(Camera.main.transform.position);//transform.InverseTransformPoint(GetMousePosInWorld());
         int localSubdivisionLevel = maxSubdivisionLevel;
-        
+        CameraUtils.planeNormals.CopyTo(frustumPlanes);
+
+        tris = new NativeStream(this.streamForeachCount, Allocator.Persistent);
+        trisWriter = tris.AsWriter();
+        trisReader = tris.AsReader();
 
         subdivideJob = new SubdivideMeshJob()
         {
@@ -417,6 +425,10 @@ public class ParallelSubdivision : MonoBehaviour
 
             maxSubdivisionLevel = this.maxSubdivisionLevel,
             sqrSubdivisionRange = this.subdivisionRange,
+            cameraFrustumPlanes = frustumPlanes,
+            objectToWorldMatrix = transform.localToWorldMatrix,
+            worldToCameraMatrix = result,
+
             target = target
         };
 
@@ -443,7 +455,6 @@ public class ParallelSubdivision : MonoBehaviour
     void CompleteVertexPairRemoval()
     {
         removeVertexPairsJobHandle.Complete();
-        Debug.Log("len: " + storedVertTris.Length);
     }
 
     // numTris = number of triangles in total we will be processing
@@ -454,7 +465,9 @@ public class ParallelSubdivision : MonoBehaviour
         newNormals = new NativeArray<float3>(storedVertTris.Length, Allocator.Persistent);
         newColors = new NativeArray<float4>(storedVertTris.Length, Allocator.Persistent);
 
-        
+        newTriangles = new NativeStream(meshTriangles.Length, Allocator.Persistent);
+        newTrianglesWriter = newTriangles.AsWriter();
+        newTrianglesReader = newTriangles.AsReader();
 
         meshJob = new ConstructMeshJob()
         {
@@ -471,11 +484,6 @@ public class ParallelSubdivision : MonoBehaviour
         };
 
         constructMeshJobHandle = meshJob.Schedule(this.streamForeachCount, 4);
-    }
-    
-    void CompleteMeshGeneration()
-    {
-        constructMeshJobHandle.Complete();
     }
     void DispatchTriangleReadback(int count)
     {
@@ -515,6 +523,11 @@ public class ParallelSubdivision : MonoBehaviour
         newNormals.Dispose();
         newColors.Dispose();
         outputTriIndices.Dispose();
+        tris.Dispose();
+    }
+    void FreePostReadbackResources()
+    {
+        newTriangles.Dispose();
     }
     void ResetMesh()
     {
@@ -546,6 +559,8 @@ public class ParallelSubdivision : MonoBehaviour
 
         if (storedVertTris.IsCreated) { storedVertTris.Dispose(); }
         if (tris.IsCreated) { tris.Dispose(); }
+
+        if (frustumPlanes.IsCreated) { frustumPlanes.Dispose(); }
     }
     void OnDisable()
     {

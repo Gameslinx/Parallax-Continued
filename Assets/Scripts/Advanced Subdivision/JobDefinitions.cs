@@ -10,62 +10,9 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
-[BurstCompile]
-public struct SubdivideMeshJob : IJobParallelFor
-{
-    [ReadOnly] public NativeArray<SubdividableTriangle> meshTriangles;
-    [ReadOnly] public NativeArray<float3> originalVerts;
-    [ReadOnly] public NativeArray<float3> originalNormals;
-    [ReadOnly] public NativeArray<float4> originalColors;
-
-    // subdividableTRIS
-    [WriteOnly] public NativeStream.Writer tris;
-
-    [ReadOnly] public float3 target;
-    [ReadOnly] public float sqrSubdivisionRange;
-    [ReadOnly] public int maxSubdivisionLevel;
-
-    // Executes per triangle in the original mesh
-    public void Execute(int index)
-    {
-        tris.BeginForEachIndex(index);
-
-        SubdividableTriangle meshTriangle = meshTriangles[index];
-
-        // Calculate 
-        float dist1 = Clamp01(SqrDistance(meshTriangle.v1, target) / sqrSubdivisionRange);
-        float dist2 = Clamp01(SqrDistance(meshTriangle.v2, target) / sqrSubdivisionRange);
-        float dist3 = Clamp01(SqrDistance(meshTriangle.v3, target) / sqrSubdivisionRange);
-
-        // With reducing distance from center, level starts at maxSubdivisionLevel and goes down
-        meshTriangle.Subdivide(ref tris, 0, target, maxSubdivisionLevel, dist1, dist2, dist3);
-        tris.EndForEachIndex();
-    }
-    float SqrDistance(float3 d1, float3 d2)
-    {
-        float dx = d2.x - d1.x;
-        float dy = d2.y - d1.y;
-        float dz = d2.z - d1.z;
-        return Mathf.Sqrt(dx * dx + dy * dy + dz * dz);
-    }
-    float Clamp01(float value)
-    {
-        if (value > 1)
-        {
-            value = 1;
-            return value;
-        }
-        else if (value < 0)
-        {
-            value = 0;
-            return value;
-        }
-        else
-        {
-            return value;
-        }
-    }
-}
+/////////////////////
+//    UTILITIES    //
+/////////////////////
 
 // Interlocked add does not work as expected inside a job, it must be referenced from outside
 
@@ -90,6 +37,120 @@ public static class InterlockedCounters
         for (int i = 0; i < triangleReadbackCounters.Length; i++)
         {
             triangleReadbackCounters[i] = -3;
+        }
+    }
+}
+
+// Used in frustum culling
+public struct ParallaxPlane
+{
+    float3 normal;
+    float distance;
+    public ParallaxPlane(float3 normal, float distance)
+    {
+        this.normal = normal;
+        this.distance = distance;
+    }
+    // Allow cast from Plane to ParallaxPlane
+    public static implicit operator ParallaxPlane(Plane plane) 
+    { 
+        return new ParallaxPlane(plane.normal, plane.distance);
+    }
+    // Is this position on the positive side of the plane
+    public bool GetSide(in Vector3 pos)
+    {
+        return math.dot(pos, normal) + distance > 0;
+    }
+}
+
+////////////////
+//    JOBS    //
+////////////////
+
+
+// Subdivide mesh into smaller triangles - edge midpoint subdivision
+[BurstCompile]
+public struct SubdivideMeshJob : IJobParallelFor
+{
+    [ReadOnly] public NativeArray<SubdividableTriangle> meshTriangles;
+    [ReadOnly] public NativeArray<float3> originalVerts;
+    [ReadOnly] public NativeArray<float3> originalNormals;
+    [ReadOnly] public NativeArray<float4> originalColors;
+
+    // Subdividable TRIS
+    [WriteOnly] public NativeStream.Writer tris;
+
+    [ReadOnly] public float3 target;
+    [ReadOnly] public float sqrSubdivisionRange;
+    [ReadOnly] public int maxSubdivisionLevel;
+
+    [ReadOnly] public NativeArray<ParallaxPlane> cameraFrustumPlanes;
+    [ReadOnly] public float4x4 objectToWorldMatrix;
+    [ReadOnly] public float4x4 worldToCameraMatrix;
+
+    // Executes per triangle in the original mesh
+    public void Execute(int index)
+    {
+        tris.BeginForEachIndex(index);
+
+        int numInside = 0;
+
+        // Fetch triangle
+        SubdividableTriangle meshTriangle = meshTriangles[index];
+
+        // Fetch world space points for frustum culling
+        float4 worldSpaceV1 = math.mul(objectToWorldMatrix, new float4(meshTriangle.v1, 1));
+        float4 worldSpaceV2 = math.mul(objectToWorldMatrix, new float4(meshTriangle.v2, 1));
+        float4 worldSpaceV3 = math.mul(objectToWorldMatrix, new float4(meshTriangle.v3, 1));
+        float centerDist = SqrDistance(target, (meshTriangle.v1 + meshTriangle.v2 + meshTriangle.v3) * 0.333f);
+
+        // Make sure all points are within the frustum
+        for (int i = 0; i < 6; i++)
+        {
+            ParallaxPlane plane = cameraFrustumPlanes[i];
+            if (centerDist < 1 || plane.GetSide(worldSpaceV1.xyz) || plane.GetSide(worldSpaceV2.xyz) || plane.GetSide(worldSpaceV3.xyz))
+            {
+                numInside++;
+            }
+        }
+
+        if (numInside == 6)
+        {
+            // Calculate subdivision distances
+            float dist1 = Clamp01(SqrDistance(meshTriangle.v1, target) / sqrSubdivisionRange);
+            float dist2 = Clamp01(SqrDistance(meshTriangle.v2, target) / sqrSubdivisionRange);
+            float dist3 = Clamp01(SqrDistance(meshTriangle.v3, target) / sqrSubdivisionRange);
+
+            // With reducing distance from center, level starts at maxSubdivisionLevel and goes down
+            meshTriangle.Subdivide(ref tris, 0, target, maxSubdivisionLevel, dist1, dist2, dist3);
+        }
+        else
+        {
+            tris.Write(meshTriangle);
+        }
+        tris.EndForEachIndex();
+
+    }
+    float SqrDistance(in float3 d1, in float3 d2)
+    {
+        float dx = d2.x - d1.x;
+        float dy = d2.y - d1.y;
+        float dz = d2.z - d1.z;
+        return Mathf.Sqrt(dx * dx + dy * dy + dz * dz);
+    }
+    float Clamp01(in float value)
+    {
+        if (value > 1)
+        {
+            return 1;
+        }
+        else if (value < 0)
+        {
+            return 0;
+        }
+        else
+        {
+            return value;
         }
     }
 }
