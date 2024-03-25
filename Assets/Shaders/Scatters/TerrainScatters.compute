@@ -1,0 +1,99 @@
+﻿#pragma kernel Distribute
+#pragma kernel Evaluate
+
+#include "ScatterStructs.cginc"
+#include "ScatterParams.cginc"
+#include "ScatterUtils.cginc"
+
+StructuredBuffer<float3> vertices;
+StructuredBuffer<float3> normals;
+StructuredBuffer<int> triangles;
+
+AppendStructuredBuffer<PositionData> output;
+
+//
+//  Distribution Compute Shader
+//
+
+// Runs per triangle in the mesh (indices count / 3)
+
+[numthreads(32,1,1)]
+void Distribute (uint3 id : SV_DispatchThreadID)
+{
+    // Early return if max triangles to be processed is exceeded
+    if ((id.x * _PopulationMultiplier) > _MaxCount - 1)
+    {
+        return;
+    }
+    
+    // Get the indices for the vertices of this thread's triangle
+    uint index1 = triangles[id.x * 3];
+    uint index2 = triangles[id.x * 3 + 1];
+    uint index3 = triangles[id.x * 3 + 2];
+    
+    // Get triangle vertices
+    float3 v1 = vertices[index1];
+    float3 v2 = vertices[index2];
+    float3 v3 = vertices[index3];
+    
+    // Get triangle normals
+    float3 n1 = normals[index1];
+    float3 n2 = normals[index2];
+    float3 n3 = normals[index3];
+    
+    // Use tri center as the random seed, since it will vary per quad
+    // but will remain persistent
+    float3 center = TriCenter(v1, v2, v3);
+    
+    for (int i = 0; i < _PopulationMultiplier; i++)
+    {
+        // Output struct
+        PositionData newObject;
+        
+        // Use the local vertex position as a random input so each quad is different
+        float randomX = Rand(center + i);
+        float randomY = Rand(center / 2 + i);
+        float3 localPos = RandomPoint(v1, v2, v3, sqrt(randomX), randomY);
+        
+        newObject.localPos = localPos;
+        newObject.localScale = float3(0.1, 0.1, 0.1);
+        newObject.rotation = 0;
+        newObject.index = id.x * 3;
+    
+        output.Append(newObject);
+    }
+    
+    
+    
+}
+
+//
+//  Evaluation Compute Shader
+//
+
+// Transforms local positions to world positions
+
+StructuredBuffer<PositionData> positions;
+AppendStructuredBuffer<TransformData> instancingData;
+StructuredBuffer<uint> objectLimits;
+
+[numthreads(32, 1, 1)]
+void Evaluate(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x > objectLimits[0] - 1)
+    {
+        return;
+    }
+
+    PositionData pos = positions[id.x];
+
+    // the float3 at the end becomes the terrain average normal
+    float4x4 mat = GetTRSMatrix(pos.localPos, float3(0, pos.rotation, 0), pos.localScale, float3(0, 1, 0)); //GetTRSMatrix(pos.localPos, float3(0, pos.rotation, 0), pos.localScale, float3(0, 1, 0));
+
+    mat = mul(_ObjectToWorldMatrix, mat);
+
+    TransformData object;
+    object.objectToWorld = mat;
+
+    instancingData.Append(object);
+}

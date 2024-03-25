@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.Collections;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace Parallax
@@ -14,6 +16,11 @@ namespace Parallax
         public static event FlightReflectionProbeReady onFlightReflectionProbeReady;
 
         public static GameObject flightProbeObject;
+
+        // Used in mesh subdivision frustum culling
+        public static ParallaxPlane[] cameraFrustumPlanes = new ParallaxPlane[6];
+        public static float3 cameraPos = float3.zero;
+        Plane[] planes;
         public void Start()
         {
             flightProbeObject = GameObject.Find("Reflection Probe");
@@ -26,9 +33,29 @@ namespace Parallax
         }
         public void Update()
         {
+            // Determine a celestial body change
             if (EventHandler.currentParallaxBody != null && FlightGlobals.currentMainBody != null)
             {
                 SetParallaxMaterialVars(EventHandler.currentParallaxBody.parallaxMaterials);
+            }
+
+            // Get the camera position
+            Camera cam = Camera.allCameras.FirstOrDefault(_cam => _cam.name == "Camera 00");
+            if (cam != null)
+            {
+                cameraPos = cam.gameObject.transform.position;
+            }
+            else
+            {
+                return;
+            }
+
+            // Calculate camera frustum planes for frustum culling
+            planes = GeometryUtility.CalculateFrustumPlanes(cam);
+            for (int i = 0; i < planes.Length; i++)
+            {
+                // Convert to ParallaxPlane
+                cameraFrustumPlanes[i] = planes[i];
             }
         }
         Vector3 terrainShaderOffset;

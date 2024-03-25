@@ -23,14 +23,18 @@ public struct SubdividableTriangle
         this.n1 = n1; this.n2 = n2; this.n3 = n3;
         this.c1 = c1; this.c2 = c2; this.c3 = c3;
     }
-    public void Subdivide(ref NativeStream.Writer tris, in int level, in float3 target, in int maxSubdivisionLevel, in float dist1, in float dist2, in float dist3)
+    public void Subdivide(ref NativeStream.Writer tris, in int level, in float3 target, in int maxSubdivisionLevel, in float subdivisionRange, in float4x4 objectToWorld)
     {
         if (level == maxSubdivisionLevel) { return; }
 
+        float3 worldPosV1 = math.mul(objectToWorld, new float4(v1, 1)).xyz;
+        float3 worldPosV2 = math.mul(objectToWorld, new float4(v2, 1)).xyz;
+        float3 worldPosV3 = math.mul(objectToWorld, new float4(v3, 1)).xyz;
+
         // Get which verts are actually in range
-        int subdivisionLevelv1 = (int)Mathf.Lerp(maxSubdivisionLevel, 0, dist1 / 1.0f);
-        int subdivisionLevelv2 = (int)Mathf.Lerp(maxSubdivisionLevel, 0, dist2 / 1.0f);
-        int subdivisionLevelv3 = (int)Mathf.Lerp(maxSubdivisionLevel, 0, dist3 / 1.0f);
+        int subdivisionLevelv1 = (int)math.lerp(maxSubdivisionLevel, 0, CalculateDistance(worldPosV1, target, subdivisionRange));
+        int subdivisionLevelv2 = (int)math.lerp(maxSubdivisionLevel, 0, CalculateDistance(worldPosV2, target, subdivisionRange));
+        int subdivisionLevelv3 = (int)math.lerp(maxSubdivisionLevel, 0, CalculateDistance(worldPosV3, target, subdivisionRange));
 
         //
         //  Mathematically this subdivision scheme works because there will never be a fully subdivided triangle with an edge that borders a triangle
@@ -101,12 +105,8 @@ public struct SubdividableTriangle
         float4 tc2 = GetColorBetween(c3, c2);
         float4 tc3 = c3;
 
-        float td1 = GetFloatBetween(dist1, dist3);
-        float td2 = GetFloatBetween(dist3, dist2);
-        float td3 = dist3;
-
         SubdividableTriangle t = new SubdividableTriangle(tv1, tv2, tv3, tn1, tn2, tn3, tc1, tc2, tc3);
-        t.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, td1, td2, td3);
+        t.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, subdivisionRange, objectToWorld);
 
         // Lower left
         float3 blv1 = v1;
@@ -121,12 +121,8 @@ public struct SubdividableTriangle
         float4 blc2 = GetColorBetween(c1, c2);
         float4 blc3 = GetColorBetween(c1, c3);
 
-        float bld1 = dist1;
-        float bld2 = GetFloatBetween(dist1, dist2);
-        float bld3 = GetFloatBetween(dist1, dist3);
-
         SubdividableTriangle bl = new SubdividableTriangle(blv1, blv2, blv3, bln1, bln2, bln3, blc1, blc2, blc3);
-        bl.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, bld1, bld2, bld3);
+        bl.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, subdivisionRange, objectToWorld);
 
         // Lower right
         float3 brv1 = GetVertexBetween(v1, v2);
@@ -141,12 +137,8 @@ public struct SubdividableTriangle
         float4 brc2 = c2;
         float4 brc3 = GetColorBetween(c3, c2);
 
-        float brd1 = GetFloatBetween(dist1, dist2);
-        float brd2 = dist2;
-        float brd3 = GetFloatBetween(dist3, dist2);
-
         SubdividableTriangle br = new SubdividableTriangle(brv1, brv2, brv3, brn1, brn2, brn3, brc1, brc2, brc3);
-        br.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, brd1, brd2, brd3);
+        br.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, subdivisionRange, objectToWorld);
 
         // Center tri
         float3 cv1 = GetVertexBetween(v1, v2);
@@ -161,12 +153,8 @@ public struct SubdividableTriangle
         float4 cc2 = GetColorBetween(c2, c3);
         float4 cc3 = GetColorBetween(c3, c1);
 
-        float cd1 = GetFloatBetween(dist1, dist2);
-        float cd2 = GetFloatBetween(dist2, dist3);
-        float cd3 = GetFloatBetween(dist3, dist1);
-
         SubdividableTriangle c = new SubdividableTriangle(cv1, cv2, cv3, cn1, cn2, cn3, cc1, cc2, cc3);
-        c.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, cd1, cd2, cd3);
+        c.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, subdivisionRange, objectToWorld);
 
         if (level + 1 == subdivisionLevelv1 && level + 1 == subdivisionLevelv2 && level + 1 == subdivisionLevelv3)
         {
@@ -175,6 +163,13 @@ public struct SubdividableTriangle
             tris.Write(br);
             tris.Write(c);
         }
+    }
+    float CalculateDistance(in float3 pos, in float3 target, in float maxRange)
+    {
+        float log2SqrMaxRange = math.log2(maxRange * maxRange);
+        float dist = math.distance(pos, target);
+        float log2SqrDist = math.log2(dist * dist);
+        return math.saturate(log2SqrDist / log2SqrMaxRange);
     }
     bool AreTwoVertsOutOfRange(in int thisLevel, in int level1, in int level2, in int level3)
     {
@@ -404,9 +399,11 @@ public class ParallelSubdivision : MonoBehaviour
         float4x4 mat1 = Camera.main.worldToCameraMatrix;
         float4x4 mat2 = Camera.main.projectionMatrix;
 
-        float4x4 result = math.mul(mat2, mat1);
 
-        float3 target = transform.InverseTransformPoint(Camera.main.transform.position);//transform.InverseTransformPoint(GetMousePosInWorld());
+        float4x4 result = Camera.main.projectionMatrix * Camera.main.worldToCameraMatrix;
+        result = math.mul(result, mat0);
+
+        float3 target = (Camera.main.transform.position);//transform.InverseTransformPoint(GetMousePosInWorld());
         int localSubdivisionLevel = maxSubdivisionLevel;
         CameraUtils.planeNormals.CopyTo(frustumPlanes);
 
@@ -427,7 +424,6 @@ public class ParallelSubdivision : MonoBehaviour
             sqrSubdivisionRange = this.subdivisionRange,
             cameraFrustumPlanes = frustumPlanes,
             objectToWorldMatrix = transform.localToWorldMatrix,
-            worldToCameraMatrix = result,
 
             target = target
         };

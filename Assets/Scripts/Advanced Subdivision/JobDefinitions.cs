@@ -86,7 +86,6 @@ public struct SubdivideMeshJob : IJobParallelFor
 
     [ReadOnly] public NativeArray<ParallaxPlane> cameraFrustumPlanes;
     [ReadOnly] public float4x4 objectToWorldMatrix;
-    [ReadOnly] public float4x4 worldToCameraMatrix;
 
     // Executes per triangle in the original mesh
     public void Execute(int index)
@@ -102,7 +101,7 @@ public struct SubdivideMeshJob : IJobParallelFor
         float4 worldSpaceV1 = math.mul(objectToWorldMatrix, new float4(meshTriangle.v1, 1));
         float4 worldSpaceV2 = math.mul(objectToWorldMatrix, new float4(meshTriangle.v2, 1));
         float4 worldSpaceV3 = math.mul(objectToWorldMatrix, new float4(meshTriangle.v3, 1));
-        float centerDist = SqrDistance(target, (meshTriangle.v1 + meshTriangle.v2 + meshTriangle.v3) * 0.333f);
+        float centerDist = SqrDistance(target, (worldSpaceV1.xyz + worldSpaceV2.xyz + worldSpaceV3.xyz) * 0.333f);
 
         // Make sure all points are within the frustum
         for (int i = 0; i < 6; i++)
@@ -114,15 +113,10 @@ public struct SubdivideMeshJob : IJobParallelFor
             }
         }
 
-        if (numInside == 6)
+        if (numInside > 0)
         {
-            // Calculate subdivision distances
-            float dist1 = Clamp01(SqrDistance(meshTriangle.v1, target) / sqrSubdivisionRange);
-            float dist2 = Clamp01(SqrDistance(meshTriangle.v2, target) / sqrSubdivisionRange);
-            float dist3 = Clamp01(SqrDistance(meshTriangle.v3, target) / sqrSubdivisionRange);
-
             // With reducing distance from center, level starts at maxSubdivisionLevel and goes down
-            meshTriangle.Subdivide(ref tris, 0, target, maxSubdivisionLevel, dist1, dist2, dist3);
+            meshTriangle.Subdivide(ref tris, 0, target, maxSubdivisionLevel, sqrSubdivisionRange, objectToWorldMatrix);
         }
         else
         {

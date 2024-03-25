@@ -64,6 +64,9 @@ namespace Parallax
             parallaxGlobalSettings.terrainGlobalSettings.maxTessellation = float.Parse(terrainSettingsNode.GetValue("maxTessellation"));
             parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength = float.Parse(terrainSettingsNode.GetValue("tessellationEdgeLength"));
             parallaxGlobalSettings.terrainGlobalSettings.maxTessellationRange = float.Parse(terrainSettingsNode.GetValue("maxTessellationRange"));
+
+            ConfigNode debugSettingsNode = config.config.GetNode("DebugSettings");
+            parallaxGlobalSettings.debugGlobalSettings.wireframeTerrain = bool.Parse(debugSettingsNode.GetValue("wireframeTerrain"));
         }
         // Template configs tell Parallax what variable names and type are supported by the shader
         public static void InitializeTemplateConfigs(UrlDir.UrlConfig config)
