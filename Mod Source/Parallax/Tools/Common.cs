@@ -29,15 +29,17 @@ namespace Parallax
     }
     // Stores the loaded values from the configs for each planet, except for the textures which are stored via file path
     // Textures are loaded On-Demand and stored in loadedTextures, where they are unloaded on scene change
-    public class ParallaxBody
+    public class ParallaxTerrainBody
     {
         public string planetName;
         public Dictionary<string, Texture2D> loadedTextures = new Dictionary<string, Texture2D>();
+
+        // Terrain materials
         public ParallaxMaterials parallaxMaterials = new ParallaxMaterials();
 
         public ShaderProperties terrainShaderProperties;
         public bool loaded = false;
-        public ParallaxBody(string planetName)
+        public ParallaxTerrainBody(string planetName)
         {
             this.planetName = planetName;
         }
@@ -137,6 +139,27 @@ namespace Parallax
         public Material parallaxMidHigh;
 
         public Material parallaxFull;
+    }
+    // Stores scatter information
+    public class ParallaxScatterBody
+    {
+        public string planetName;
+
+        // Scatter dictionary for fast access
+        public Dictionary<string, Scatter> scatters = new Dictionary<string, Scatter>();
+
+        // Scatter array for fast iteration
+        public Scatter[] bodyScatters;
+        public ParallaxScatterBody(string planetName)
+        {
+            this.planetName = planetName;
+        }
+    }
+    // Stores Scatter information
+    public class Scatter
+    {
+        // Store properties as laid out in config
+        public string scatterName;
     }
     // Stores the names of the variables, then the types as defined in the ShaderPropertiesTemplate.cfg
     public class ShaderProperties : ICloneable

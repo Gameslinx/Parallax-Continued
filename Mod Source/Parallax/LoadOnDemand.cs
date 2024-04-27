@@ -18,16 +18,16 @@ namespace Parallax
 
             if (to != null)
             {
-                LoadBody(ConfigLoader.parallaxBodies[to.name]);
+                LoadBody(ConfigLoader.parallaxTerrainBodies[to.name]);
             }
         }
-        public static void LoadBody(ParallaxBody body)
+        public static void LoadBody(ParallaxTerrainBody body)
         {
             body.Load(true);
         }
         public static void UnloadAll()
         {
-            foreach (KeyValuePair<string, ParallaxBody> body in ConfigLoader.parallaxBodies)
+            foreach (KeyValuePair<string, ParallaxTerrainBody> body in ConfigLoader.parallaxTerrainBodies)
             {
                 if (body.Value.loaded)
                 {

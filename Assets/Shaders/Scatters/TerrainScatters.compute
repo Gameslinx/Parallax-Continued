@@ -4,6 +4,7 @@
 #include "ScatterStructs.cginc"
 #include "ScatterParams.cginc"
 #include "ScatterUtils.cginc"
+#include "SimplexNoise.cginc"
 
 StructuredBuffer<float3> vertices;
 StructuredBuffer<float3> normals;
@@ -21,7 +22,7 @@ AppendStructuredBuffer<PositionData> output;
 void Distribute (uint3 id : SV_DispatchThreadID)
 {
     // Early return if max triangles to be processed is exceeded
-    if ((id.x * _PopulationMultiplier) > _MaxCount - 1)
+    if (((int)id.x * _PopulationMultiplier) > _MaxCount - 1)
     {
         return;
     }
@@ -51,20 +52,21 @@ void Distribute (uint3 id : SV_DispatchThreadID)
         PositionData newObject;
         
         // Use the local vertex position as a random input so each quad is different
-        float randomX = Rand(center + i);
-        float randomY = Rand(center / 2 + i);
-        float3 localPos = RandomPoint(v1, v2, v3, sqrt(randomX), randomY);
+        // X must be sqrtd
+        float randomX = sqrt(Rand(center + i));
+        float randomY = Rand(center * 0.5 + i);
+        float3 localPos = RandomPoint(v1, v2, v3, randomX, randomY);
+        
+        float noiseValue = snoise(localPos * _NoiseScale) * 0.5f + 0.5f;
+        float heightMultiplier = lerp(0.5, 2, noiseValue);
         
         newObject.localPos = localPos;
-        newObject.localScale = float3(0.1, 0.1, 0.1);
-        newObject.rotation = 0;
+        newObject.localScale = float3(1.1, 1.1, 1.1);
+        newObject.rotation = Rand(center * 0.25 + i) * 180.0f;
         newObject.index = id.x * 3;
     
         output.Append(newObject);
     }
-    
-    
-    
 }
 
 //
@@ -88,7 +90,7 @@ void Evaluate(uint3 id : SV_DispatchThreadID)
     PositionData pos = positions[id.x];
 
     // the float3 at the end becomes the terrain average normal
-    float4x4 mat = GetTRSMatrix(pos.localPos, float3(0, pos.rotation, 0), pos.localScale, float3(0, 1, 0)); //GetTRSMatrix(pos.localPos, float3(0, pos.rotation, 0), pos.localScale, float3(0, 1, 0));
+    float4x4 mat = GetTRSMatrix(pos.localPos, float3(0, 0, 0), pos.localScale, float3(0, 1, 0)); //GetTRSMatrix(pos.localPos, float3(0, pos.rotation, 0), pos.localScale, float3(0, 1, 0));
 
     mat = mul(_ObjectToWorldMatrix, mat);
 

@@ -1,5 +1,3 @@
-#define eta 0.7519
-
 // Samplers
 sampler2D _MainTexLow;
 sampler2D _BumpMapLow;
@@ -33,13 +31,6 @@ float _SteepMidpoint;
 float _MaxTessellation;
 float _TessellationEdgeLength;
 float _MaxTessellationRange;
-
-// Lighting params
-float _FresnelPower;
-float _SpecularPower;
-float _SpecularIntensity;
-float _EnvironmentMapFactor;
-float _RefractionIntensity;
 
 //
 // Other / game params

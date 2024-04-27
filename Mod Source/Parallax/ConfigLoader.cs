@@ -21,8 +21,11 @@ namespace Parallax
         // Holds global settings defined in ParallaxGlobalSettings.cfg
         public static ParallaxSettings parallaxGlobalSettings = new ParallaxSettings();
 
-        // Stores all parallax bodies by planet name
-        public static Dictionary<string, ParallaxBody> parallaxBodies = new Dictionary<string, ParallaxBody>();
+        // Stores all parallax terrain bodies by planet name
+        public static Dictionary<string, ParallaxTerrainBody> parallaxTerrainBodies = new Dictionary<string, ParallaxTerrainBody>();
+
+        // Stores all parallax scatter bodies by planet name
+        public static Dictionary<string, ParallaxScatterBody> parallaxScatterBodies = new Dictionary<string, ParallaxScatterBody>();
 
         // Stores transparent material for terrain quads
         public static Material transparentMaterial;
@@ -111,14 +114,17 @@ namespace Parallax
                 {
                     string planetName = planetNode.GetValue("name");
                     // TODO: Add emissive support here
-                    ParallaxBody body = new ParallaxBody(planetName);
+                    ParallaxTerrainBody body = new ParallaxTerrainBody(planetName);
                     ParseNewBody(body, planetNode.GetNode("ShaderProperties"));
                     body.LoadInitial();
-                    parallaxBodies.Add(planetName, body);
+                    parallaxTerrainBodies.Add(planetName, body);
                 }
             }
+
+            // For debugging
+            parallaxScatterBodies.Add("Kerbin", new ParallaxScatterBody("Kerbin"));
         }
-        public static void ParseNewBody(ParallaxBody body, ConfigNode bodyNode)
+        public static void ParseNewBody(ParallaxTerrainBody body, ConfigNode bodyNode)
         {
             ParallaxDebug.Log("Parsing new body: " + body.planetName);
             // Grab the template

@@ -17,6 +17,9 @@ namespace Parallax
 
         public static GameObject flightProbeObject;
 
+        public delegate void DominantBodyChanged(CelestialBody body);
+        public static event DominantBodyChanged onDominantBodyChanged;
+
         // Used in mesh subdivision frustum culling
         public static ParallaxPlane[] cameraFrustumPlanes = new ParallaxPlane[6];
         public static float3 cameraPos = float3.zero;
@@ -37,6 +40,10 @@ namespace Parallax
             if (EventHandler.currentParallaxBody != null && FlightGlobals.currentMainBody != null)
             {
                 SetParallaxMaterialVars(EventHandler.currentParallaxBody.parallaxMaterials);
+                if (onDominantBodyChanged != null)
+                {
+                    onDominantBodyChanged(FlightGlobals.currentMainBody);
+                }
             }
 
             // Get the camera position

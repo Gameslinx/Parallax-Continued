@@ -78,7 +78,8 @@ Shader "Custom/Parallax"
     {
         Tags { "RenderType"="Opaque" }
         LOD 100
-
+        //ZWrite On
+        //Cull Back
         //
         //  Forward Base Pass
         //
@@ -103,6 +104,7 @@ Shader "Custom/Parallax"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
             
+            #include "../Includes/ParallaxGlobalFunctions.cginc"
             #include "ParallaxStructs.cginc"
             #include "ParallaxVariables.cginc"
             #include "ParallaxUtils.cginc"
@@ -393,6 +395,7 @@ Shader "Custom/Parallax"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
         
+            #include "../Includes/ParallaxGlobalFunctions.cginc"
             #include "ParallaxStructs.cginc"
             #include "ParallaxVariables.cginc"
             #include "ParallaxUtils.cginc"

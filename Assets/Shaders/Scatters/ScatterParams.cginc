@@ -11,6 +11,8 @@ float3 _PlanetNormal;
 // Max distribution count
 int _MaxCount;
 
+float _NoiseScale;
+
 //
 //  Evaluate params
 //

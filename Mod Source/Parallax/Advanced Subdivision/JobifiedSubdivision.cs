@@ -66,7 +66,7 @@ namespace Parallax
 
         public void Start()
         {
-            mesh = Instantiate(GetComponent<MeshFilter>().sharedMesh);
+            mesh = GetComponent<MeshFilter>().sharedMesh;
             mesh.MarkDynamic();
             this.gameObject.GetComponent<MeshFilter>().sharedMesh = mesh;
 
@@ -287,10 +287,18 @@ namespace Parallax
         void ResetMesh()
         {
             mesh.Clear();
-            mesh.SetVertices(vertices);
+
+            mesh.SetVertexBufferParams(vertices.Length, new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32));
+            mesh.SetVertexBufferData(vertices, 0, 0, vertices.Length);
+
+            mesh.SetIndexBufferParams(triangles.Length, IndexFormat.UInt32);
+            mesh.SetIndexBufferData(triangles, 0, 0, triangles.Length);
+
+            mesh.SetSubMesh(0, new SubMeshDescriptor(0, triangles.Length));
+
             mesh.SetNormals(normals);
-            mesh.SetTriangles(triangles.ToArray(), 0);
             mesh.SetColors(colors);
+            this.GetComponent<MeshFilter>().sharedMesh = mesh;
         }
         public void Cleanup()
         {
@@ -298,6 +306,8 @@ namespace Parallax
             subdivideJobHandle.Complete();
             triangleDataReadJobHandle.Complete();
             removeVertexPairsJobHandle.Complete();
+
+            ResetMesh();
 
             if (vertices.IsCreated) { vertices.Dispose(); }
             if (normals.IsCreated) { normals.Dispose(); }

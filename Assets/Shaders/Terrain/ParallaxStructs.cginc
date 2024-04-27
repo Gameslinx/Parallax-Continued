@@ -86,7 +86,7 @@
     {                                               \
         float4 pos : SV_POSITION;                   \
         float4 vertex : TEXCOORD1;                  \
-        float3 normal : TEXCOORD2;                     \
+        float3 normal : TEXCOORD2;                  \
         float3 worldPos : TEXCOORD0;                \
         float3 worldNormal : NORMAL;                \
     };

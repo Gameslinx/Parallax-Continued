@@ -14,7 +14,7 @@ namespace Parallax
     public class TerrainShaderQuadData
     {
         public Material quadMaterial;
-        public ParallaxBody body;
+        public ParallaxTerrainBody body;
 
         GameObject newQuad;
         JobifiedSubdivision subdivisionComponent;
@@ -47,7 +47,7 @@ namespace Parallax
         // Get all required properties on the planet
         public void Initialize()
         {
-            body = ConfigLoader.parallaxBodies[quad.sphereRoot.name];
+            body = ConfigLoader.parallaxTerrainBodies[quad.sphereRoot.name];
 
             blendLowMidStart = body.terrainShaderProperties.shaderFloats["_LowMidBlendStart"];
             blendLowMidEnd = body.terrainShaderProperties.shaderFloats["_LowMidBlendEnd"];
@@ -59,6 +59,7 @@ namespace Parallax
 
             if (isMaxLevel)
             {
+                // Sadly a requirement or NRE spam in PQS code
                 mesh = UnityEngine.Object.Instantiate(quad.mesh);
                 
                 quadWidth = (float)((2f * Mathf.PI * FlightGlobals.GetBodyByName(quad.sphereRoot.name).Radius / 4f) / (Mathf.Pow(2f, quad.sphereRoot.maxLevel)));

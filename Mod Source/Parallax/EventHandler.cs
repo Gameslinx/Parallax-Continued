@@ -14,7 +14,7 @@ namespace Parallax
         public static event QuadRangeCheck OnQuadRangeCheck;
         
         public static EventHandler Instance;
-        public static ParallaxBody currentParallaxBody;
+        public static ParallaxTerrainBody currentParallaxBody;
 
         CelestialBody currentBody;
         void Awake()
@@ -28,12 +28,12 @@ namespace Parallax
         {
             Debug.Log("Load requested: " + planetName);
             // First check if the body is a parallax body
-            if (!ConfigLoader.parallaxBodies.ContainsKey(planetName))
+            if (!ConfigLoader.parallaxTerrainBodies.ContainsKey(planetName))
             {
                 return;
             }
 
-            ParallaxBody body = ConfigLoader.parallaxBodies[planetName];
+            ParallaxTerrainBody body = ConfigLoader.parallaxTerrainBodies[planetName];
 
             // This is a new body, we should load it
             if (body.loaded)
@@ -50,12 +50,12 @@ namespace Parallax
         public static void RequestUnload(string planetName, string source)
         {
             Debug.Log("Unload requested: " + planetName);
-            if (!ConfigLoader.parallaxBodies.ContainsKey(planetName))
+            if (!ConfigLoader.parallaxTerrainBodies.ContainsKey(planetName))
             {
                 return;
             }
 
-            ParallaxBody body = ConfigLoader.parallaxBodies[planetName];
+            ParallaxTerrainBody body = ConfigLoader.parallaxTerrainBodies[planetName];
 
             // The planet we're trying to unload is the current body
             if (body.loaded)

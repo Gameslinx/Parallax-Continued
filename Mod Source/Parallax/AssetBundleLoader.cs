@@ -12,11 +12,21 @@ namespace Parallax
     public class AssetBundleLoader
     {
         public static Dictionary<string, Shader> parallaxTerrainShaders = new Dictionary<string, Shader>();
+        public static Dictionary<string, Shader> parallaxScatterShaders = new Dictionary<string, Shader>();
+        public static Dictionary<string, ComputeShader> parallaxComputeShaders = new Dictionary<string, ComputeShader>();
         public static void Initialize()
         {
-            string filePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "Parallax/Shaders/Parallax");
-            filePath = DeterminePlatform(filePath);
-            LoadAssetBundles(filePath, parallaxTerrainShaders);
+            string terrainShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "Parallax/Shaders/ParallaxTerrain");
+            string scatterShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "Parallax/Shaders/ParallaxScatters");
+            string computeShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "Parallax/Shaders/ParallaxCompute");
+
+            terrainShaderFilePath = DeterminePlatform(terrainShaderFilePath);
+            scatterShaderFilePath = DeterminePlatform(scatterShaderFilePath);
+            computeShaderFilePath = DeterminePlatform(computeShaderFilePath);
+
+            LoadAssetBundles<Shader>(terrainShaderFilePath, parallaxTerrainShaders);
+            LoadAssetBundles<Shader>(scatterShaderFilePath, parallaxScatterShaders);
+            LoadAssetBundles<ComputeShader>(computeShaderFilePath, parallaxComputeShaders);
         }
         static string DeterminePlatform(string filePath)
         {
@@ -41,7 +51,7 @@ namespace Parallax
             return filePath;
         }
         // Get all shaders from asset bundle
-        static void LoadAssetBundles(string filePath, Dictionary<string, Shader> dest)
+        static void LoadAssetBundles<T>(string filePath, Dictionary<string, T> dest) where T : UnityEngine.Object
         {
             var assetBundle = AssetBundle.LoadFromFile(filePath);
             if (assetBundle == null)
@@ -50,8 +60,8 @@ namespace Parallax
             }
             else
             {
-                Shader[] shaders = assetBundle.LoadAllAssets<Shader>();
-                foreach (Shader shader in shaders)
+                T[] shaders = assetBundle.LoadAllAssets<T>();
+                foreach (T shader in shaders)
                 {
                     dest.Add(shader.name, shader);
                     ParallaxDebug.Log("Loaded shader: " + shader.name);

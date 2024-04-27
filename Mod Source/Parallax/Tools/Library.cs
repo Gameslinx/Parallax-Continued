@@ -10,12 +10,6 @@ using static GameEvents;
 
 namespace Parallax
 {
-    public class Variance
-    {
-        public string Prop { get; set; }
-        public object valA { get; set; }
-        public object valB { get; set; }
-    }
     // Debug logging with "[Parallax]"
     public static class ParallaxDebug
     {

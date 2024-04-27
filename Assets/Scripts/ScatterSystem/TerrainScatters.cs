@@ -55,8 +55,13 @@ public class TerrainScatters : MonoBehaviour
     int[] triangles;
     Mesh mesh;
 
-    // Distribution Params
-    [Range(1, 25)] public int _PopulationMultiplier = 1;
+    // Distribution params that require a full reinitialization
+    [Range(1, 100)] public int _PopulationMultiplier = 1;
+
+    // Distribution params that don't require a full reinitialization
+    public bool requiresFullRestart = false;
+    [Range(0.001f, 10f)] public float noiseScale;
+    public Vector3 _PlanetOrigin = Vector3.zero;
 
     int numTriangles;
 
@@ -76,10 +81,12 @@ public class TerrainScatters : MonoBehaviour
 
         readyForValidationChecks = true;
     }
-    // This is called when a value is changed in the inspector
     void OnValidate()
     {
         if (!readyForValidationChecks) { return; }
+
+        // Remove this component (exclude in build) to prevent multiple components from being added
+        scatterRenderer.scatterComponents.Remove(this);
 
         // Clean everything except for indirect args
         sourceVertsBuffer?.Dispose();
@@ -110,7 +117,6 @@ public class TerrainScatters : MonoBehaviour
 
         scatterShader.SetInt("_PopulationMultiplier", _PopulationMultiplier);
         scatterShader.SetInt("_AlignToTerrainNormal", 0);
-        scatterShader.SetVector("_PlanetNormal", new Vector3(0, 1, 0) * -1000);
         scatterShader.SetInt("_MaxCount", outputSize);
 
         distributeKernel = scatterShader.FindKernel("Distribute");
@@ -120,7 +126,7 @@ public class TerrainScatters : MonoBehaviour
         sourceVertsBuffer = new ComputeBuffer(vertices.Length, sizeof(float) * 3, ComputeBufferType.Structured);
         sourceNormalsBuffer = new ComputeBuffer(normals.Length, sizeof(float) * 3, ComputeBufferType.Structured);
         sourceTrianglesBuffer = new ComputeBuffer(triangles.Length, sizeof(int), ComputeBufferType.Structured);
-       
+
         sourceVertsBuffer.SetData(vertices);
         sourceNormalsBuffer.SetData(normals);
         sourceTrianglesBuffer.SetData(triangles);
@@ -131,6 +137,13 @@ public class TerrainScatters : MonoBehaviour
         scatterShader.SetBuffer(distributeKernel, "normals", sourceNormalsBuffer);
         scatterShader.SetBuffer(distributeKernel, "triangles", sourceTrianglesBuffer);
         scatterShader.SetBuffer(distributeKernel, "output", outputScatterDataBuffer);
+
+        SetDistributionVars();
+    }
+    // These don't require a full reinitialization
+    public void SetDistributionVars()
+    {
+        scatterShader.SetFloat("_NoiseScale", noiseScale);
     }
     public void Distribute()
     {
@@ -181,7 +194,8 @@ public class TerrainScatters : MonoBehaviour
         // Update runtime shader vars
         // We need to know the size of the distribution before continuing with this
         scatterShader.SetMatrix("_ObjectToWorldMatrix", transform.localToWorldMatrix);
-        scatterShader.SetVector("_PlanetNormal", new Vector3(0, 1, 0));
+        scatterShader.SetVector("_PlanetNormal", Vector3.Normalize(transform.position - _PlanetOrigin));
+
 
         scatterShader.DispatchIndirect(evaluateKernel, dispatchArgs, 0);
     }
