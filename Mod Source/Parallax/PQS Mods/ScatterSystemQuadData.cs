@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using static KSP.UI.Screens.RDNode;
 
 namespace Parallax
 {
@@ -12,10 +11,18 @@ namespace Parallax
     // after meeting certain criteria, eg, is quad in range
     public class ScatterSystemQuadData
     {
+        ParallaxScatterBody body;
+
         // The terrain quad
         public PQ quad;
         public int subdivisionLevel;
         public float subdivisionRadius;
+        public float sqrQuadWidth;
+
+        // PQS data
+        // Potentially store a scaled version of this to get closer to the desired frequency and reduce precision errors
+        // Length parity with quad vertex count
+        public Vector3[] directionFromCenter;
 
         // Physical mesh data
         Mesh mesh;
@@ -36,14 +43,18 @@ namespace Parallax
         // Stores the scatter components
         List<ScatterData> quadScatters = new List<ScatterData>();
 
-        public ScatterSystemQuadData(PQ quad, int subdivisionLevel, float subdivisionRadius)
+        public ScatterSystemQuadData(ParallaxScatterBody body, PQ quad, int subdivisionLevel, float subdivisionRadius)
         {
+            this.body = body;
             this.quad = quad;
             this.subdivisionLevel = subdivisionLevel;
             this.subdivisionRadius = subdivisionRadius;
         }
         public void Initialize()
         {
+            sqrQuadWidth = (float)((2f * Mathf.PI * quad.sphereRoot.radius / 4f) / (Mathf.Pow(2f, quad.sphereRoot.maxLevel)));
+            sqrQuadWidth *= sqrQuadWidth;
+
             mesh = UnityEngine.Object.Instantiate(quad.mesh);
             vertices = mesh.vertices;
             normals = mesh.normals;
@@ -68,10 +79,15 @@ namespace Parallax
             {
                 return;
             }
-            ScatterData newScatter = new ScatterData(this);
-            newScatter.Start();
-
-            quadScatters.Add(newScatter);
+            Debug.Log("DetermineScatters");
+            for (int i = 0; i < body.fastScatters.Length; i++)
+            {
+                // Optimization needed here so we don't add every scatter to every quad
+                ScatterData data = new ScatterData(this, body.fastScatters[i]);
+                quadScatters.Add(data);
+                Debug.Log("Added scatter data to quad");
+                data.Start();
+            }
         }
         // Called when a quad is unloaded, or has a subdivision level below this
         public void Cleanup()

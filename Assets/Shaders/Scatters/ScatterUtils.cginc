@@ -84,44 +84,6 @@ float4x4 GetScaleMatrix(float3 scale)
 // From: https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
 float4x4 TransformToPlanetNormal(float3 a, float3 b)
 {
-    //float3 v = (cross(a, b));
-    //float v1 = v.x;
-    //float v2 = v.y;
-    //float v3 = v.z;
-    //
-    //float c = dot(a, b);
-    //float4x4 V = float4x4(
-    //    float4(0,       v3,     -v2,    0),
-    //    float4(-v3,     0,      v1,     0),
-    //    float4(v2,      -v1,    0,      0),
-    //    float4(0,       0,      0,      1)
-    //    );
-    //
-    //float4x4 VPlusI = float4x4(
-    //    float4(1,       v3,     -v2,    0),
-    //    float4(-v3,     1,      v1,     0),
-    //    float4(v2,      -v1,    1,      0),
-    //    float4(0,       0,      0,      1)
-    //    );
-    //
-    //float4x4 VSquared = mul(V, V);
-    //float lastPart = (1 / (1 + c));
-    //
-    //float4x4 halfMat = VSquared * lastPart;
-    //float4x4 full = transpose(halfMat + VPlusI);
-    //
-    //// Set remaining components to 0
-    //full[0].w = 0;
-    //full[1].w = 0;
-    //full[2].w = 0;
-    //
-    //full[3].w = 1;
-    //
-    //full[3].x = 0;
-    //full[3].y = 0;
-    //full[3].z = 0;
-    //return full;
-    
     float3 v = (cross(a, b));
     float v1 = v.x;
     float v2 = v.y;
@@ -129,25 +91,26 @@ float4x4 TransformToPlanetNormal(float3 a, float3 b)
     
     float c = dot(a, b);
     float4x4 V = float4x4(
-        float4(0, -v3, v2, 0),
-        float4(v3, 0, -v1, 0),
-        float4(-v2, v1, 0, 0),
-        float4(0, 0, 0, 1)
+        float4(0,       v3,     -v2,    0),
+        float4(-v3,     0,      v1,     0),
+        float4(v2,      -v1,    0,      0),
+        float4(0,       0,      0,      1)
         );
-    V = transpose(V);
-    float4x4 VPlusI = float4x4(
-        float4(1, -v3, v2, 0),
-        float4(v3, 1, -v1, 0),
-        float4(-v2, v1, 1, 0),
-        float4(0, 0, 0, 1)
-        );
-    VPlusI = transpose(VPlusI);
-    float4x4 VSquared = mul(V, V);
     
+    float4x4 VPlusI = float4x4(
+        float4(1,       v3,     -v2,    0),
+        float4(-v3,     1,      v1,     0),
+        float4(v2,      -v1,    1,      0),
+        float4(0,       0,      0,      1)
+        );
+    
+    float4x4 VSquared = mul(V, V);
     float lastPart = (1 / (1 + c));
     
     float4x4 halfMat = VSquared * lastPart;
     float4x4 full = transpose(halfMat + VPlusI);
+    
+    // Set remaining components to 0
     full[0].w = 0;
     full[1].w = 0;
     full[2].w = 0;
@@ -157,6 +120,7 @@ float4x4 TransformToPlanetNormal(float3 a, float3 b)
     full[3].x = 0;
     full[3].y = 0;
     full[3].z = 0;
+    
     return full;
 }
 
@@ -170,9 +134,33 @@ float4x4 GetTRSMatrix(float3 position, float3 rotationAngles, float3 scale, floa
     }
     else
     {
-        nrm = normalize(terrainNormal);
+        //change this to terrain normal
+        nrm = normalize(_PlanetNormal);
     }
+    nrm = normalize(_PlanetNormal);
     float3 up = float3(0, 1, 0);
     float4x4 mat = TransformToPlanetNormal(up, nrm);
-    return mul(GetTranslationMatrix(position), mul(mul(mat, GetRotationMatrix(rotationAngles)), GetScaleMatrix(scale)));
+    mat = mul(mat, GetRotationMatrix(rotationAngles));
+    return mul(GetTranslationMatrix(position), mul(mat, GetScaleMatrix(scale)));
+}
+
+// Get distances to camera frustum planes
+float4 CameraDistances0(float3 worldPos)
+{
+    return float4(
+	    dot(_CameraFrustumPlanes[0].xyz, worldPos) + _CameraFrustumPlanes[0].w,
+		dot(_CameraFrustumPlanes[1].xyz, worldPos) + _CameraFrustumPlanes[1].w,
+		dot(_CameraFrustumPlanes[2].xyz, worldPos) + _CameraFrustumPlanes[2].w,
+		dot(_CameraFrustumPlanes[3].xyz, worldPos) + _CameraFrustumPlanes[3].w
+	);
+}
+// Get distances to camera frustum near and far plane
+float4 CameraDistances1(float3 worldPos)
+{
+    return float4(
+		dot(_CameraFrustumPlanes[4].xyz, worldPos) + _CameraFrustumPlanes[4].w,
+		dot(_CameraFrustumPlanes[5].xyz, worldPos) + _CameraFrustumPlanes[5].w,
+		0.00001f,
+		0.00001f
+	);
 }

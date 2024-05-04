@@ -45,8 +45,8 @@ Shader "Custom/ParallaxInstancedSolid"
         _PlanetOrigin("Planet Origin", vector) = (0, 0, 0)
 
         // 0 = cull off
-        // 1 = cull backfaces
-        // 2 = cull frontfaces
+        // 1 = cull frontfaces
+        // 2 = cull backfaces
         _CullMode("Cull Mode", int) = 0
     }
     SubShader

@@ -35,10 +35,15 @@ namespace Parallax
                 GameObject.DontDestroyOnLoad(perPlanetRenderer);
                 perPlanetRenderer.SetActive(false);
 
-                ScatterRenderer renderer = perPlanetRenderer.AddComponent<ScatterRenderer>();
-                renderer.planetName = body.Key;
-                scatterRenderers.Add(renderer);
-                fastScatterRenderers.Add(body.Key, renderer);
+                // Now add a renderer for each scatter on this body and parent it to the per-planet GameObject
+                foreach (KeyValuePair<string, Scatter> scatter in body.Value.scatters)
+                {
+                    ScatterRenderer renderer = perPlanetRenderer.AddComponent<ScatterRenderer>();
+                    renderer.planetName = body.Key;
+                    renderer.scatter = scatter.Value;
+                    scatterRenderers.Add(renderer);
+                    fastScatterRenderers.Add(scatter.Key, renderer);
+                }
 
                 Debug.Log("Init new manager body: " + body.Key);
             }
@@ -66,11 +71,18 @@ namespace Parallax
                 }
             }
             activeScatterRenderers.Clear();
+
+            // Could be more elegant but it's effectively a "is this first run?" check
+            if (bodyName != "ParallaxFirstRunDoNotCallAPlanetThis")
+            {
+                ParallaxScatterBody body = ConfigLoader.parallaxScatterBodies[bodyName];
+                body.UnloadTextures();
+            }
+            
         }
         // After any world origin shifts
         void LateUpdate()
         {
-            Debug.Log("Manager: LateUpdate");
             foreach (ScatterRenderer renderer in activeScatterRenderers)
             {
                 renderer.Render();

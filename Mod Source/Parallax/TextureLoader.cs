@@ -30,7 +30,7 @@ namespace Parallax
             Texture2D tex;
             tex = new Texture2D(2, 2, TextureFormat.ARGB32, true, linear);
             tex.LoadRawTextureData(File.ReadAllBytes(url));
-            tex.Apply();
+            tex.Apply(true, true);
             return tex;
         }
         public static Texture2D LoadDDSTexture(string url, bool linear)
@@ -85,7 +85,7 @@ namespace Parallax
                 Debug.Log("CRITICAL ERROR: Parallax has halted the OnDemand loading process because texture.LoadRawTextureData(dxtBytes) would have resulted in overread");
                 Debug.Log("Please check the format for this texture and refer to the wiki if you're unsure:");
             }
-            texture.Apply();
+            texture.Apply(true, true);
 
             return (texture);
         }

@@ -62,7 +62,7 @@ namespace Parallax
                 // Sadly a requirement or NRE spam in PQS code
                 mesh = UnityEngine.Object.Instantiate(quad.mesh);
                 
-                quadWidth = (float)((2f * Mathf.PI * FlightGlobals.GetBodyByName(quad.sphereRoot.name).Radius / 4f) / (Mathf.Pow(2f, quad.sphereRoot.maxLevel)));
+                quadWidth = (float)((2f * Mathf.PI * quad.sphereRoot.radius / 4f) / (Mathf.Pow(2f, quad.sphereRoot.maxLevel)));
                 quadWidth *= quadWidth;
 
                 EventHandler.OnQuadRangeCheck += RangeCheck;

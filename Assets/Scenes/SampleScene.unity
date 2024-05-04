@@ -338,7 +338,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8e7f25bb725de584d9dfa412409d376b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  instancedMaterialLOD0: {fileID: 2100000, guid: b83537e472dc4d2488e51dc16dc83e44,
+  instancedMaterialLOD0: {fileID: 2100000, guid: cbf359a509b9a8240a49bca763543c21,
     type: 2}
   instancedMaterialLOD1: {fileID: 2100000, guid: cbf359a509b9a8240a49bca763543c21,
     type: 2}
@@ -364,7 +364,7 @@ MonoBehaviour:
   _PopulationMultiplier: 3
   requiresFullRestart: 0
   noiseScale: 2
-  _PlanetOrigin: {x: 0, y: 0, z: 0}
+  _PlanetOrigin: {x: 5, y: -10000, z: -5}
 --- !u!1 &643708513
 GameObject:
   m_ObjectHideFlags: 0

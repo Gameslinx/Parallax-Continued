@@ -57,6 +57,7 @@ public class TerrainScatters : MonoBehaviour
 
     // Distribution params that require a full reinitialization
     [Range(1, 100)] public int _PopulationMultiplier = 1;
+    [Range(0.001f, 1.0f)] public float _SpawnChance = 1;
 
     // Distribution params that don't require a full reinitialization
     public bool requiresFullRestart = false;
@@ -116,6 +117,7 @@ public class TerrainScatters : MonoBehaviour
         int outputSize = _PopulationMultiplier * numTriangles;
 
         scatterShader.SetInt("_PopulationMultiplier", _PopulationMultiplier);
+        scatterShader.SetFloat("_SpawnChance", _SpawnChance);
         scatterShader.SetInt("_AlignToTerrainNormal", 0);
         scatterShader.SetInt("_MaxCount", outputSize);
 
@@ -196,6 +198,12 @@ public class TerrainScatters : MonoBehaviour
         scatterShader.SetMatrix("_ObjectToWorldMatrix", transform.localToWorldMatrix);
         scatterShader.SetVector("_PlanetNormal", Vector3.Normalize(transform.position - _PlanetOrigin));
 
+        scatterShader.SetVector("_WorldSpaceCameraPosition", Camera.main.transform.position);
+        
+        scatterShader.SetFloats("_CameraFrustumPlanes", CameraUtils.scatterPlaneNormals);
+        scatterShader.SetFloat("_CullRadius", 0.05f);
+        scatterShader.SetFloat("_CullLimit", 0);
+        scatterShader.SetFloat("_MaxRange", 5);
 
         scatterShader.DispatchIndirect(evaluateKernel, dispatchArgs, 0);
     }

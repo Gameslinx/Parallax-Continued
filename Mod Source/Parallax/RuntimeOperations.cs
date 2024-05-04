@@ -22,7 +22,11 @@ namespace Parallax
 
         // Used in mesh subdivision frustum culling
         public static ParallaxPlane[] cameraFrustumPlanes = new ParallaxPlane[6];
+
+        // Used in scatter system frustum culling - Shader does NOT want to accept ParallaxPlane[] so we'll use the slightly faster float version
+        public static float[] floatCameraFrustumPlanes = new float[24];
         public static float3 cameraPos = float3.zero;
+        public static Vector3 vectorCameraPos = Vector3.zero;
         Plane[] planes;
         public void Start()
         {
@@ -51,6 +55,7 @@ namespace Parallax
             if (cam != null)
             {
                 cameraPos = cam.gameObject.transform.position;
+                vectorCameraPos = cam.gameObject.transform.position;
             }
             else
             {
@@ -63,6 +68,15 @@ namespace Parallax
             {
                 // Convert to ParallaxPlane
                 cameraFrustumPlanes[i] = planes[i];
+            }
+
+            floatCameraFrustumPlanes = new float[planes.Length * 4];
+            for (int i = 0; i < planes.Length; ++i)
+            {
+                floatCameraFrustumPlanes[i * 4 + 0] = planes[i].normal.x;
+                floatCameraFrustumPlanes[i * 4 + 1] = planes[i].normal.y;
+                floatCameraFrustumPlanes[i * 4 + 2] = planes[i].normal.z;
+                floatCameraFrustumPlanes[i * 4 + 3] = planes[i].distance;
             }
         }
         Vector3 terrainShaderOffset;

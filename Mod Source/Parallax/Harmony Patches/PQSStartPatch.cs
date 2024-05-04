@@ -17,7 +17,7 @@ namespace Parallax
     [HarmonyPatch("StartSphere")]
     public class PQSStartPatch
     {
-        public static string currentLoadedBody = "";
+        public static string currentLoadedBody = "ParallaxFirstRunDoNotCallAPlanetThis";
 
         public delegate void PQSStart(string bodyName);
         public delegate void PQSUnload(string bodyName);

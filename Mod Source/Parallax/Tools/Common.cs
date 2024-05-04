@@ -98,7 +98,8 @@ namespace Parallax
                         }
                     }
                     // Bump maps need to be linear, while everything else sRGB
-                    if (textureValue.Key.Contains("Bump") || textureValue.Key.Contains("Displacement") || textureValue.Key.Contains("Influence")) { linear = true; }
+                    // This could be handled better, tbh, but at least we're accounting for linear textures this time around
+                    linear = TextureUtils.IsLinear(textureValue.Key);
                     Texture2D tex = TextureLoader.LoadTexture(textureValue.Value, linear);
 
                     parallaxMaterials.parallaxLow.SetTexture(textureValue.Key, tex);
@@ -140,26 +141,128 @@ namespace Parallax
 
         public Material parallaxFull;
     }
+
+    //
+    //  Parallax Scatters
+    //
+
+    // Structs
+    // Precomputed / preset in the configs by the user, used purely for optimization purposes
+    public struct OptimizationParams
+    {
+        public float frustumCullingIgnoreRadius;
+        public float frustumCullingSafetyMargin;
+        public int maxRenderableObjects;
+    }
+    public enum SubdivisionMode
+    {
+        noSubdivision,
+        nearestQuads
+    }
+    public enum NoiseType
+    {
+        value,
+        simplexPerlin,
+        simplexCellular,
+        simplexPolkaDot,
+        
+        // Maybe implement
+        cubist,
+        sparseConvolution,
+        hermite
+    }
+    public struct SubdivisionParams
+    {
+        // If the quad needs subdividing
+        public SubdivisionMode subdivisionMode;
+        public int maxSubdivisionLevel;
+    }
+    public struct NoiseParams
+    {
+        public NoiseType noiseType;
+        public int octaves;
+        public float persistence;
+        public float frequency;
+        public int seed;
+    }
+    public struct DistributionParams
+    {
+        public float seed;
+        public float spawnChance;
+        public float range;
+        public int populationMultiplier;
+        public Vector3 minScale;
+        public Vector3 maxScale;
+        public float noiseCutoff;
+        public float steepPower;
+        public float steepContrast;
+        public float steepMidpoint;
+        public float maxNormalDeviance;
+        public float minAltitude;
+        public float maxAltitude;
+        public LOD lod1;
+        public LOD lod2;
+        public HashSet<string> biomeBlacklist;
+    }
+    public struct LOD
+    {
+        public string modelPathOverride;
+        public MaterialParams materialOverride;
+        public float range;
+    }
+    // Holds shader and its variations - rest is processed at load time from shaderbank
+    public struct MaterialParams
+    {
+        public string shader;
+        public List<string> shaderKeywords;
+        public ShaderProperties shaderProperties;
+    }
     // Stores scatter information
     public class ParallaxScatterBody
     {
         public string planetName;
+        public int nearestQuadSubdivisionLevel = 1;
+        public float nearestQuadSubdivisionRange = 1.0f;
 
         // Scatter dictionary for fast access
         public Dictionary<string, Scatter> scatters = new Dictionary<string, Scatter>();
 
+        // Shared textures across the planet
+        public Dictionary<string, Texture2D> loadedTextures = new Dictionary<string, Texture2D>();
+
         // Scatter array for fast iteration
-        public Scatter[] bodyScatters;
+        public Scatter[] fastScatters;
         public ParallaxScatterBody(string planetName)
         {
             this.planetName = planetName;
         }
+        public void UnloadTextures()
+        {
+            ParallaxDebug.Log("Unloading textures for " + planetName);
+            foreach (KeyValuePair<string, Texture2D> texturePair in loadedTextures)
+            {
+                UnityEngine.Object.Destroy(texturePair.Value);
+            }
+            loadedTextures.Clear();
+        }
     }
+    
     // Stores Scatter information
     public class Scatter
     {
-        // Store properties as laid out in config
         public string scatterName;
+        public string modelPath;
+
+        public OptimizationParams optimizationParams;
+        public SubdivisionParams subdivisionParams;
+        public NoiseParams noiseParams;
+        public DistributionParams distributionParams;
+        public MaterialParams materialParams;
+
+        public Scatter(string scatterName)
+        {
+            this.scatterName = scatterName;
+        }
     }
     // Stores the names of the variables, then the types as defined in the ShaderPropertiesTemplate.cfg
     public class ShaderProperties : ICloneable
@@ -168,7 +271,7 @@ namespace Parallax
         public Dictionary<string, float> shaderFloats = new Dictionary<string, float>();
         public Dictionary<string, Vector3> shaderVectors = new Dictionary<string, Vector3>();
         public Dictionary<string, Color> shaderColors = new Dictionary<string, Color>();
-
+        public Dictionary<string, int> shaderInts = new Dictionary<string, int>();
         public object Clone()
         {
             var clone = new ShaderProperties();
@@ -187,6 +290,10 @@ namespace Parallax
             foreach (var colorValue in shaderColors)
             {
                 clone.shaderColors.Add(colorValue.Key, colorValue.Value);
+            }
+            foreach (var intValue in shaderInts)
+            {
+                clone.shaderInts.Add(intValue.Key, intValue.Value);
             }
             return clone;
         }

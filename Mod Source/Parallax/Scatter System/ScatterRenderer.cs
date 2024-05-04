@@ -10,6 +10,7 @@ namespace Parallax
     public class ScatterRenderer : MonoBehaviour
     {
         public string planetName;
+        public Scatter scatter;
 
         public Material instancedMaterialLOD0;
         public Material instancedMaterialLOD1;
@@ -40,17 +41,70 @@ namespace Parallax
         // Assign materials and meshes
         void Prerequisites()
         {
-            GameObject dummyObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            meshLOD0 = GameObject.CreatePrimitive(PrimitiveType.Cube).GetComponent<MeshFilter>().mesh; //Instantiate(GameDatabase.Instance.GetModel(scatter.modelPath).GetComponent<MeshFilter>().mesh);
+            meshLOD1 = Instantiate(GameDatabase.Instance.GetModel(scatter.distributionParams.lod1.modelPathOverride).GetComponent<MeshFilter>().mesh);
+            meshLOD2 = Instantiate(GameDatabase.Instance.GetModel(scatter.distributionParams.lod2.modelPathOverride).GetComponent<MeshFilter>().mesh);
 
-            meshLOD0 = dummyObject.GetComponent<MeshFilter>().mesh;
-            meshLOD1 = dummyObject.GetComponent<MeshFilter>().mesh;
-            meshLOD2 = dummyObject.GetComponent<MeshFilter>().mesh;
+            instancedMaterialLOD0 = new Material(AssetBundleLoader.parallaxScatterShaders[scatter.materialParams.shader]);
+            instancedMaterialLOD1 = new Material(AssetBundleLoader.parallaxScatterShaders[scatter.distributionParams.lod1.materialOverride.shader]);
+            instancedMaterialLOD2 = new Material(AssetBundleLoader.parallaxScatterShaders[scatter.distributionParams.lod2.materialOverride.shader]);
 
-            instancedMaterialLOD0 = new Material(AssetBundleLoader.parallaxScatterShaders["Custom/Barebones"]);
-            instancedMaterialLOD1 = new Material(AssetBundleLoader.parallaxScatterShaders["Custom/Barebones"]);
-            instancedMaterialLOD2 = new Material(AssetBundleLoader.parallaxScatterShaders["Custom/Barebones"]);
+            SetMaterialParams(scatter.materialParams, instancedMaterialLOD0);
+            SetMaterialParams(scatter.distributionParams.lod1.materialOverride, instancedMaterialLOD0);
+            SetMaterialParams(scatter.distributionParams.lod2.materialOverride, instancedMaterialLOD0);
+        }
+        void SetMaterialParams(in MaterialParams materialParams, Material material)
+        {
+            ShaderProperties properties = materialParams.shaderProperties;
+            // Set textures - OnEnable is called when the renderer is re-enabled on planet change, so we can load textures here
+            // They are unloaded by the scatter manager
 
-            UnityEngine.Object.Destroy(dummyObject);
+            // Keywords
+            foreach (string keyword in materialParams.shaderKeywords)
+            {
+                Debug.Log("Enabling shader keyword: " + keyword);
+                material.EnableKeyword(keyword);
+            }
+
+            // Textures
+            foreach (KeyValuePair<string, string> texturePair in properties.shaderTextures)
+            {
+                Texture2D texture;
+                if (!ConfigLoader.parallaxScatterBodies[planetName].loadedTextures.ContainsKey(texturePair.Key))
+                {
+                    bool linear = TextureUtils.IsLinear(texturePair.Key);
+                    texture = TextureLoader.LoadTexture(texturePair.Value, linear);
+                }
+                else
+                {
+                    texture = ConfigLoader.parallaxScatterBodies[planetName].loadedTextures[texturePair.Key];
+                }
+                material.SetTexture(texturePair.Key, texture);
+            }
+
+            // Floats
+            foreach (KeyValuePair<string, float> floatPair in properties.shaderFloats)
+            {
+                material.SetFloat(floatPair.Key, floatPair.Value);
+            }
+
+            // Vectors
+            foreach (KeyValuePair<string, Vector3> vectorPair in properties.shaderVectors)
+            {
+                material.SetVector(vectorPair.Key, vectorPair.Value);
+            }
+
+            // Colors
+            foreach (KeyValuePair<string, Color> colorPair in properties.shaderColors)
+            {
+                material.SetColor(colorPair.Key, colorPair.Value);
+            }
+
+            // Ints
+            foreach (KeyValuePair<string, int> intPair in properties.shaderInts)
+            {
+                material.SetInt(intPair.Key, intPair.Value);
+            }
         }
         void Initialize()
         {
@@ -60,7 +114,7 @@ namespace Parallax
             instancedMaterialLOD2 = Instantiate(instancedMaterialLOD0);
 
             // Create output buffers - Evaluate() function on quads will will these
-            int arbitraryMaxCount = 100000;
+            int arbitraryMaxCount = 500000;
             outputLOD0 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
             outputLOD1 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
             outputLOD2 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
@@ -127,12 +181,12 @@ namespace Parallax
 
             int[] count = new int[5];
             indirectArgsLOD0.GetData(count);
-            Debug.Log("R Count: " + count[1]);
+            Debug.Log("C: " + count[1]);
 
             // Render instanced data
-            Graphics.DrawMeshInstancedIndirect(meshLOD0, 0, instancedMaterialLOD0, rendererBounds, indirectArgsLOD0, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, null);
-            Graphics.DrawMeshInstancedIndirect(meshLOD1, 0, instancedMaterialLOD1, rendererBounds, indirectArgsLOD1, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, null);
-            Graphics.DrawMeshInstancedIndirect(meshLOD2, 0, instancedMaterialLOD2, rendererBounds, indirectArgsLOD2, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, null);
+            Graphics.DrawMeshInstancedIndirect(meshLOD0, 0, instancedMaterialLOD0, rendererBounds, indirectArgsLOD0, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, Camera.main);
+            Graphics.DrawMeshInstancedIndirect(meshLOD1, 0, instancedMaterialLOD1, rendererBounds, indirectArgsLOD1, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, Camera.main);
+            Graphics.DrawMeshInstancedIndirect(meshLOD2, 0, instancedMaterialLOD2, rendererBounds, indirectArgsLOD2, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, Camera.main);
         }
         void Cleanup()
         {

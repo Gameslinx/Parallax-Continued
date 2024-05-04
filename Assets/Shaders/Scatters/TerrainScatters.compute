@@ -46,6 +46,7 @@ void Distribute (uint3 id : SV_DispatchThreadID)
     // but will remain persistent
     float3 center = TriCenter(v1, v2, v3);
     
+    // Create an object on this triangle for every population multiplier
     for (int i = 0; i < _PopulationMultiplier; i++)
     {
         // Output struct
@@ -57,6 +58,8 @@ void Distribute (uint3 id : SV_DispatchThreadID)
         float randomY = Rand(center * 0.5 + i);
         float3 localPos = RandomPoint(v1, v2, v3, randomX, randomY);
         
+        bool canSpawn = Rand(localPos) < _SpawnChance;
+        
         float noiseValue = snoise(localPos * _NoiseScale) * 0.5f + 0.5f;
         float heightMultiplier = lerp(0.5, 2, noiseValue);
         
@@ -65,7 +68,10 @@ void Distribute (uint3 id : SV_DispatchThreadID)
         newObject.rotation = Rand(center * 0.25 + i) * 180.0f;
         newObject.index = id.x * 3;
     
-        output.Append(newObject);
+        if (canSpawn)
+        {
+            output.Append(newObject);
+        }
     }
 }
 
@@ -89,10 +95,26 @@ void Evaluate(uint3 id : SV_DispatchThreadID)
 
     PositionData pos = positions[id.x];
 
-    // the float3 at the end becomes the terrain average normal
-    float4x4 mat = GetTRSMatrix(pos.localPos, float3(0, 0, 0), pos.localScale, float3(0, 1, 0)); //GetTRSMatrix(pos.localPos, float3(0, pos.rotation, 0), pos.localScale, float3(0, 1, 0));
+    float3 worldPos = mul(_ObjectToWorldMatrix, float4(pos.localPos, 1)).xyz;
+    
+    // Get distances to frustum faces
+    float4 cd0 = CameraDistances0(worldPos);
+    float4 cd1 = CameraDistances1(worldPos);
+    
+	// Get distance from camera to object
+    float lodDist = distance(_WorldSpaceCameraPosition, worldPos) / _MaxRange; //Percentage to max range
 
-    mat = mul(_ObjectToWorldMatrix, mat);
+    if (lodDist > 1)
+    {
+        return;
+    }
+    if (!(all(cd0 >= 0) && all(cd1 >= 0)))
+    {
+        return;
+    }
+    
+    // the float3 at the end becomes the terrain average normal
+    float4x4 mat = GetTRSMatrix(worldPos, float3(0, pos.rotation, 0), pos.localScale, float3(0, 1, 0));
 
     TransformData object;
     object.objectToWorld = mat;

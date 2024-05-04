@@ -18,43 +18,79 @@ namespace Parallax
         public int subdivisionLevel = 1;
         public float subdivisionRadius = 100.0f;
         public static Dictionary<PQ, TerrainShaderQuadData> terrainQuadData = new Dictionary<PQ, TerrainShaderQuadData>();
-        public static Dictionary<PQ, ScatterSystemQuadData> scatterQuadData = new Dictionary<PQ, ScatterSystemQuadData>();
+        
+        public ParallaxScatterBody scatterBody;
+
+        bool hasScatters = false;
+        bool hasTerrainShader = false;
         public override void OnSetup()
         {
+            // remove?
             this.requirements = PQS.ModiferRequirements.MeshColorChannel;
+            DetermineRequirements();
+        }
+        public void DetermineRequirements()
+        {
+            if (ConfigLoader.parallaxTerrainBodies.ContainsKey(sphere.name))
+            {
+                hasTerrainShader = true;
+            }
+            //if (ConfigLoader.parallaxScatterBodies.ContainsKey(sphere.name))
+            //{
+            //    hasScatters = true;
+            //    scatterBody = ConfigLoader.parallaxScatterBodies[sphere.name];
+            //}
+        }
+        // Occurs before vertex build - Get quad data here
+        public override void OnQuadPreBuild(PQ quad)
+        {
+            // Add the scatter system
+            //if (hasScatters)
+            //{
+            //    ScatterSystemQuadData scatterData = new ScatterSystemQuadData(scatterBody, quad, subdivisionLevel, subdivisionRadius);
+            //    scatterQuadData.Add(quad, scatterData);
+            //}
         }
         public override void OnQuadBuilt(PQ quad)
         {
-            Debug.Log("Quad is building NOW on " + quad.sphereRoot.name);
             // Add the terrain shader
-            TerrainShaderQuadData terrainData = new TerrainShaderQuadData(quad, subdivisionLevel, subdivisionRadius, quad.subdivision == quad.sphereRoot.maxLevel);
-            terrainData.Initialize();
-            terrainQuadData.Add(quad, terrainData);
+            if (hasTerrainShader)
+            {
+                TerrainShaderQuadData terrainData = new TerrainShaderQuadData(quad, subdivisionLevel, subdivisionRadius, quad.subdivision == quad.sphereRoot.maxLevel);
+                terrainData.Initialize();
+                terrainQuadData.Add(quad, terrainData);
+            }
 
-            // Add the scatter system
-            ScatterSystemQuadData scatterData = new ScatterSystemQuadData(quad, subdivisionLevel, subdivisionRadius);
-            scatterData.Initialize();
-            scatterQuadData.Add(quad, scatterData);
+            // Initialise the scatter system
+            //if (hasScatters)
+            //{
+            //    ScatterSystemQuadData scatterData = scatterQuadData[quad];
+            //    scatterData.Initialize();
+            //}
         }
         public override void OnQuadDestroy(PQ quad)
         {
             // Clean up terrain shader
-            if (terrainQuadData.ContainsKey(quad))
+            if (hasTerrainShader && terrainQuadData.ContainsKey(quad))
             {
                 terrainQuadData[quad].Cleanup();
                 terrainQuadData.Remove(quad);
             }
 
             // Clean up scatter system
-            if (scatterQuadData.ContainsKey(quad))
-            {
-                scatterQuadData[quad].Cleanup();
-                scatterQuadData.Remove(quad);
-            }
+            //if (hasScatters && scatterQuadData.ContainsKey(quad))
+            //{
+            //    scatterQuadData[quad].Cleanup();
+            //    scatterQuadData.Remove(quad);
+            //}
         }
         public override void OnVertexBuild(PQS.VertexBuildData data)
         {
-            // Direction from center stuff here
+            //if (!hasScatters) { return; }
+
+            // This check should not be needed, as the data is always added if we have scatters
+            // Unless of course, quad subdivision is too low
+            //ScatterSystemQuadData scatterData = scatterQuadData[data.buildQuad];
         }
     }
     [RequireConfigType(ConfigType.Node)]

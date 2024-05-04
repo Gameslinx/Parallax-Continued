@@ -14,7 +14,8 @@ namespace Parallax
     {
         // Grab reference to parent quad to access mesh data
         ScatterSystemQuadData parent;
-
+        // The scatter we're generating
+        Scatter scatter;
         // Output evaluate results to the renderer
         ScatterRenderer scatterRenderer;
 
@@ -30,9 +31,6 @@ namespace Parallax
         ComputeBuffer dispatchArgs;
         ComputeBuffer objectLimits;
 
-        // Distribution params that require a full reinitialization
-        public int _PopulationMultiplier = 1;
-
         // Distribution params that don't require a full reinitialization
         public bool requiresFullRestart = false;
         public float noiseScale = 1.0f;
@@ -44,10 +42,13 @@ namespace Parallax
         uint[] indirectArgs = { 1, 1, 1 };
 
         bool readyForValidationChecks = false;
+        bool eventAdded = false;
+        bool cleaned = false;
 
-        public ScatterData(ScatterSystemQuadData parent)
+        public ScatterData(ScatterSystemQuadData parent, Scatter scatter)
         {
             this.parent = parent;
+            this.scatter = scatter;
         }
         public void Start()
         {
@@ -60,7 +61,7 @@ namespace Parallax
         }
         void Initialize()
         {
-            scatterRenderer = ScatterManager.Instance.fastScatterRenderers[parent.quad.sphereRoot.name];
+            scatterRenderer = ScatterManager.Instance.fastScatterRenderers[scatter.scatterName];
             numTriangles = parent.numMeshTriangles;
         }
         void InitializeDistribute()
@@ -68,10 +69,15 @@ namespace Parallax
             // For now....
             scatterShader = UnityEngine.Object.Instantiate(AssetBundleLoader.parallaxComputeShaders["TerrainScatters"]);
 
-            int outputSize = _PopulationMultiplier * numTriangles;
+            int populationMultiplier = scatter.distributionParams.populationMultiplier;
+            int outputSize = populationMultiplier * numTriangles;
 
-            scatterShader.SetInt("_PopulationMultiplier", _PopulationMultiplier);
+            // Values from config
+            scatterShader.SetInt("_PopulationMultiplier", populationMultiplier);
             scatterShader.SetInt("_AlignToTerrainNormal", 0);
+            scatterShader.SetFloat("_SpawnChance", scatter.distributionParams.spawnChance);
+
+            // Required values
             scatterShader.SetVector("_PlanetNormal", Vector3.Normalize(parent.quad.transform.position - parent.quad.quadRoot.transform.position));
             scatterShader.SetInt("_MaxCount", outputSize);
 
@@ -118,6 +124,8 @@ namespace Parallax
         }
         public void OnDistributeComplete(AsyncGPUReadbackRequest request)
         {
+            // Data was cleaned up before generation completed - stop here
+            if (cleaned) { return; }
             count = request.GetData<int>().ToArray(); //Creates garbage, unfortunate
 
             // Initialise indirect args
@@ -130,24 +138,45 @@ namespace Parallax
 
             // Ready to start evaluating
             scatterRenderer.onEvaluateScatters += Evaluate;
+
+            // This part of the code may never execute because the quad tries to cleanup before the readback is complete
+            // So add this guard to prevent trying to remove the event before it was ever added
+            eventAdded = true;
         }
         public void InitializeEvaluate()
         {
             scatterShader.SetBuffer(evaluateKernel, "positions", outputScatterDataBuffer);
             scatterShader.SetBuffer(evaluateKernel, "instancingData", scatterRenderer.outputLOD0);
+
+            scatterShader.SetFloat("_CullRange", scatter.optimizationParams.frustumCullingIgnoreRadius);
+            scatterShader.SetFloat("_CullLimit", scatter.optimizationParams.frustumCullingSafetyMargin);
+
+            scatterShader.SetFloat("_MaxRange", scatter.distributionParams.range);
         }
         public void Evaluate()
         {
+            // Is it even worth evaluating this scatter?
+            if (!parent.quad.isVisible) { return; }
+            
             // Update runtime shader vars
             // We need to know the size of the distribution before continuing with this
-            scatterShader.SetMatrix("_ObjectToWorldMatrix", parent.quad.transform.localToWorldMatrix);
-            scatterShader.SetVector("_PlanetNormal", Vector3.Normalize((FlightGlobals.ActiveVessel != null ? FlightGlobals.ActiveVessel.transform.position : Vector3.zero) - (Vector3)RuntimeOperations.cameraPos));
+            scatterShader.SetMatrix("_ObjectToWorldMatrix", parent.quad.gameObject.transform.localToWorldMatrix);
+            scatterShader.SetVector("_PlanetNormal", Vector3.Normalize(parent.quad.gameObject.transform.position - parent.quad.sphereRoot.gameObject.transform.position));
+            scatterShader.SetFloats("_CameraFrustumPlanes", RuntimeOperations.floatCameraFrustumPlanes);
+            scatterShader.SetVector("_WorldSpaceCameraPosition", RuntimeOperations.vectorCameraPos);
 
             scatterShader.DispatchIndirect(evaluateKernel, dispatchArgs, 0);
         }
         public void Cleanup()
         {
-            scatterRenderer.onEvaluateScatters -= Evaluate;
+            // Check against this in the readback to stop us from adding an event after the data is cleaned up
+            cleaned = true;
+
+            if (eventAdded)
+            {
+                scatterRenderer.onEvaluateScatters -= Evaluate;
+                eventAdded = false;
+            }
 
             outputScatterDataBuffer?.Dispose();
             dispatchArgs?.Dispose();

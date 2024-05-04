@@ -27,6 +27,8 @@ namespace Parallax
         }
     }
     // Config loader try-parse vars
+    // Would be nicer if it was neater but it does the job
+    // I'm not a huge fan of writing extensive config loaders
     public class ConfigUtils
     {
         public static void TryParse(string planetName, string name, string value, Type type, out object result)
@@ -46,6 +48,83 @@ namespace Parallax
                 catch 
                 {
                     ParallaxDebug.LogParseError(name, planetName, type.Name, value);
+                    result = 0;
+                }
+            }
+            else if (type == typeof(int))
+            {
+                try
+                {
+                    result = int.Parse(value);
+                }
+                catch
+                {
+                    ParallaxDebug.LogParseError(name, planetName, type.Name, value);
+                    result = 0;
+                }
+            }    
+            else if (type == typeof(Vector3))
+            {
+                try
+                {
+                    string[] components = value.Trim().Replace(" ", string.Empty).Split(',');
+                    result = new Vector3(float.Parse(components[0]), float.Parse(components[1]), float.Parse(components[2]));
+                }
+                catch
+                {
+                    ParallaxDebug.LogParseError(name, planetName, type.Name, value);
+                    result = Vector3.one;
+                }
+            }
+            else if (type == typeof(Color))
+            {
+                try
+                {
+                    string[] components = value.Trim().Replace(" ", string.Empty).Split(',');
+                    result = new Color(float.Parse(components[0]), float.Parse(components[1]), float.Parse(components[2]));
+                }
+                catch
+                {
+                    ParallaxDebug.LogParseError(name, planetName, type.Name, value);
+                    result = Color.magenta;
+                }
+            }
+            else
+            {
+                ParallaxDebug.LogError("Trying to parse " + name + " on planet: " + planetName + " as type " + type.Name + " but converting to this type is unsupported");
+            }
+        }
+        // Alternative version that returns an object instead of passing as out
+        public static object TryParse(string planetName, string name, string value, Type type)
+        {
+            // Must be assigned before function ends
+            object result = null;
+            if (type == typeof(string))
+            {
+                result = value;
+            }
+            else if (type == typeof(float))
+            {
+                try
+                {
+                    result = float.Parse(value);
+                }
+                catch
+                {
+                    ParallaxDebug.LogParseError(name, planetName, type.Name, value);
+                    result = 0;
+                }
+            }
+            else if (type == typeof(int))
+            {
+                try
+                {
+                    result = int.Parse(value);
+                }
+                catch
+                {
+                    ParallaxDebug.LogParseError(name, planetName, type.Name, value);
+                    result = 0;
                 }
             }
             else if (type == typeof(Vector3))
@@ -58,17 +137,44 @@ namespace Parallax
                 catch
                 {
                     ParallaxDebug.LogParseError(name, planetName, type.Name, value);
+                    result = Vector3.one;
                 }
             }
             else if (type == typeof(Color))
             {
-                string[] components = value.Trim().Replace(" ", string.Empty).Split(',');
-                result = new Color(float.Parse(components[0]), float.Parse(components[1]), float.Parse(components[2]));
+                try
+                {
+                    string[] components = value.Trim().Replace(" ", string.Empty).Split(',');
+                    result = new Color(float.Parse(components[0]), float.Parse(components[1]), float.Parse(components[2]));
+                }
+                catch
+                {
+                    ParallaxDebug.LogParseError(name, planetName, type.Name, value);
+                    result = Color.magenta;
+                }
             }
             else
             {
                 ParallaxDebug.LogError("Trying to parse " + name + " on planet: " + planetName + " as type " + type.Name + " but converting to this type is unsupported");
             }
+            return result;
+        }
+        public static string TryGetConfigValue(ConfigNode node, string name)
+        {
+            string result = node.GetValue(name);
+            if (result == null)
+            {
+                ParallaxDebug.LogError("Error parsing config - Unable to get property '" + name + "'. Fix this!");
+            }
+            return result;
+        }
+    }
+    public static class TextureUtils
+    {
+        public static bool IsLinear(string textureName)
+        {
+            if (textureName.Contains("Bump") || textureName.Contains("Displacement") || textureName.Contains("Influence") || textureName.Contains("Wind")) { return true; }
+            return false;
         }
     }
 }
