@@ -267,12 +267,14 @@ namespace Parallax
                     NoiseParams noiseParams = GetNoiseParams(body, node.GetNode("DistributionNoise"));
                     MaterialParams materialParams = GetMaterialParams(body, node.GetNode("Material"));
                     DistributionParams distributionParams = GetDistributionParams(body, node.GetNode("Distribution"), materialParams);
+                    BiomeBlacklistParams biomeBlacklistParams = GetBiomeBlacklistParams(body, node.GetNode("Distribution"));
 
                     scatter.optimizationParams = optimizationParams;
                     scatter.subdivisionParams = subdivisionParams;
                     scatter.noiseParams = noiseParams;
                     scatter.materialParams = materialParams;
                     scatter.distributionParams = distributionParams;
+                    scatter.biomeBlacklistParams = biomeBlacklistParams;
 
                     PerformNormalisationConversions(scatter);
 
@@ -319,15 +321,17 @@ namespace Parallax
 
             string frequency = ConfigUtils.TryGetConfigValue(node, "frequency");
             string octaves = ConfigUtils.TryGetConfigValue(node, "octaves");
-            string persistence = ConfigUtils.TryGetConfigValue(node, "persistence");
+            string lacunarity = ConfigUtils.TryGetConfigValue(node, "lacunarity");
             string seed = ConfigUtils.TryGetConfigValue(node, "seed");
             string noiseType = ConfigUtils.TryGetConfigValue(node, "noiseType");
+            string inverted = ConfigUtils.TryGetConfigValue(node, "inverted");
 
             noiseParams.frequency = (float)ConfigUtils.TryParse(planetName, "frequency", frequency, typeof(float));
             noiseParams.octaves = (int)ConfigUtils.TryParse(planetName, "octaves", octaves, typeof(int));
-            noiseParams.persistence = (float)ConfigUtils.TryParse(planetName, "persistence", persistence, typeof(float));
+            noiseParams.lacunarity = (float)ConfigUtils.TryParse(planetName, "lacunarity", lacunarity, typeof(float));
             noiseParams.seed = (int)ConfigUtils.TryParse(planetName, "seed", seed, typeof(int));
             noiseParams.noiseType = (NoiseType)Enum.Parse(typeof(NoiseType), noiseType);
+            noiseParams.inverted = (bool)ConfigUtils.TryParse(planetName, "inverted", inverted, typeof(bool));
 
             return noiseParams;
         }
@@ -373,6 +377,22 @@ namespace Parallax
             distributionParams.lod2 = ParseLOD(planetName, lodNodes[1], baseMaterial);
 
             return distributionParams;
+        }
+        public static BiomeBlacklistParams GetBiomeBlacklistParams(string planetName, ConfigNode node)
+        {
+            BiomeBlacklistParams blacklist = new BiomeBlacklistParams();
+            blacklist.blacklistedBiomes = new List<string>();
+
+            ConfigNode blacklistNode = node.GetNode("BiomeBlacklist");
+            if (blacklistNode == null)
+            {
+                return blacklist;
+            }
+            else
+            {
+                blacklist.blacklistedBiomes.AddRange(blacklistNode.GetValuesList("name"));
+                return blacklist;
+            }
         }
         public static LOD ParseLOD(string planetName, ConfigNode node, in MaterialParams baseMaterial)
         {

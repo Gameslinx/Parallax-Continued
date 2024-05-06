@@ -16,6 +16,19 @@ float _NoiseScale;
 // Chance for an object to spawn
 float _SpawnChance;
 
+// The colours of the biomes which this scatter can appear in
+// Max 8
+int _NumberOfBiomes;
+
+//
+//  Noise params
+//
+
+float _NoiseFrequency;
+int _NoiseSeed;
+float _NoiseLacunarity;
+int _NoiseOctaves;
+
 //
 //  Evaluate params
 //

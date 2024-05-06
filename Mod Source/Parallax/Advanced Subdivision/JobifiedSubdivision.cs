@@ -327,7 +327,10 @@ namespace Parallax
 
             if (frustumPlanes.IsCreated) { frustumPlanes.Dispose(); }
 
-            InterlockedCounters.Return(uniqueIdentifier);
+            if (uniqueIdentifier > -1)
+            {
+                InterlockedCounters.Return(uniqueIdentifier);
+            }
         }
         void OnDisable()
         {

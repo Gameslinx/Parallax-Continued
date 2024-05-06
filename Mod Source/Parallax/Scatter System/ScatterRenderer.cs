@@ -50,8 +50,8 @@ namespace Parallax
             instancedMaterialLOD2 = new Material(AssetBundleLoader.parallaxScatterShaders[scatter.distributionParams.lod2.materialOverride.shader]);
 
             SetMaterialParams(scatter.materialParams, instancedMaterialLOD0);
-            SetMaterialParams(scatter.distributionParams.lod1.materialOverride, instancedMaterialLOD0);
-            SetMaterialParams(scatter.distributionParams.lod2.materialOverride, instancedMaterialLOD0);
+            SetMaterialParams(scatter.distributionParams.lod1.materialOverride, instancedMaterialLOD1);
+            SetMaterialParams(scatter.distributionParams.lod2.materialOverride, instancedMaterialLOD2);
         }
         void SetMaterialParams(in MaterialParams materialParams, Material material)
         {
@@ -108,13 +108,8 @@ namespace Parallax
         }
         void Initialize()
         {
-            // For testing purposes
-            // These need to be separate instances otherwise they'll be overwritten
-            instancedMaterialLOD1 = Instantiate(instancedMaterialLOD0);
-            instancedMaterialLOD2 = Instantiate(instancedMaterialLOD0);
-
             // Create output buffers - Evaluate() function on quads will will these
-            int arbitraryMaxCount = 500000;
+            int arbitraryMaxCount = 15000;
             outputLOD0 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
             outputLOD1 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
             outputLOD2 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);

@@ -4,6 +4,7 @@
 //
 
 #define DEG2RAD 0.01745329251f
+#define ALLOWED_COLOR_RANGE 0.2f
 
 float DegToRad(float deg)
 {
@@ -31,11 +32,17 @@ float3 RandomPoint(float3 p1, float3 p2, float3 p3, float r1, float r2)
     return ((1 - r1) * p1) + ((r1 * (1 - r2)) * p2) + ((r2 * r1) * p3);
 }
 
-// Returns a uniformly distributed UV coordinate at a random position on a triangle
+// Returns a uniformly distributed UV coordinate at a random position on a triangle - probably too expensive to be used if we're sampling biome maps all the time
 float2 RandomUV(float2 uv1, float2 uv2, float2 uv3, float r1, float r2)
 {
     // r1 must be a sqrt random number
     return ((1 - r1) * uv1) + ((r1 * (1 - r2)) * uv2) + ((r2 * r1) * uv3);
+}
+
+bool BiomeEligible(float3 biomeColor, float3 scatterColor)
+{
+    float deviation = distance(biomeColor, scatterColor);
+    return 1 * (deviation < ALLOWED_COLOR_RANGE);
 }
 
 // Construct translation matrix from a position
@@ -163,4 +170,69 @@ float4 CameraDistances1(float3 worldPos)
 		0.00001f,
 		0.00001f
 	);
+}
+
+//
+//  Get noise values
+//
+
+#if defined (NOISEMODE_PERLIN)
+
+float GetNoiseValue(float3 worldPos)
+{
+    return SimplexPerlin3D(worldPos);
+}
+
+#elif defined (NOISEMODE_CELLULAR)
+
+float GetNoiseValue(float3 worldPos)
+{
+    return Cellular3D(worldPos) * 2;
+}
+
+#elif defined (NOISEMODE_POLKADOT)
+
+float GetNoiseValue(float3 worldPos)
+{
+    return SimplexPolkaDot3D(worldPos, 0.3, 1);
+}
+    
+#else
+
+float GetNoiseValue(float3 worldPos)
+{
+    return 1;
+}
+
+#endif
+
+// Process FBM noise by layering noises on top of each other
+float Noise(float3 dirFromCenter)
+{
+    // Offset the noise to establish a different noise pattern per seed
+    dirFromCenter += _NoiseSeed * -3.0f;
+    
+    float noiseValue = 0;
+    float frequency = _NoiseFrequency;
+    float amplitude = 1;
+    float perOctaveOffset = 2;
+    
+    for (int i = 0; i < _NoiseOctaves; i++)
+    {
+        // Offset dir from center by entire phase
+        dirFromCenter += perOctaveOffset;
+
+        frequency *= _NoiseLacunarity;
+        amplitude *= 0.5;
+        
+        noiseValue += GetNoiseValue(dirFromCenter * frequency) * amplitude;
+    }
+    
+    #if defined (INVERT_NOISE)
+    noiseValue = 1 - abs(noiseValue);
+    #else
+    noiseValue = noiseValue * 0.5f + 0.5f;
+    #endif
+    
+    return noiseValue;
 }

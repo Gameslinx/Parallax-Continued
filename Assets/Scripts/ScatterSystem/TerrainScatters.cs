@@ -43,6 +43,8 @@ public class TerrainScatters : MonoBehaviour
     ComputeBuffer sourceVertsBuffer;
     ComputeBuffer sourceNormalsBuffer;
     ComputeBuffer sourceTrianglesBuffer;
+    ComputeBuffer sourceUVsBuffer;
+    ComputeBuffer dirFromCenterBuffer;
     ComputeBuffer outputScatterDataBuffer;
 
     // Evaluation buffers
@@ -53,6 +55,8 @@ public class TerrainScatters : MonoBehaviour
     Vector3[] vertices;
     Vector3[] normals;
     int[] triangles;
+    Vector3[] directionsFromCenter;
+    Vector2[] uvs;
     Mesh mesh;
 
     // Distribution params that require a full reinitialization
@@ -63,6 +67,13 @@ public class TerrainScatters : MonoBehaviour
     public bool requiresFullRestart = false;
     [Range(0.001f, 10f)] public float noiseScale;
     public Vector3 _PlanetOrigin = Vector3.zero;
+    [Range(100.0f, 10000.0f)] public float frequency;
+    [Range(0.001f, 10f)] public float lacunarity;
+    [Range(1, 8)] public int octaves;
+    [Range(0, 10)] public int seed;
+
+    public Texture2D biomeMap;
+    public Color scatterBiomeColor;
 
     int numTriangles;
 
@@ -93,6 +104,8 @@ public class TerrainScatters : MonoBehaviour
         sourceVertsBuffer?.Dispose();
         sourceNormalsBuffer?.Dispose();
         sourceTrianglesBuffer?.Dispose();
+        sourceUVsBuffer?.Dispose();
+        dirFromCenterBuffer?.Dispose();
         outputScatterDataBuffer?.Dispose();
         objectLimits?.Dispose();
 
@@ -109,8 +122,20 @@ public class TerrainScatters : MonoBehaviour
         vertices = mesh.vertices;
         normals = mesh.normals;
         triangles = mesh.triangles;
+        uvs = mesh.uv;
 
         numTriangles = triangles.Length / 3;
+
+        // Generate some directions from center for our noise values
+
+        Vector3[] directions = new Vector3[vertices.Length];
+        Vector3 planetOriginLocal = transform.InverseTransformPoint(_PlanetOrigin);
+        for (int i = 0; i < directions.Length; i++)
+        {
+            Vector3 dirFromCenter = Vector3.Normalize(vertices[i] - planetOriginLocal);
+            directions[i] = dirFromCenter;
+        }
+        directionsFromCenter = directions;
     }
     void InitializeDistribute()
     {
@@ -120,6 +145,12 @@ public class TerrainScatters : MonoBehaviour
         scatterShader.SetFloat("_SpawnChance", _SpawnChance);
         scatterShader.SetInt("_AlignToTerrainNormal", 0);
         scatterShader.SetInt("_MaxCount", outputSize);
+        scatterShader.SetInt("_NumberOfBiomes", 1);
+
+        // Create biome texture
+        Texture2D biomeTex = new Texture2D(1, 1, TextureFormat.ARGB32, false);
+        biomeTex.SetPixel(0, 0, scatterBiomeColor);
+        biomeTex.Apply(false, true);
 
         distributeKernel = scatterShader.FindKernel("Distribute");
         evaluateKernel = scatterShader.FindKernel("Evaluate");
@@ -128,24 +159,36 @@ public class TerrainScatters : MonoBehaviour
         sourceVertsBuffer = new ComputeBuffer(vertices.Length, sizeof(float) * 3, ComputeBufferType.Structured);
         sourceNormalsBuffer = new ComputeBuffer(normals.Length, sizeof(float) * 3, ComputeBufferType.Structured);
         sourceTrianglesBuffer = new ComputeBuffer(triangles.Length, sizeof(int), ComputeBufferType.Structured);
+        dirFromCenterBuffer = new ComputeBuffer(directionsFromCenter.Length, sizeof(float) * 3, ComputeBufferType.Structured);
+        sourceUVsBuffer = new ComputeBuffer(uvs.Length, sizeof(float) * 2, ComputeBufferType.Structured);
 
         sourceVertsBuffer.SetData(vertices);
         sourceNormalsBuffer.SetData(normals);
         sourceTrianglesBuffer.SetData(triangles);
+        sourceUVsBuffer.SetData(uvs);
+        dirFromCenterBuffer.SetData(directionsFromCenter);
 
         outputScatterDataBuffer = new ComputeBuffer(outputSize, PositionData.Size(), ComputeBufferType.Append);
 
         scatterShader.SetBuffer(distributeKernel, "vertices", sourceVertsBuffer);
         scatterShader.SetBuffer(distributeKernel, "normals", sourceNormalsBuffer);
         scatterShader.SetBuffer(distributeKernel, "triangles", sourceTrianglesBuffer);
+        scatterShader.SetBuffer(distributeKernel, "uvs", sourceUVsBuffer);
+        scatterShader.SetBuffer(distributeKernel, "directionsFromCenter", dirFromCenterBuffer);
         scatterShader.SetBuffer(distributeKernel, "output", outputScatterDataBuffer);
+
+        scatterShader.SetTexture(distributeKernel, "biomeMap", biomeMap);
+        scatterShader.SetTexture(distributeKernel, "scatterBiomes", biomeTex);
 
         SetDistributionVars();
     }
     // These don't require a full reinitialization
     public void SetDistributionVars()
     {
-        scatterShader.SetFloat("_NoiseScale", noiseScale);
+        scatterShader.SetInt("_NoiseOctaves", octaves);
+        scatterShader.SetFloat("_NoiseFrequency", frequency);
+        scatterShader.SetFloat("_NoiseLacunarity", lacunarity);
+        scatterShader.SetInt("_NoiseSeed", seed);
     }
     public void Distribute()
     {
@@ -203,7 +246,7 @@ public class TerrainScatters : MonoBehaviour
         scatterShader.SetFloats("_CameraFrustumPlanes", CameraUtils.scatterPlaneNormals);
         scatterShader.SetFloat("_CullRadius", 0.05f);
         scatterShader.SetFloat("_CullLimit", 0);
-        scatterShader.SetFloat("_MaxRange", 5);
+        scatterShader.SetFloat("_MaxRange", 35);
 
         scatterShader.DispatchIndirect(evaluateKernel, dispatchArgs, 0);
     }
@@ -218,6 +261,8 @@ public class TerrainScatters : MonoBehaviour
         sourceVertsBuffer?.Dispose();
         sourceNormalsBuffer?.Dispose();
         sourceTrianglesBuffer?.Dispose();
+        dirFromCenterBuffer.Dispose();
+        sourceUVsBuffer?.Dispose();
         outputScatterDataBuffer?.Dispose();
         dispatchArgs?.Dispose();
         objectLimits?.Dispose();

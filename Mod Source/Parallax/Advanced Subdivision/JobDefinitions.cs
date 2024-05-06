@@ -56,6 +56,7 @@ namespace Parallax
         }
         public static void Return(int counter)
         {
+            Debug.Log("Returning identifier: " + counter);
             triangleReadbackCounters[counter] = -3;
             uniqueQuadIdentifiers.Enqueue(counter);
         }

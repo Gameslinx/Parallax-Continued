@@ -18,7 +18,13 @@ namespace Parallax
         public int subdivisionLevel = 1;
         public float subdivisionRadius = 100.0f;
         public static Dictionary<PQ, TerrainShaderQuadData> terrainQuadData = new Dictionary<PQ, TerrainShaderQuadData>();
-        
+        /// <summary>
+        /// Contains the UVs that map the entire planet for sampling the biome map
+        /// </summary>
+        public static Dictionary<PQ, Vector2[]> quadPlanetUVs = new Dictionary<PQ, Vector2[]>();
+
+        Vector2[] uvCache;
+
         public ParallaxScatterBody scatterBody;
 
         bool hasScatters = false;
@@ -35,21 +41,11 @@ namespace Parallax
             {
                 hasTerrainShader = true;
             }
-            //if (ConfigLoader.parallaxScatterBodies.ContainsKey(sphere.name))
-            //{
-            //    hasScatters = true;
-            //    scatterBody = ConfigLoader.parallaxScatterBodies[sphere.name];
-            //}
         }
         // Occurs before vertex build - Get quad data here
         public override void OnQuadPreBuild(PQ quad)
         {
-            // Add the scatter system
-            //if (hasScatters)
-            //{
-            //    ScatterSystemQuadData scatterData = new ScatterSystemQuadData(scatterBody, quad, subdivisionLevel, subdivisionRadius);
-            //    scatterQuadData.Add(quad, scatterData);
-            //}
+            uvCache = new Vector2[225];
         }
         public override void OnQuadBuilt(PQ quad)
         {
@@ -61,13 +57,9 @@ namespace Parallax
                 terrainQuadData.Add(quad, terrainData);
             }
 
-            // Initialise the scatter system
-            //if (hasScatters)
-            //{
-            //    ScatterSystemQuadData scatterData = scatterQuadData[quad];
-            //    scatterData.Initialize();
-            //}
+            quadPlanetUVs.Add(quad, uvCache);
         }
+
         public override void OnQuadDestroy(PQ quad)
         {
             // Clean up terrain shader
@@ -77,20 +69,12 @@ namespace Parallax
                 terrainQuadData.Remove(quad);
             }
 
-            // Clean up scatter system
-            //if (hasScatters && scatterQuadData.ContainsKey(quad))
-            //{
-            //    scatterQuadData[quad].Cleanup();
-            //    scatterQuadData.Remove(quad);
-            //}
+            quadPlanetUVs.Remove(quad);
         }
+        // Generate the planet UVs used for sampling the biome map (scatter system)
         public override void OnVertexBuild(PQS.VertexBuildData data)
         {
-            //if (!hasScatters) { return; }
-
-            // This check should not be needed, as the data is always added if we have scatters
-            // Unless of course, quad subdivision is too low
-            //ScatterSystemQuadData scatterData = scatterQuadData[data.buildQuad];
+            uvCache[data.vertIndex] = new Vector2((float)data.u, (float)data.v);
         }
     }
     [RequireConfigType(ConfigType.Node)]

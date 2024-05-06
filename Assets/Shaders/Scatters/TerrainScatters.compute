@@ -1,14 +1,39 @@
-﻿#pragma kernel Distribute
+﻿// Vanilla shader     - Kernel 0
+#pragma kernel Distribute
+
+// Noise modes        - Kernels 1, 2, 3
+#pragma kernel Distribute NOISEMODE_PERLIN
+#pragma kernel Distribute NOISEMODE_CELLULAR
+#pragma kernel Distribute NOISEMODE_POLKADOT
+
+// Ridged noise modes - Kernels 4, 5, 6
+#pragma kernel Distribute NOISEMODE_PERLIN      INVERT_NOISE
+#pragma kernel Distribute NOISEMODE_CELLULAR    INVERT_NOISE
+#pragma kernel Distribute NOISEMODE_POLKADOT    INVERT_NOISE
+
+// Render             - Kernel 7
 #pragma kernel Evaluate
 
 #include "ScatterStructs.cginc"
 #include "ScatterParams.cginc"
+#include "../Includes/gpu_noise_lib.glsl"
 #include "ScatterUtils.cginc"
-#include "SimplexNoise.cginc"
 
 StructuredBuffer<float3> vertices;
 StructuredBuffer<float3> normals;
+StructuredBuffer<float2> uvs;
 StructuredBuffer<int> triangles;
+
+// Normalized directions from planet center to quad vertex
+StructuredBuffer<float3> directionsFromCenter;
+
+// Biome map - RGBA (although alpha is unused, I can't convert to RGB)
+Texture2D<float4> biomeMap;
+Texture2D<float4> scatterBiomes;
+
+// The naming is important here
+SamplerState linearClampSampler;
+SamplerState pointClampSampler;
 
 AppendStructuredBuffer<PositionData> output;
 
@@ -42,6 +67,39 @@ void Distribute (uint3 id : SV_DispatchThreadID)
     float3 n2 = normals[index2];
     float3 n3 = normals[index3];
     
+    // Get triangle UVs
+    float2 uv1 = uvs[index1];
+    float2 uv2 = uvs[index2];
+    float2 uv3 = uvs[index3];
+    
+    // Get face center UV
+    float2 centerUV = (uv1 + uv2 + uv3) * 0.333f;
+    
+    // Get the biome colour
+    float3 biome = biomeMap.SampleLevel(pointClampSampler, centerUV, 0).rgb;
+    
+    // Does this biome colour match any of the biomes this scatter can appear in?
+    int biomesEligible = 0;
+   
+    for (int b = 0; b < _NumberOfBiomes; b++)
+    {
+        float3 biomeColor = scatterBiomes.SampleLevel(pointClampSampler, float2(0, (float)b / (float)_NumberOfBiomes), 0).rgb;
+        biomesEligible += BiomeEligible(biome, biomeColor);
+    }
+    
+    // Skip this triangle if this scatter isn't eligible on it
+    if (biomesEligible == 0)
+    {
+        return;
+    }
+    
+    // Early return if this triangle doesn't lie in the correct biome
+    
+    // Get direction from center
+    float3 dfc1 = directionsFromCenter[index1];
+    float3 dfc2 = directionsFromCenter[index2];
+    float3 dfc3 = directionsFromCenter[index3];
+    
     // Use tri center as the random seed, since it will vary per quad
     // but will remain persistent
     float3 center = TriCenter(v1, v2, v3);
@@ -57,14 +115,14 @@ void Distribute (uint3 id : SV_DispatchThreadID)
         float randomX = sqrt(Rand(center + i));
         float randomY = Rand(center * 0.5 + i);
         float3 localPos = RandomPoint(v1, v2, v3, randomX, randomY);
+        float3 localCenterDir = RandomPoint(dfc1, dfc2, dfc3, randomX, randomY);
+        
+        float noise = Noise(localCenterDir); //snoise(localCenterDir * 2000.0f) * 0.5f + 0.5f;
         
         bool canSpawn = Rand(localPos) < _SpawnChance;
         
-        float noiseValue = snoise(localPos * _NoiseScale) * 0.5f + 0.5f;
-        float heightMultiplier = lerp(0.5, 2, noiseValue);
-        
         newObject.localPos = localPos;
-        newObject.localScale = float3(1.1, 1.1, 1.1);
+        newObject.localScale = float3(10.1, 10.1, 10.1) * noise;
         newObject.rotation = Rand(center * 0.25 + i) * 180.0f;
         newObject.index = id.x * 3;
     

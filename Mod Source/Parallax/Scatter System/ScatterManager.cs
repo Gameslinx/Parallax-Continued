@@ -19,6 +19,9 @@ namespace Parallax
 
         // Stored only active renderer components that need rendering
         public List<ScatterRenderer> activeScatterRenderers = new List<ScatterRenderer>();
+
+        // The current biome map
+        public static Texture2D currentBiomeMap;
         void Awake()
         {
             Instance = this;
@@ -50,6 +53,10 @@ namespace Parallax
         }
         void DominantBodyLoaded(string bodyName)
         {
+            if (ConfigLoader.parallaxScatterBodies.ContainsKey(bodyName))
+            {
+                currentBiomeMap = FlightGlobals.GetBodyByName(bodyName).BiomeMap.CompileToTexture();
+            }
             foreach (ScatterRenderer renderer in scatterRenderers)
             {
                 // Renderer body is the new one - enable it
@@ -77,8 +84,8 @@ namespace Parallax
             {
                 ParallaxScatterBody body = ConfigLoader.parallaxScatterBodies[bodyName];
                 body.UnloadTextures();
+                UnityEngine.Object.Destroy(currentBiomeMap);
             }
-            
         }
         // After any world origin shifts
         void LateUpdate()

@@ -33,7 +33,6 @@ namespace Parallax
 
         // Distribution params that don't require a full reinitialization
         public bool requiresFullRestart = false;
-        public float noiseScale = 1.0f;
 
         int numTriangles;
 
@@ -80,8 +79,9 @@ namespace Parallax
             // Required values
             scatterShader.SetVector("_PlanetNormal", Vector3.Normalize(parent.quad.transform.position - parent.quad.quadRoot.transform.position));
             scatterShader.SetInt("_MaxCount", outputSize);
+            scatterShader.SetInt("_NumberOfBiomes", scatter.biomeCount);
 
-            distributeKernel = scatterShader.FindKernel("Distribute");
+            distributeKernel = GetDistributeKernel();
             evaluateKernel = scatterShader.FindKernel("Evaluate");
 
             outputScatterDataBuffer = new ComputeBuffer(outputSize, PositionData.Size(), ComputeBufferType.Append);
@@ -89,14 +89,52 @@ namespace Parallax
             scatterShader.SetBuffer(distributeKernel, "vertices", parent.sourceVertsBuffer);
             scatterShader.SetBuffer(distributeKernel, "normals", parent.sourceNormalsBuffer);
             scatterShader.SetBuffer(distributeKernel, "triangles", parent.sourceTrianglesBuffer);
+            scatterShader.SetBuffer(distributeKernel, "uvs", parent.sourceUVsBuffer);
+            scatterShader.SetBuffer(distributeKernel, "directionsFromCenter", parent.sourceDirsFromCenterBuffer);
             scatterShader.SetBuffer(distributeKernel, "output", outputScatterDataBuffer);
+
+            scatterShader.SetTexture(distributeKernel, "biomeMap", ScatterManager.currentBiomeMap);
+            scatterShader.SetTexture(distributeKernel, "scatterBiomes", scatter.biomeControlMap);
 
             SetDistributionVars();
         }
-        // These don't require a full reinitialization
+        public int GetDistributeKernel()
+        {
+            int kernel = 0;
+
+            // Noise type
+            switch (scatter.noiseParams.noiseType)
+            {
+                case NoiseType.simplexPerlin:
+                {
+                    kernel = 1;
+                    break;
+                }
+                case NoiseType.simplexCellular:
+                {
+                    kernel = 2;
+                    break;
+                }
+                case NoiseType.simplexPolkaDot:
+                {
+                    kernel = 3;
+                    break;
+                }
+            }
+            if (scatter.noiseParams.inverted)
+            {
+                // Use the kernels with inverted noise
+                kernel += 3;
+            }
+            return kernel;
+        }
         public void SetDistributionVars()
         {
-            scatterShader.SetFloat("_NoiseScale", noiseScale);
+            scatterShader.SetInt("_NoiseOctaves", scatter.noiseParams.octaves);
+            scatterShader.SetFloat("_NoiseFrequency", scatter.noiseParams.frequency);
+            scatterShader.SetFloat("_NoiseLacunarity", scatter.noiseParams.lacunarity);
+            scatterShader.SetInt("_NoiseSeed", scatter.noiseParams.seed);
+
         }
         public void Distribute()
         {

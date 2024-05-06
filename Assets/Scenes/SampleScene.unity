@@ -140,7 +140,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &65353113
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -362,9 +362,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   scatterShader: {fileID: 7200000, guid: 7c479f5cd11a7184894f6dbf0ab96a0d, type: 3}
   _PopulationMultiplier: 3
+  _SpawnChance: 1
   requiresFullRestart: 0
   noiseScale: 2
   _PlanetOrigin: {x: 5, y: -10000, z: -5}
+  frequency: 780
+  lacunarity: 2
+  octaves: 4
+  seed: 1
+  biomeMap: {fileID: 2800000, guid: d6cccf7d426f4f248b449426307700c2, type: 3}
+  scatterBiomeColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!1 &643708513
 GameObject:
   m_ObjectHideFlags: 0
@@ -620,7 +627,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 938489594}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 5, y: 2, z: -5}
+  m_LocalPosition: {x: 5.078, y: 2, z: -5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -704,8 +711,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_LocalRotation: {x: -0.07293073, y: -0.8564836, z: 0.12531058, w: -0.495393}
-  m_LocalPosition: {x: -1.2905483, y: 3.1536732, z: -1.3803949}
+  m_LocalRotation: {x: 0.19362798, y: 0.6799644, z: -0.19054015, w: 0.68106616}
+  m_LocalPosition: {x: -2.3059015, y: 5.461418, z: -5.0026855}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}

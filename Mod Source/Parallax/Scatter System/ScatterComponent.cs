@@ -24,13 +24,9 @@ namespace Parallax
             // Necessary evil?
             if (ConfigLoader.parallaxScatterBodies.TryGetValue(quad.sphereRoot.name, out ParallaxScatterBody scatterBody))
             {
-                if (quad.subdivision > 9)
-                {
-                    ScatterSystemQuadData scatterData = new ScatterSystemQuadData(scatterBody, quad, scatterBody.nearestQuadSubdivisionLevel, scatterBody.nearestQuadSubdivisionRange);
-                    scatterData.Initialize();
-                    scatterQuadData.Add(quad, scatterData);
-                }
-                
+                ScatterSystemQuadData scatterData = new ScatterSystemQuadData(scatterBody, quad, scatterBody.nearestQuadSubdivisionLevel, scatterBody.nearestQuadSubdivisionRange);
+                scatterData.Initialize();
+                scatterQuadData.Add(quad, scatterData);
             }
         }
         /// <summary>
@@ -39,6 +35,8 @@ namespace Parallax
         /// </summary>
         public static void OnQuadVisible(PQ quad)
         {
+            OnQuadVisibleBuilt(quad);
+            return;
             if (ConfigLoader.parallaxScatterBodies.TryGetValue(quad.sphereRoot.name, out ParallaxScatterBody scatterBody))
             {
                 if (scatterQuadData.TryGetValue(quad, out ScatterSystemQuadData scatterData))
@@ -53,7 +51,8 @@ namespace Parallax
         /// </summary>
         public static void OnQuadInvisible(PQ quad)
         {
-           
+            OnQuadDestroyed(quad);
+            return;
             // If this scatter body is eligible
             if (ConfigLoader.parallaxScatterBodies.TryGetValue(quad.sphereRoot.name, out ParallaxScatterBody scatterBody))
             {

@@ -161,7 +161,6 @@ namespace Parallax
     }
     public enum NoiseType
     {
-        value,
         simplexPerlin,
         simplexCellular,
         simplexPolkaDot,
@@ -180,8 +179,9 @@ namespace Parallax
     public struct NoiseParams
     {
         public NoiseType noiseType;
+        public bool inverted;
         public int octaves;
-        public float persistence;
+        public float lacunarity;
         public float frequency;
         public int seed;
     }
@@ -216,6 +216,11 @@ namespace Parallax
         public string shader;
         public List<string> shaderKeywords;
         public ShaderProperties shaderProperties;
+    }
+    public struct BiomeBlacklistParams
+    {
+        // The name of each biome and the colours they correspond to where this scatter can appear - Max 8
+        public List<string> blacklistedBiomes;
     }
     // Stores scatter information
     public class ParallaxScatterBody
@@ -258,6 +263,10 @@ namespace Parallax
         public NoiseParams noiseParams;
         public DistributionParams distributionParams;
         public MaterialParams materialParams;
+        public BiomeBlacklistParams biomeBlacklistParams;
+
+        public Texture2D biomeControlMap;
+        public int biomeCount = 0;
 
         public Scatter(string scatterName)
         {

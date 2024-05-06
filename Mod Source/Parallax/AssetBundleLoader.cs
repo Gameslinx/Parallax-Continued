@@ -14,19 +14,23 @@ namespace Parallax
         public static Dictionary<string, Shader> parallaxTerrainShaders = new Dictionary<string, Shader>();
         public static Dictionary<string, Shader> parallaxScatterShaders = new Dictionary<string, Shader>();
         public static Dictionary<string, ComputeShader> parallaxComputeShaders = new Dictionary<string, ComputeShader>();
+        public static Dictionary<string, Shader> parallaxDebugShaders = new Dictionary<string, Shader>();
         public static void Initialize()
         {
             string terrainShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "Parallax/Shaders/ParallaxTerrain");
             string scatterShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "Parallax/Shaders/ParallaxScatters");
             string computeShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "Parallax/Shaders/ParallaxCompute");
+            string debugShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "Parallax/Shaders/ParallaxDebug");
 
             terrainShaderFilePath = DeterminePlatform(terrainShaderFilePath);
             scatterShaderFilePath = DeterminePlatform(scatterShaderFilePath);
             computeShaderFilePath = DeterminePlatform(computeShaderFilePath);
+            debugShaderFilePath = DeterminePlatform(debugShaderFilePath);
 
             LoadAssetBundles<Shader>(terrainShaderFilePath, parallaxTerrainShaders);
             LoadAssetBundles<Shader>(scatterShaderFilePath, parallaxScatterShaders);
             LoadAssetBundles<ComputeShader>(computeShaderFilePath, parallaxComputeShaders);
+            LoadAssetBundles<Shader>(debugShaderFilePath, parallaxDebugShaders);
         }
         static string DeterminePlatform(string filePath)
         {

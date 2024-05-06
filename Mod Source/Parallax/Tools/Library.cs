@@ -89,6 +89,18 @@ namespace Parallax
                     result = Color.magenta;
                 }
             }
+            else if (type == typeof(bool))
+            {
+                try
+                {
+                    result = bool.Parse(value);
+                }
+                catch
+                {
+                    ParallaxDebug.LogParseError(name, planetName, type.Name, value);
+                    result = false;
+                }
+            }
             else
             {
                 ParallaxDebug.LogError("Trying to parse " + name + " on planet: " + planetName + " as type " + type.Name + " but converting to this type is unsupported");
@@ -153,6 +165,18 @@ namespace Parallax
                     result = Color.magenta;
                 }
             }
+            else if (type == typeof(bool))
+            {
+                try
+                {
+                    result = bool.Parse(value);
+                }
+                catch
+                {
+                    ParallaxDebug.LogParseError(name, planetName, type.Name, value);
+                    result = false;
+                }
+            }    
             else
             {
                 ParallaxDebug.LogError("Trying to parse " + name + " on planet: " + planetName + " as type " + type.Name + " but converting to this type is unsupported");

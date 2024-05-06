@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: SphericalCoords
-  m_Shader: {fileID: 4800000, guid: a1a276bb4279c32469fd038caf62b24a, type: 3}
+  m_Name: ShowBiomes
+  m_Shader: {fileID: 4800000, guid: b311c4a9a27dada498883e5f322a8d1a, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -40,7 +40,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 5f959d4e01710304893ac7e0ef68c4eb, type: 3}
+        m_Texture: {fileID: 2800000, guid: c2eae859038353842b576359166f53bf, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -60,32 +60,18 @@ Material:
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
-    - _EnvironmentMapFactor: 1
-    - _Frequency: 2.64
-    - _FresnelPower: 1
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _Inverse: 1
-    - _Lacunarity: 2
     - _Metallic: 0
     - _Mode: 0
-    - _NoiseMode: 0
-    - _NoiseScale: 3.37
     - _OcclusionStrength: 1
-    - _Octaves: 8
     - _Parallax: 0.02
-    - _Persistence: 0.89
-    - _RefractionIntensity: 1
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
-    - _SpecularIntensity: 1
-    - _SpecularPower: 1
     - _SrcBlend: 1
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _FresnelColor: {r: 0, g: 0, b: 0, a: 1}
-    - _PlanetOrigin: {r: 5, g: 2, b: -5, a: 1}
