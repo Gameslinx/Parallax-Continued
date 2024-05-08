@@ -200,6 +200,7 @@ namespace Parallax
         public float maxNormalDeviance;
         public float minAltitude;
         public float maxAltitude;
+        public int alignToTerrainNormal;
         public LOD lod1;
         public LOD lod2;
         public HashSet<string> biomeBlacklist;
@@ -221,6 +222,7 @@ namespace Parallax
     {
         // The name of each biome and the colours they correspond to where this scatter can appear - Max 8
         public List<string> blacklistedBiomes;
+        public HashSet<string> fastBlacklistedBiomes;
     }
     // Stores scatter information
     public class ParallaxScatterBody

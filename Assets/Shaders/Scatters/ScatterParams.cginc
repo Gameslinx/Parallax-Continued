@@ -7,6 +7,12 @@ int _AlignToTerrainNormal;
 
 // Vector from planet to quad
 float3 _PlanetNormal;
+float3 _LocalPlanetNormal;
+
+// Slope calculation params
+float _SteepPower;
+float _SteepContrast;
+float _SteepMidpoint;
 
 // Max distribution count
 int _MaxCount;
@@ -15,6 +21,9 @@ float _NoiseScale;
 
 // Chance for an object to spawn
 float _SpawnChance;
+
+// The maximum amount the normals can deviate on a triangle
+float _MaxNormalDeviance;
 
 // The colours of the biomes which this scatter can appear in
 // Max 8

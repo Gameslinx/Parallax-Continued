@@ -99,7 +99,7 @@
 				//fade based on dist from center
  				float I = exp2(-4.0*d*d);
  				
- 				float4 col = lerp(_Color, _WireColor, I);		
+ 				float4 col = lerp(_Color, _WireColor, I);
 				col.a = 1;
 				return col;
 			}

@@ -53,7 +53,8 @@ namespace Parallax
                         }
 
                         Debug.Log("Scatter " + scatter.scatterName + " has " + numberOfEligibleBiomes + " biomes");
-                        biomeControltexture.Apply(false, true);
+                        // We read this again in ScatterSystemQuadData.cs
+                        biomeControltexture.Apply(false, false);
                         scatter.biomeControlMap = biomeControltexture;
                         scatter.biomeCount = numberOfEligibleBiomes;
                     }

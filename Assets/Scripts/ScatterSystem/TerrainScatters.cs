@@ -62,6 +62,7 @@ public class TerrainScatters : MonoBehaviour
     // Distribution params that require a full reinitialization
     [Range(1, 100)] public int _PopulationMultiplier = 1;
     [Range(0.001f, 1.0f)] public float _SpawnChance = 1;
+    [Range(0.0f, 1.0f)] public float _MaxNormalDeviation;
 
     // Distribution params that don't require a full reinitialization
     public bool requiresFullRestart = false;
@@ -71,6 +72,8 @@ public class TerrainScatters : MonoBehaviour
     [Range(0.001f, 10f)] public float lacunarity;
     [Range(1, 8)] public int octaves;
     [Range(0, 10)] public int seed;
+
+    public bool alignToTerrainNormal = false;
 
     public Texture2D biomeMap;
     public Color scatterBiomeColor;
@@ -143,9 +146,10 @@ public class TerrainScatters : MonoBehaviour
 
         scatterShader.SetInt("_PopulationMultiplier", _PopulationMultiplier);
         scatterShader.SetFloat("_SpawnChance", _SpawnChance);
-        scatterShader.SetInt("_AlignToTerrainNormal", 0);
+        scatterShader.SetInt("_AlignToTerrainNormal", alignToTerrainNormal == true ? 1 : 0);
         scatterShader.SetInt("_MaxCount", outputSize);
         scatterShader.SetInt("_NumberOfBiomes", 1);
+        scatterShader.SetFloat("_MaxNormalDeviation", _MaxNormalDeviation * _MaxNormalDeviation * _MaxNormalDeviation);
 
         // Create biome texture
         Texture2D biomeTex = new Texture2D(1, 1, TextureFormat.ARGB32, false);
@@ -231,6 +235,9 @@ public class TerrainScatters : MonoBehaviour
     }
     public void InitializeEvaluate()
     {
+        scatterShader.SetBuffer(evaluateKernel, "triangles", sourceTrianglesBuffer);
+        scatterShader.SetBuffer(evaluateKernel, "vertices", sourceVertsBuffer);
+
         scatterShader.SetBuffer(evaluateKernel, "positions", outputScatterDataBuffer);
         scatterShader.SetBuffer(evaluateKernel, "instancingData", scatterRenderer.outputLOD0);
     }
@@ -240,6 +247,7 @@ public class TerrainScatters : MonoBehaviour
         // We need to know the size of the distribution before continuing with this
         scatterShader.SetMatrix("_ObjectToWorldMatrix", transform.localToWorldMatrix);
         scatterShader.SetVector("_PlanetNormal", Vector3.Normalize(transform.position - _PlanetOrigin));
+        scatterShader.SetVector("_LocalPlanetNormal", transform.InverseTransformDirection(Vector3.Normalize(transform.position - _PlanetOrigin)));
 
         scatterShader.SetVector("_WorldSpaceCameraPosition", Camera.main.transform.position);
         

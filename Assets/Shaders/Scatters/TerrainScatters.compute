@@ -19,10 +19,10 @@
 #include "../Includes/gpu_noise_lib.glsl"
 #include "ScatterUtils.cginc"
 
+StructuredBuffer<int> triangles;
 StructuredBuffer<float3> vertices;
 StructuredBuffer<float3> normals;
 StructuredBuffer<float2> uvs;
-StructuredBuffer<int> triangles;
 
 // Normalized directions from planet center to quad vertex
 StructuredBuffer<float3> directionsFromCenter;
@@ -62,15 +62,17 @@ void Distribute (uint3 id : SV_DispatchThreadID)
     float3 v2 = vertices[index2];
     float3 v3 = vertices[index3];
     
+    // Get triangle UVs
+    float2 uv1 = uvs[index1];
+    float2 uv2 = uvs[index2];
+    float2 uv3 = uvs[index3];
+    
     // Get triangle normals
     float3 n1 = normals[index1];
     float3 n2 = normals[index2];
     float3 n3 = normals[index3];
     
-    // Get triangle UVs
-    float2 uv1 = uvs[index1];
-    float2 uv2 = uvs[index2];
-    float2 uv3 = uvs[index3];
+    float3 averageNormal = TriCenter(n1, n2, n3);
     
     // Get face center UV
     float2 centerUV = (uv1 + uv2 + uv3) * 0.333f;
@@ -93,16 +95,25 @@ void Distribute (uint3 id : SV_DispatchThreadID)
         return;
     }
     
-    // Early return if this triangle doesn't lie in the correct biome
+    // Don't place scatters on ineligible gradients, such as mountains
+    float slope = CalculateSlope(averageNormal);
+    
+    // If the mesh is too curved, we can end up with scatters floating/overhanging the terrain (depending on scatter mesh and size)
+    // So skip this triangle entirely
+    float normalDeviance = GetNormalDeviance(n1, n2, n3);
+    if (normalDeviance < 1.0f - _MaxNormalDeviance)
+    {
+        return;
+    }
     
     // Get direction from center
     float3 dfc1 = directionsFromCenter[index1];
     float3 dfc2 = directionsFromCenter[index2];
     float3 dfc3 = directionsFromCenter[index3];
     
-    // Use tri center as the random seed, since it will vary per quad
-    // but will remain persistent
-    float3 center = TriCenter(v1, v2, v3);
+    // Use UV and id as random seed. It's not elegant, but it's persistent. Fyi, using the quad local position triangle center is not valid here
+    // This produces sufficient randomness
+    float3 center = float3(centerUV, id.x); //TriCenter(v1, v2, v3);
     
     // Create an object on this triangle for every population multiplier
     for (int i = 0; i < _PopulationMultiplier; i++)
@@ -117,12 +128,12 @@ void Distribute (uint3 id : SV_DispatchThreadID)
         float3 localPos = RandomPoint(v1, v2, v3, randomX, randomY);
         float3 localCenterDir = RandomPoint(dfc1, dfc2, dfc3, randomX, randomY);
         
-        float noise = Noise(localCenterDir); //snoise(localCenterDir * 2000.0f) * 0.5f + 0.5f;
+        float noise = Noise(localCenterDir);
         
         bool canSpawn = Rand(localPos) < _SpawnChance;
         
         newObject.localPos = localPos;
-        newObject.localScale = float3(10.1, 10.1, 10.1) * noise;
+        newObject.localScale = float3(2.1, 2.1, 2.1) * noise;
         newObject.rotation = Rand(center * 0.25 + i) * 180.0f;
         newObject.index = id.x * 3;
     
@@ -171,8 +182,24 @@ void Evaluate(uint3 id : SV_DispatchThreadID)
         return;
     }
     
+    // Get triangle indices for sampling vertices
+    
+    uint index1 = triangles[pos.index];
+    uint index2 = triangles[pos.index + 1];
+    uint index3 = triangles[pos.index + 2];
+
+    // Calculating the average normal using (nrm1 + nrm2 + nrm3) / 3 does not give face normal, so compute face normal from vertex positions
+
+    float3 vert1 = vertices[index1];
+    float3 vert2 = vertices[index2];
+    float3 vert3 = vertices[index3];
+
+    // Get the terrain normal in world space
+    float3 avgNormal = normalize(cross(vert2 - vert1, vert3 - vert1));
+    avgNormal = mul(_ObjectToWorldMatrix, float4(avgNormal, 0)).xyz;
+    
     // the float3 at the end becomes the terrain average normal
-    float4x4 mat = GetTRSMatrix(worldPos, float3(0, pos.rotation, 0), pos.localScale, float3(0, 1, 0));
+    float4x4 mat = GetTRSMatrix(worldPos, float3(0, pos.rotation, 0), pos.localScale, avgNormal);
 
     TransformData object;
     object.objectToWorld = mat;

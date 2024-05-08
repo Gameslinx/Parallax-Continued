@@ -78,7 +78,7 @@ public struct SubdividableTriangle
                 float3 midPointN = GetNormalBetween(n1, n2);
                 float4 midPointC = GetColorBetween(c1, c2);
                 SubdividableTriangle v3v1midPoint = new SubdividableTriangle(v3, v1, midPointV, n3, n1, midPointN, c3, c1, midPointC);
-                SubdividableTriangle v2v3midPoint = new SubdividableTriangle(v2, v3, midPointV, n2, n2, midPointN, c2, c3, midPointC);
+                SubdividableTriangle v2v3midPoint = new SubdividableTriangle(v2, v3, midPointV, n2, n3, midPointN, c2, c3, midPointC);
                 tris.Write(v3v1midPoint);
                 tris.Write(v2v3midPoint);
                 return;
@@ -156,7 +156,7 @@ public struct SubdividableTriangle
         SubdividableTriangle c = new SubdividableTriangle(cv1, cv2, cv3, cn1, cn2, cn3, cc1, cc2, cc3);
         c.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, subdivisionRange, objectToWorld);
 
-        if (level + 1 == subdivisionLevelv1 && level + 1 == subdivisionLevelv2 && level + 1 == subdivisionLevelv3)
+        if (level == subdivisionLevelv1 && level == subdivisionLevelv2 && level == subdivisionLevelv3)
         {
             tris.Write(t);
             tris.Write(bl);

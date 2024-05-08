@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Parallax.Tools;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -21,6 +22,10 @@ namespace Parallax
         public float subdivisionRadius;
         public float sqrQuadWidth;
 
+        // Direction from planet to quad in world and local space
+        public Vector3 planetNormal;
+        public Vector3 localPlanetNormal;
+
         // PQS data
         // Potentially store a scaled version of this to get closer to the desired frequency and reduce precision errors
         // Length parity with quad vertex count
@@ -32,6 +37,8 @@ namespace Parallax
         Vector3[] normals;
         int[] triangles;
         Vector2[] uvs;
+
+        string[] cornerBiomes = new string[4];
 
         public int numMeshTriangles = 0;
 
@@ -85,6 +92,10 @@ namespace Parallax
 
             numMeshTriangles = triangles.Length / 3;
 
+            planetNormal = Vector3.Normalize(quad.transform.position - quad.quadRoot.transform.position);
+            localPlanetNormal = quad.gameObject.transform.InverseTransformDirection(planetNormal);
+
+            GetCornerBiomes();
             DetermineScatters();
         }
         /// <summary>
@@ -128,6 +139,25 @@ namespace Parallax
             {
                 return false;
             }
+
+            // Is the scatter in an eligible biome?
+            if (scatter.biomeBlacklistParams.fastBlacklistedBiomes.Contains(cornerBiomes[0]))
+            {
+                return false;
+            }
+            if (scatter.biomeBlacklistParams.fastBlacklistedBiomes.Contains(cornerBiomes[1]))
+            {
+                return false;
+            }
+            if (scatter.biomeBlacklistParams.fastBlacklistedBiomes.Contains(cornerBiomes[2]))
+            {
+                return false;
+            }
+            if (scatter.biomeBlacklistParams.fastBlacklistedBiomes.Contains(cornerBiomes[3]))
+            {
+                return false;
+            }
+
             return true;
         }
         /// <summary>
@@ -136,6 +166,26 @@ namespace Parallax
         /// <param name="vertices"></param>
         /// <param name="planetCenter"></param>
         /// <returns></returns>
+        public void GetCornerBiomes()
+        {
+            // Pick 4 corners of the quad and get their biomes for determining scatter eligibility
+            Vector3 corner1 = quad.gameObject.transform.TransformPoint(vertices[0]);
+            Vector3 corner2 = quad.gameObject.transform.TransformPoint(vertices[14]);
+            Vector3 corner3 = quad.gameObject.transform.TransformPoint(vertices[224]);
+            Vector3 corner4 = quad.gameObject.transform.TransformPoint(vertices[210]);
+
+            // Uses a dictionary, at least...
+            CelestialBody body = FlightGlobals.GetBodyByName(quad.sphereRoot.name);
+            CBAttributeMapSO.MapAttribute attribute1 = Kopernicus.Utility.GetBiome(body, corner1);
+            CBAttributeMapSO.MapAttribute attribute2 = Kopernicus.Utility.GetBiome(body, corner2);
+            CBAttributeMapSO.MapAttribute attribute3 = Kopernicus.Utility.GetBiome(body, corner3);
+            CBAttributeMapSO.MapAttribute attribute4 = Kopernicus.Utility.GetBiome(body, corner4);
+
+            cornerBiomes[0] = attribute1.name;
+            cornerBiomes[1] = attribute2.name;
+            cornerBiomes[2] = attribute3.name;
+            cornerBiomes[3] = attribute4.name;
+        }
         public Vector3[] GetDirectionsFromCenter(Vector3[] vertices, Vector3 planetCenter)
         {
             Vector3 localPlanetCenter = quad.gameObject.transform.InverseTransformPoint(planetCenter);

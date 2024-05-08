@@ -174,10 +174,6 @@ namespace Parallax
             ComputeBuffer.CopyCount(outputLOD1, indirectArgsLOD1, 4);
             ComputeBuffer.CopyCount(outputLOD2, indirectArgsLOD2, 4);
 
-            int[] count = new int[5];
-            indirectArgsLOD0.GetData(count);
-            Debug.Log("C: " + count[1]);
-
             // Render instanced data
             Graphics.DrawMeshInstancedIndirect(meshLOD0, 0, instancedMaterialLOD0, rendererBounds, indirectArgsLOD0, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, Camera.main);
             Graphics.DrawMeshInstancedIndirect(meshLOD1, 0, instancedMaterialLOD1, rendererBounds, indirectArgsLOD1, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, Camera.main);

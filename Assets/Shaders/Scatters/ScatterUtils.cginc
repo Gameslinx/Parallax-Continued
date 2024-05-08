@@ -45,6 +45,28 @@ bool BiomeEligible(float3 biomeColor, float3 scatterColor)
     return 1 * (deviation < ALLOWED_COLOR_RANGE);
 }
 
+// Calculate the slope of the mesh
+float CalculateSlope(float3 normal)
+{
+    // Get gradient of slope
+    float slope = abs(dot(normalize(-_LocalPlanetNormal), normal));
+    
+    slope = pow(slope, _SteepPower);
+    slope = saturate((slope - _SteepMidpoint) * _SteepContrast + _SteepMidpoint);
+    
+    return slope;
+}
+
+// Obtain a basic estimate for the curvature of the mesh based on how much the normals deviate from one another
+float GetNormalDeviance(float3 normal1, float3 normal2, float3 normal3)
+{
+    float nrmDev1 = dot(normal2, normal3);
+    float nrmDev2 = dot(normal3, normal1);
+    float nrmDev3 = dot(normal1, normal2);
+    float normalDeviance = min(nrmDev1, min(nrmDev2, nrmDev3));
+    return normalDeviance;
+}
+
 // Construct translation matrix from a position
 float4x4 GetTranslationMatrix(float3 pos)
 {
@@ -141,10 +163,8 @@ float4x4 GetTRSMatrix(float3 position, float3 rotationAngles, float3 scale, floa
     }
     else
     {
-        //change this to terrain normal
-        nrm = normalize(_PlanetNormal);
+        nrm = normalize(terrainNormal);
     }
-    nrm = normalize(_PlanetNormal);
     float3 up = float3(0, 1, 0);
     float4x4 mat = TransformToPlanetNormal(up, nrm);
     mat = mul(mat, GetRotationMatrix(rotationAngles));

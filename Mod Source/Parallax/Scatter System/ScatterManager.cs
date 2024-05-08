@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -94,6 +95,18 @@ namespace Parallax
             {
                 renderer.Render();
             }
+        }
+        // Create single channel 8 bpp biome map - stores indices of each biome 
+        Texture2D CreateBiomeIndexMap(CBAttributeMapSO biomeMap)
+        {
+            Type type = biomeMap.GetType();
+            FieldInfo fieldInfo = type.GetField("_data", BindingFlags.NonPublic | BindingFlags.Instance);
+            byte[] data = (byte[])fieldInfo.GetValue(biomeMap);
+
+            Texture2D tex = new Texture2D(biomeMap.Width, biomeMap.Height, TextureFormat.R8, false);
+            tex.LoadRawTextureData(data);
+            tex.Apply(false, false);
+            return tex;
         }
         void OnDestroy()
         {

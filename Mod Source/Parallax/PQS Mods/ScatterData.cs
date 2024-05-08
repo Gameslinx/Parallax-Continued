@@ -68,16 +68,11 @@ namespace Parallax
             // For now....
             scatterShader = UnityEngine.Object.Instantiate(AssetBundleLoader.parallaxComputeShaders["TerrainScatters"]);
 
-            int populationMultiplier = scatter.distributionParams.populationMultiplier;
-            int outputSize = populationMultiplier * numTriangles;
-
-            // Values from config
-            scatterShader.SetInt("_PopulationMultiplier", populationMultiplier);
-            scatterShader.SetInt("_AlignToTerrainNormal", 0);
-            scatterShader.SetFloat("_SpawnChance", scatter.distributionParams.spawnChance);
+            int outputSize = scatter.distributionParams.populationMultiplier * numTriangles;
 
             // Required values
-            scatterShader.SetVector("_PlanetNormal", Vector3.Normalize(parent.quad.transform.position - parent.quad.quadRoot.transform.position));
+            scatterShader.SetVector("_PlanetNormal", parent.planetNormal);
+            scatterShader.SetVector("_LocalPlanetNormal", parent.localPlanetNormal);
             scatterShader.SetInt("_MaxCount", outputSize);
             scatterShader.SetInt("_NumberOfBiomes", scatter.biomeCount);
 
@@ -130,10 +125,20 @@ namespace Parallax
         }
         public void SetDistributionVars()
         {
+            // Values from config
+            scatterShader.SetInt("_PopulationMultiplier", scatter.distributionParams.populationMultiplier);
+            scatterShader.SetFloat("_SpawnChance", scatter.distributionParams.spawnChance);
+            scatterShader.SetInt("_AlignToTerrainNormal", scatter.distributionParams.alignToTerrainNormal);
+            scatterShader.SetFloat("_MaxNormalDeviance", scatter.distributionParams.maxNormalDeviance);
+
             scatterShader.SetInt("_NoiseOctaves", scatter.noiseParams.octaves);
             scatterShader.SetFloat("_NoiseFrequency", scatter.noiseParams.frequency);
             scatterShader.SetFloat("_NoiseLacunarity", scatter.noiseParams.lacunarity);
             scatterShader.SetInt("_NoiseSeed", scatter.noiseParams.seed);
+
+            scatterShader.SetFloat("_SteepPower", scatter.distributionParams.steepPower);
+            scatterShader.SetFloat("_SteepContrast", scatter.distributionParams.steepContrast);
+            scatterShader.SetFloat("_SteepMidpoint", scatter.distributionParams.steepMidpoint);
 
         }
         public void Distribute()
@@ -183,6 +188,8 @@ namespace Parallax
         }
         public void InitializeEvaluate()
         {
+            scatterShader.SetBuffer(evaluateKernel, "triangles", parent.sourceTrianglesBuffer);
+            scatterShader.SetBuffer(evaluateKernel, "vertices", parent.sourceVertsBuffer);
             scatterShader.SetBuffer(evaluateKernel, "positions", outputScatterDataBuffer);
             scatterShader.SetBuffer(evaluateKernel, "instancingData", scatterRenderer.outputLOD0);
 

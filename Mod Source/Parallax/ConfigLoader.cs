@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Parallax.Debugging;
+using Smooth.Collections;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
@@ -44,6 +46,11 @@ namespace Parallax
         public static void ModuleManagerPostLoad()
         {
             ParallaxDebug.Log("Beginning config load");
+
+            // Get system information
+            ParallaxSystemInfo.ReadInfo();
+            ParallaxSystemInfo.LogInfo();
+
             AssetBundleLoader.Initialize();
             InitializeGlobalSettings(GetConfigByName("ParallaxGlobal"));
 
@@ -277,6 +284,7 @@ namespace Parallax
                     scatter.biomeBlacklistParams = biomeBlacklistParams;
 
                     PerformNormalisationConversions(scatter);
+                    PerformAdditionalOperations(scatter);
 
                     scatterBody.scatters.Add(scatterName, scatter);
                 }
@@ -352,7 +360,8 @@ namespace Parallax
             string maxNormalDeviance = ConfigUtils.TryGetConfigValue(node, "maxNormalDeviance");
             string minAltitude = ConfigUtils.TryGetConfigValue(node, "minAltitude");
             string maxAltitude = ConfigUtils.TryGetConfigValue(node, "maxAltitude");
-            
+            string alignToTerrainNormal = ConfigUtils.TryGetConfigValue(node, "alignToTerrainNormal");
+
             distributionParams.seed = (float)ConfigUtils.TryParse(planetName, "seed", seed, typeof(float));
             distributionParams.spawnChance = (float)ConfigUtils.TryParse(planetName, "spawnChance", spawnChance, typeof(float));
             distributionParams.range = (float)ConfigUtils.TryParse(planetName, "range", range, typeof(float));
@@ -366,6 +375,7 @@ namespace Parallax
             distributionParams.maxNormalDeviance = (float)ConfigUtils.TryParse(planetName, "maxNormalDeviance", maxNormalDeviance, typeof(float));
             distributionParams.minAltitude = (float)ConfigUtils.TryParse(planetName, "minAltitude", minAltitude, typeof(float));
             distributionParams.maxAltitude = (float)ConfigUtils.TryParse(planetName, "maxAltitude", maxAltitude, typeof(float));
+            distributionParams.alignToTerrainNormal = (bool)(ConfigUtils.TryParse(planetName, "alignToTerrainNormal", alignToTerrainNormal, typeof(bool))) ? 1 : 0;
 
             ConfigNode lods = node.GetNode("LODs");
             ConfigNode[] lodNodes = lods.GetNodes("LOD");
@@ -382,6 +392,7 @@ namespace Parallax
         {
             BiomeBlacklistParams blacklist = new BiomeBlacklistParams();
             blacklist.blacklistedBiomes = new List<string>();
+            blacklist.fastBlacklistedBiomes = new HashSet<string>();
 
             ConfigNode blacklistNode = node.GetNode("BiomeBlacklist");
             if (blacklistNode == null)
@@ -391,6 +402,7 @@ namespace Parallax
             else
             {
                 blacklist.blacklistedBiomes.AddRange(blacklistNode.GetValuesList("name"));
+                blacklist.fastBlacklistedBiomes.AddAll(blacklist.blacklistedBiomes);
                 return blacklist;
             }
         }
@@ -569,6 +581,11 @@ namespace Parallax
 
             // Normalise the frustum culling start range as a percentage of max range
             scatter.optimizationParams.frustumCullingIgnoreRadius /= scatter.distributionParams.range;
+        }
+        static void PerformAdditionalOperations(Scatter scatter)
+        {
+            // Cube the normal deviance, as it gives better results and becomes more sensitive to larger values
+            scatter.distributionParams.maxNormalDeviance = scatter.distributionParams.maxNormalDeviance * scatter.distributionParams.maxNormalDeviance * scatter.distributionParams.maxNormalDeviance;
         }
         void OnDestroy()
         {
