@@ -82,35 +82,43 @@ namespace Parallax
         Vector3 terrainShaderOffset;
         Vector3 bodyPosition;
         float bodyRadius;
+        float planetOpacity;
         public void SetParallaxMaterialVars(ParallaxMaterials materialSet)
         {
             terrainShaderOffset = FloatingOrigin.TerrainShaderOffset;
             bodyPosition = FlightGlobals.currentMainBody.gameObject.transform.position;
             bodyRadius = (float)FlightGlobals.currentMainBody.Radius;
+            planetOpacity = FlightGlobals.currentMainBody.pqsController.surfaceMaterial.GetFloat("_PlanetOpacity");
 
             materialSet.parallaxLow.SetVector("_PlanetOrigin", bodyPosition);
             materialSet.parallaxLow.SetVector("_ShaderOffset", terrainShaderOffset);
             materialSet.parallaxLow.SetFloat("_PlanetRadius", bodyRadius);
+            materialSet.parallaxLow.SetFloat("_PlanetOpacity", planetOpacity);
 
             materialSet.parallaxMid.SetVector("_PlanetOrigin", bodyPosition);
             materialSet.parallaxMid.SetVector("_ShaderOffset", terrainShaderOffset);
             materialSet.parallaxMid.SetFloat("_PlanetRadius", bodyRadius);
+            materialSet.parallaxMid.SetFloat("_PlanetOpacity", planetOpacity);
 
             materialSet.parallaxHigh.SetVector("_PlanetOrigin", bodyPosition);
             materialSet.parallaxHigh.SetVector("_ShaderOffset", terrainShaderOffset);
             materialSet.parallaxHigh.SetFloat("_PlanetRadius", bodyRadius);
+            materialSet.parallaxHigh.SetFloat("_PlanetOpacity", planetOpacity);
 
             materialSet.parallaxLowMid.SetVector("_PlanetOrigin", bodyPosition);
             materialSet.parallaxLowMid.SetVector("_ShaderOffset", terrainShaderOffset);
             materialSet.parallaxLowMid.SetFloat("_PlanetRadius", bodyRadius);
+            materialSet.parallaxLowMid.SetFloat("_PlanetOpacity", planetOpacity);
 
             materialSet.parallaxMidHigh.SetVector("_PlanetOrigin", bodyPosition);
             materialSet.parallaxMidHigh.SetVector("_ShaderOffset", terrainShaderOffset);
             materialSet.parallaxMidHigh.SetFloat("_PlanetRadius", bodyRadius);
+            materialSet.parallaxMidHigh.SetFloat("_PlanetOpacity", planetOpacity);
 
             materialSet.parallaxFull.SetVector("_PlanetOrigin", bodyPosition);
             materialSet.parallaxFull.SetVector("_ShaderOffset", terrainShaderOffset);
             materialSet.parallaxFull.SetFloat("_PlanetRadius", bodyRadius);
+            materialSet.parallaxFull.SetFloat("_PlanetOpacity", planetOpacity);
         }
     }
 }

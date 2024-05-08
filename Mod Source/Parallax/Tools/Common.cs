@@ -193,6 +193,7 @@ namespace Parallax
         public int populationMultiplier;
         public Vector3 minScale;
         public Vector3 maxScale;
+        public float scaleRandomness;
         public float noiseCutoff;
         public float steepPower;
         public float steepContrast;
@@ -200,6 +201,7 @@ namespace Parallax
         public float maxNormalDeviance;
         public float minAltitude;
         public float maxAltitude;
+        public float altitudeFadeRange;
         public int alignToTerrainNormal;
         public LOD lod1;
         public LOD lod2;

@@ -414,3 +414,16 @@ float4 GetLandMask(float3 worldPos, float3 worldNormal)
     #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex)   lowTex
     #define BLEND_CHANNELS_IN_TEX(landMask, tex)                tex.r
 #endif
+
+//
+//  Scaled Space Blending - Unused as this looks pretty bad in-game, but kept here just in case
+//
+
+// Screen position for IGN
+#define COMPUTE_SCREEN_POS(screenPos)   int2 screenPos = (i.screenPos / i.screenPos.w) * (_ScreenParams.xy);
+
+// IGN - Adapted From https://blog.demofox.org/2022/01/01/interleaved-gradient-noise-a-different-kind-of-low-discrepancy-sequence/
+bool InterleavedGradientNoise(int pixelX, int pixelY, float t)
+{
+    return fmod(52.9829189f * fmod(0.06711056f * float(pixelX) + 0.00583715f * float(pixelY), 1.0f), 1.0f) < t;
+}

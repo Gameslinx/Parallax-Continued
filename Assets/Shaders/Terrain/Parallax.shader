@@ -72,18 +72,19 @@ Shader "Custom/Parallax"
         [Space(10)]
         _TerrainShaderOffset("Terrain Shader Offset", vector) = (0, 0, 0)
         _PlanetOrigin("Planet Origin", vector) = (0, 0, 0)
-        _PlanetRadius("Planet Radius", Range(0.01, 5000)) = 5 
+        _PlanetRadius("Planet Radius", Range(0.01, 5000)) = 5
+        _PlanetOpacity("Planet Opacity", Range(0, 1)) = 1
     }
     SubShader
     {
         Tags { "RenderType"="Opaque" }
         LOD 100
+        Blend SrcAlpha OneMinusSrcAlpha
         //ZWrite On
         //Cull Back
         //
         //  Forward Base Pass
         //
-
         Pass
         {
             Tags { "LightMode" = "ForwardBase" }
@@ -246,13 +247,9 @@ Shader "Custom/Parallax"
                 fixed4 finalDiffuse = lerp(altitudeDiffuse, steepDiffuse, landMask.b);
                 float3 finalNormal = lerp(altitudeNormal, steepNormal, landMask.b); 
 
-                //return float4(finalNormal, 1);
-
-                //return float4(i.landMask, 1);
-
                 float3 result = CalculateLighting(finalDiffuse, finalNormal, viewDir, GET_SHADOW, _WorldSpaceLightPos0);
                 UNITY_APPLY_FOG(i.fogCoord, result);
-                return float4(result, 1);
+                return float4(result, 1 - _PlanetOpacity);
             }
             ENDCG
         }
@@ -535,13 +532,10 @@ Shader "Custom/Parallax"
                 fixed4 finalDiffuse = lerp(altitudeDiffuse, steepDiffuse, landMask.b);
                 float3 finalNormal = lerp(altitudeNormal, steepNormal, landMask.b); 
 
-                //return float4(finalNormal, 1);
-
-                //return float4(i.landMask, 1);
                 float atten = LIGHT_ATTENUATION(i);
                 float3 result = CalculateLighting(finalDiffuse, finalNormal, viewDir, GET_SHADOW, lightDir);
-                //UNITY_APPLY_FOG(i.fogCoord, result);
-                return float4(result, atten);
+
+                return float4(result, atten * (1 - _PlanetOpacity));
             }
             ENDCG
         }

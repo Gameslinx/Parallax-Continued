@@ -73,6 +73,12 @@ namespace Parallax
             // Required values
             scatterShader.SetVector("_PlanetNormal", parent.planetNormal);
             scatterShader.SetVector("_LocalPlanetNormal", parent.localPlanetNormal);
+            scatterShader.SetVector("_PlanetOrigin", parent.planetOrigin);
+            scatterShader.SetFloat("_PlanetRadius", parent.planetRadius);
+
+            // Set for altitude calculation
+            scatterShader.SetMatrix("_ObjectToWorldMatrix", parent.quad.gameObject.transform.localToWorldMatrix);
+
             scatterShader.SetInt("_MaxCount", outputSize);
             scatterShader.SetInt("_NumberOfBiomes", scatter.biomeCount);
 
@@ -130,16 +136,25 @@ namespace Parallax
             scatterShader.SetFloat("_SpawnChance", scatter.distributionParams.spawnChance);
             scatterShader.SetInt("_AlignToTerrainNormal", scatter.distributionParams.alignToTerrainNormal);
             scatterShader.SetFloat("_MaxNormalDeviance", scatter.distributionParams.maxNormalDeviance);
+            scatterShader.SetFloat("_Seed", scatter.distributionParams.seed);
+
+            scatterShader.SetVector("_MinScale", scatter.distributionParams.minScale);
+            scatterShader.SetVector("_MaxScale", scatter.distributionParams.maxScale);
+            scatterShader.SetFloat("_ScaleRandomness", scatter.distributionParams.scaleRandomness);
 
             scatterShader.SetInt("_NoiseOctaves", scatter.noiseParams.octaves);
             scatterShader.SetFloat("_NoiseFrequency", scatter.noiseParams.frequency);
             scatterShader.SetFloat("_NoiseLacunarity", scatter.noiseParams.lacunarity);
             scatterShader.SetInt("_NoiseSeed", scatter.noiseParams.seed);
+            scatterShader.SetFloat("_NoiseCutoffThreshold", scatter.distributionParams.noiseCutoff);
 
             scatterShader.SetFloat("_SteepPower", scatter.distributionParams.steepPower);
             scatterShader.SetFloat("_SteepContrast", scatter.distributionParams.steepContrast);
             scatterShader.SetFloat("_SteepMidpoint", scatter.distributionParams.steepMidpoint);
 
+            scatterShader.SetFloat("_MinAltitude", scatter.distributionParams.minAltitude);
+            scatterShader.SetFloat("_MaxAltitude", scatter.distributionParams.maxAltitude);
+            scatterShader.SetFloat("_AltitudeFadeRange", scatter.distributionParams.altitudeFadeRange);
         }
         public void Distribute()
         {
@@ -191,18 +206,26 @@ namespace Parallax
             scatterShader.SetBuffer(evaluateKernel, "triangles", parent.sourceTrianglesBuffer);
             scatterShader.SetBuffer(evaluateKernel, "vertices", parent.sourceVertsBuffer);
             scatterShader.SetBuffer(evaluateKernel, "positions", outputScatterDataBuffer);
-            scatterShader.SetBuffer(evaluateKernel, "instancingData", scatterRenderer.outputLOD0);
+
+            scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD0", scatterRenderer.outputLOD0);
+            scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD1", scatterRenderer.outputLOD1);
+            scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD2", scatterRenderer.outputLOD2);
 
             scatterShader.SetFloat("_CullRange", scatter.optimizationParams.frustumCullingIgnoreRadius);
             scatterShader.SetFloat("_CullLimit", scatter.optimizationParams.frustumCullingSafetyMargin);
 
             scatterShader.SetFloat("_MaxRange", scatter.distributionParams.range);
+            scatterShader.SetFloat("_Lod01Split", scatter.distributionParams.lod1.range);
+            scatterShader.SetFloat("_Lod12Split", scatter.distributionParams.lod2.range);
         }
         public void Evaluate()
         {
             // Is it even worth evaluating this scatter?
-            if (!parent.quad.isVisible) { return; }
-            
+            // Quad is not in the view frustum
+            if (!parent.quad.meshRenderer.isVisible || !parent.quad.isVisible) { return; }
+            // Quad is out of range
+            if (parent.quad.gcDist > scatter.distributionParams.range + Mathf.Sqrt(parent.sqrQuadWidth)) { return; }
+
             // Update runtime shader vars
             // We need to know the size of the distribution before continuing with this
             scatterShader.SetMatrix("_ObjectToWorldMatrix", parent.quad.gameObject.transform.localToWorldMatrix);

@@ -25,6 +25,8 @@ namespace Parallax
         // Direction from planet to quad in world and local space
         public Vector3 planetNormal;
         public Vector3 localPlanetNormal;
+        public Vector3 planetOrigin;
+        public float planetRadius;
 
         // PQS data
         // Potentially store a scaled version of this to get closer to the desired frequency and reduce precision errors
@@ -72,10 +74,7 @@ namespace Parallax
             // Quad has UVs but they're not the right ones - we want planet UVs so we fetch them from here
             uvs = PQSMod_Parallax.quadPlanetUVs[quad];
             
-            Stopwatch sw = Stopwatch.StartNew();
             directionsFromCenter = GetDirectionsFromCenter(vertices, quad.sphereRoot.gameObject.transform.position);
-            sw.Stop();
-            UnityEngine.Debug.Log("Elapsed time (dir from center: " + sw.ElapsedMilliseconds + " ms");
 
             // Create compute buffers
             sourceVertsBuffer = new ComputeBuffer(vertices.Length, sizeof(float) * 3, ComputeBufferType.Structured);
@@ -95,7 +94,11 @@ namespace Parallax
             planetNormal = Vector3.Normalize(quad.transform.position - quad.quadRoot.transform.position);
             localPlanetNormal = quad.gameObject.transform.InverseTransformDirection(planetNormal);
 
-            GetCornerBiomes();
+            CelestialBody body = FlightGlobals.GetBodyByName(quad.sphereRoot.name);
+            planetOrigin = body.transform.position;
+            planetRadius = (float)body.Radius;
+
+            GetCornerBiomes(body);
             DetermineScatters();
         }
         /// <summary>
@@ -166,7 +169,7 @@ namespace Parallax
         /// <param name="vertices"></param>
         /// <param name="planetCenter"></param>
         /// <returns></returns>
-        public void GetCornerBiomes()
+        public void GetCornerBiomes(CelestialBody body)
         {
             // Pick 4 corners of the quad and get their biomes for determining scatter eligibility
             Vector3 corner1 = quad.gameObject.transform.TransformPoint(vertices[0]);
@@ -175,7 +178,6 @@ namespace Parallax
             Vector3 corner4 = quad.gameObject.transform.TransformPoint(vertices[210]);
 
             // Uses a dictionary, at least...
-            CelestialBody body = FlightGlobals.GetBodyByName(quad.sphereRoot.name);
             CBAttributeMapSO.MapAttribute attribute1 = Kopernicus.Utility.GetBiome(body, corner1);
             CBAttributeMapSO.MapAttribute attribute2 = Kopernicus.Utility.GetBiome(body, corner2);
             CBAttributeMapSO.MapAttribute attribute3 = Kopernicus.Utility.GetBiome(body, corner3);

@@ -41,7 +41,7 @@ namespace Parallax
         // Assign materials and meshes
         void Prerequisites()
         {
-            meshLOD0 = GameObject.CreatePrimitive(PrimitiveType.Cube).GetComponent<MeshFilter>().mesh; //Instantiate(GameDatabase.Instance.GetModel(scatter.modelPath).GetComponent<MeshFilter>().mesh);
+            meshLOD0 = Instantiate(GameDatabase.Instance.GetModel(scatter.modelPath).GetComponent<MeshFilter>().mesh);
             meshLOD1 = Instantiate(GameDatabase.Instance.GetModel(scatter.distributionParams.lod1.modelPathOverride).GetComponent<MeshFilter>().mesh);
             meshLOD2 = Instantiate(GameDatabase.Instance.GetModel(scatter.distributionParams.lod2.modelPathOverride).GetComponent<MeshFilter>().mesh);
 
@@ -109,7 +109,7 @@ namespace Parallax
         void Initialize()
         {
             // Create output buffers - Evaluate() function on quads will will these
-            int arbitraryMaxCount = 15000;
+            int arbitraryMaxCount = 250000;
             outputLOD0 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
             outputLOD1 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
             outputLOD2 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);

@@ -39,6 +39,7 @@ float _MaxTessellationRange;
 float3 _TerrainShaderOffset;
 float3 _PlanetOrigin;
 float _PlanetRadius;
+float _PlanetOpacity;
 
 // Conditional params
 

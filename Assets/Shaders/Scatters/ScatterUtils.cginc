@@ -192,6 +192,43 @@ float4 CameraDistances1(float3 worldPos)
 	);
 }
 
+// Get blend as a percentage between two values
+float GetPercentageBetween(float t, float lowerLimit, float upperLimit)
+{
+    float percentage = (t - lowerLimit) / (upperLimit - lowerLimit);
+    return saturate(percentage);
+}
+
+// Get altitude fade range strength
+float GetAltitudeScalar(float3 worldPosition)
+{
+    float altitude = length(worldPosition - _PlanetOrigin) - _PlanetRadius;
+    
+    float minAltitudeFadeStart = _MinAltitude + _AltitudeFadeRange * 0.5f;
+    float minAltitudeFadeEnd = _MinAltitude - _AltitudeFadeRange * 0.5f;
+    
+    float maxAltitudeFadeStart = _MaxAltitude + _AltitudeFadeRange * 0.5f;
+    float maxAltitudeFadeEnd = _MaxAltitude - _AltitudeFadeRange * 0.5f;
+    
+    // 1 at fadeStart, 0 at fadeEnd
+    float rangeFadeMin = 1 - GetPercentageBetween(altitude, minAltitudeFadeStart, minAltitudeFadeEnd);
+    
+    // 0 at fadeStart, 1 at fadeEnd
+    float rangeFadeMax = GetPercentageBetween(altitude, maxAltitudeFadeStart, maxAltitudeFadeEnd);
+    
+    float midpoint = altitude / (maxAltitudeFadeStart + minAltitudeFadeEnd);
+    
+    // 0 when outside the altitude range, lerps to 1 when inside the altitude range
+    
+    return rangeFadeMin * (midpoint < 0.5) + rangeFadeMax * (midpoint > 0.5);
+}
+
+// Lerp between two points in a step - 0 at a, 1 at b
+float LerpStep(float a, float b, float t)
+{
+    return saturate((t - a) / (b - a));
+}
+
 //
 //  Get noise values
 //

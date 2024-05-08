@@ -36,10 +36,6 @@ public class ScatterRenderer : MonoBehaviour
     }
     void Initialize()
     {
-        // For testing purposes
-        // These need to be separate instances otherwise they'll be overwritten
-        instancedMaterialLOD1 = Instantiate(instancedMaterialLOD0);
-        instancedMaterialLOD2 = Instantiate(instancedMaterialLOD0);
 
         // Create output buffers - Evaluate() function on quads will will these
         int arbitraryMaxCount = 10000;

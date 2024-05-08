@@ -239,7 +239,12 @@ public class TerrainScatters : MonoBehaviour
         scatterShader.SetBuffer(evaluateKernel, "vertices", sourceVertsBuffer);
 
         scatterShader.SetBuffer(evaluateKernel, "positions", outputScatterDataBuffer);
-        scatterShader.SetBuffer(evaluateKernel, "instancingData", scatterRenderer.outputLOD0);
+        scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD0", scatterRenderer.outputLOD0);
+        scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD1", scatterRenderer.outputLOD1);
+        scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD2", scatterRenderer.outputLOD2);
+
+        scatterShader.SetFloat("_Lod01Split", 0.2f);
+        scatterShader.SetFloat("_Lod12Split", 0.5f);
     }
     public void Evaluate()
     {

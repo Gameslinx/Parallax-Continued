@@ -7,9 +7,9 @@
 #pragma kernel Distribute NOISEMODE_POLKADOT
 
 // Ridged noise modes - Kernels 4, 5, 6
-#pragma kernel Distribute NOISEMODE_PERLIN      INVERT_NOISE
-#pragma kernel Distribute NOISEMODE_CELLULAR    INVERT_NOISE
-#pragma kernel Distribute NOISEMODE_POLKADOT    INVERT_NOISE
+#pragma kernel Distribute NOISEMODE_PERLIN INVERT_NOISE
+#pragma kernel Distribute NOISEMODE_CELLULAR INVERT_NOISE
+#pragma kernel Distribute NOISEMODE_POLKADOT INVERT_NOISE
 
 // Render             - Kernel 7
 #pragma kernel Evaluate
@@ -82,7 +82,6 @@ void Distribute (uint3 id : SV_DispatchThreadID)
     
     // Does this biome colour match any of the biomes this scatter can appear in?
     int biomesEligible = 0;
-   
     for (int b = 0; b < _NumberOfBiomes; b++)
     {
         float3 biomeColor = scatterBiomes.SampleLevel(pointClampSampler, float2(0, (float)b / (float)_NumberOfBiomes), 0).rgb;
@@ -113,7 +112,7 @@ void Distribute (uint3 id : SV_DispatchThreadID)
     
     // Use UV and id as random seed. It's not elegant, but it's persistent. Fyi, using the quad local position triangle center is not valid here
     // This produces sufficient randomness
-    float3 center = float3(centerUV, id.x); //TriCenter(v1, v2, v3);
+    float3 randomSeed = float3(centerUV + _Seed, id.x);
     
     // Create an object on this triangle for every population multiplier
     for (int i = 0; i < _PopulationMultiplier; i++)
@@ -121,20 +120,40 @@ void Distribute (uint3 id : SV_DispatchThreadID)
         // Output struct
         PositionData newObject;
         
-        // Use the local vertex position as a random input so each quad is different
-        // X must be sqrtd
-        float randomX = sqrt(Rand(center + i));
-        float randomY = Rand(center * 0.5 + i);
+        // Get decently random numbers
+        float random1 = Rand(randomSeed + i);
+        float random2 = Rand(randomSeed - i);
+        float random3 = Rand(randomSeed * 0.5 + i);
+        float random4 = Rand(randomSeed * 0.5 - i);
+        float random5 = Rand(randomSeed * 0.25 + i);
+        
+        // X must be sqrtd to achieve a uniform distribution
+        float randomX = sqrt(random1);
+        float randomY = random2;
         float3 localPos = RandomPoint(v1, v2, v3, randomX, randomY);
         float3 localCenterDir = RandomPoint(dfc1, dfc2, dfc3, randomX, randomY);
         
         float noise = Noise(localCenterDir);
         
-        bool canSpawn = Rand(localPos) < _SpawnChance;
+        // Do we blend between min and max scale based on the noise value, randomly, or a mix of both?
+        
+        // 0 when noise = _NoiseCutoffThreshold (and below), and 1 when noise = 1
+        float noiseScale = LerpStep(_NoiseCutoffThreshold, 1, noise);
+        float scaleInterpolant = lerp(noiseScale, random3, _ScaleRandomness);
+        float3 scale = lerp(_MinScale, _MaxScale, scaleInterpolant);
+        
+        float3 worldPos = mul(_ObjectToWorldMatrix, float4(localPos, 1)).xyz;
+        float altitudeScalar = GetAltitudeScalar(worldPos);
+        
+        // Cannot spawn if:
+        // 1. Failed spawn chance probability check
+        // 2. Is out of altitude range (close to altitude range, lower the spawn chance)
+        // 3. Noise is past cutoff threshold
+        bool canSpawn = (random4 < _SpawnChance * altitudeScalar) && (noise > _NoiseCutoffThreshold);
         
         newObject.localPos = localPos;
-        newObject.localScale = float3(2.1, 2.1, 2.1) * noise;
-        newObject.rotation = Rand(center * 0.25 + i) * 180.0f;
+        newObject.localScale = scale;
+        newObject.rotation = random5 * 180.0f;
         newObject.index = id.x * 3;
     
         if (canSpawn)
@@ -151,7 +170,9 @@ void Distribute (uint3 id : SV_DispatchThreadID)
 // Transforms local positions to world positions
 
 StructuredBuffer<PositionData> positions;
-AppendStructuredBuffer<TransformData> instancingData;
+AppendStructuredBuffer<TransformData> instancingDataLOD0;
+AppendStructuredBuffer<TransformData> instancingDataLOD1;
+AppendStructuredBuffer<TransformData> instancingDataLOD2;
 StructuredBuffer<uint> objectLimits;
 
 [numthreads(32, 1, 1)]
@@ -204,5 +225,18 @@ void Evaluate(uint3 id : SV_DispatchThreadID)
     TransformData object;
     object.objectToWorld = mat;
 
-    instancingData.Append(object);
+    if (lodDist > _Lod12Split)
+    {
+        instancingDataLOD2.Append(object);
+        return;
+    }
+    else if (lodDist > _Lod01Split)
+    {
+        instancingDataLOD1.Append(object);
+        return;
+    }
+    else
+    {
+        instancingDataLOD0.Append(object);
+    }
 }

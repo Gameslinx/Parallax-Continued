@@ -1,5 +1,6 @@
 ﻿// Max number of positions per triangle
 int _PopulationMultiplier;
+float _Seed;
 
 // 1 = align scatter up vector to the terrain normal
 // 0 = align scatter up to the planet normal
@@ -8,11 +9,22 @@ int _AlignToTerrainNormal;
 // Vector from planet to quad
 float3 _PlanetNormal;
 float3 _LocalPlanetNormal;
+float3 _PlanetOrigin;
+float _PlanetRadius;
 
 // Slope calculation params
 float _SteepPower;
 float _SteepContrast;
 float _SteepMidpoint;
+
+// Min and max scatter size
+float3 _MinScale;
+float3 _MaxScale;
+float _ScaleRandomness;
+
+float _MinAltitude;
+float _MaxAltitude;
+float _AltitudeFadeRange;
 
 // Max distribution count
 int _MaxCount;
@@ -38,6 +50,8 @@ int _NoiseSeed;
 float _NoiseLacunarity;
 int _NoiseOctaves;
 
+float _NoiseCutoffThreshold;
+
 //
 //  Evaluate params
 //
@@ -56,3 +70,7 @@ float _CullLimit;
 float _MaxRange;
 
 float4x4 _ObjectToWorldMatrix;
+
+// Lod splits - normalised
+float _Lod01Split;
+float _Lod12Split;

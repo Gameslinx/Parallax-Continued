@@ -353,6 +353,7 @@ namespace Parallax
             string populationMultiplier = ConfigUtils.TryGetConfigValue(node, "populationMultiplier");
             string minScale = ConfigUtils.TryGetConfigValue(node, "minScale");
             string maxScale = ConfigUtils.TryGetConfigValue(node, "maxScale");
+            string scaleRandomness = ConfigUtils.TryGetConfigValue(node, "scaleRandomness");
             string noiseCutoff = ConfigUtils.TryGetConfigValue(node, "cutoffScale");
             string steepPower = ConfigUtils.TryGetConfigValue(node, "steepPower");
             string steepContrast = ConfigUtils.TryGetConfigValue(node, "steepContrast");
@@ -360,6 +361,7 @@ namespace Parallax
             string maxNormalDeviance = ConfigUtils.TryGetConfigValue(node, "maxNormalDeviance");
             string minAltitude = ConfigUtils.TryGetConfigValue(node, "minAltitude");
             string maxAltitude = ConfigUtils.TryGetConfigValue(node, "maxAltitude");
+            string altitudeFadeRange = ConfigUtils.TryGetConfigValue(node, "altitudeFadeRange");
             string alignToTerrainNormal = ConfigUtils.TryGetConfigValue(node, "alignToTerrainNormal");
 
             distributionParams.seed = (float)ConfigUtils.TryParse(planetName, "seed", seed, typeof(float));
@@ -368,6 +370,7 @@ namespace Parallax
             distributionParams.populationMultiplier = (int)ConfigUtils.TryParse(planetName, "populationMultiplier", populationMultiplier, typeof(int));
             distributionParams.minScale = (Vector3)ConfigUtils.TryParse(planetName, "minScale", minScale, typeof(Vector3));
             distributionParams.maxScale = (Vector3)ConfigUtils.TryParse(planetName, "maxScale", maxScale, typeof(Vector3));
+            distributionParams.scaleRandomness = (float)ConfigUtils.TryParse(planetName, "scaleRandomness", scaleRandomness, typeof(float));
             distributionParams.noiseCutoff = (float)ConfigUtils.TryParse(planetName, "noiseCutoff", noiseCutoff, typeof(float));
             distributionParams.steepPower = (float)ConfigUtils.TryParse(planetName, "steepPower", steepPower, typeof(float));
             distributionParams.steepContrast = (float)ConfigUtils.TryParse(planetName, "steepContrast", steepContrast, typeof(float));
@@ -375,6 +378,7 @@ namespace Parallax
             distributionParams.maxNormalDeviance = (float)ConfigUtils.TryParse(planetName, "maxNormalDeviance", maxNormalDeviance, typeof(float));
             distributionParams.minAltitude = (float)ConfigUtils.TryParse(planetName, "minAltitude", minAltitude, typeof(float));
             distributionParams.maxAltitude = (float)ConfigUtils.TryParse(planetName, "maxAltitude", maxAltitude, typeof(float));
+            distributionParams.altitudeFadeRange = (float)ConfigUtils.TryParse(planetName, "altitudeFadeRange", altitudeFadeRange, typeof(float));
             distributionParams.alignToTerrainNormal = (bool)(ConfigUtils.TryParse(planetName, "alignToTerrainNormal", alignToTerrainNormal, typeof(bool))) ? 1 : 0;
 
             ConfigNode lods = node.GetNode("LODs");

@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: ParallaxMaterial
   m_Shader: {fileID: 4800000, guid: b9860552776eb2c4f998cf8c4044ee5a, type: 3}
-  m_ShaderKeywords: 
+  m_ShaderKeywords: PARALLAX_FULL
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -151,7 +151,7 @@ Material:
     - _OcclusionStrength: 1
     - _PARALLAX_SHADER_VARIANT: 0
     - _Parallax: 0.02
-    - _PlanetOpacity: 1
+    - _PlanetOpacity: 0
     - _PlanetRadius: 1000
     - _RefractionIntensity: 0
     - _Shininess: 10
