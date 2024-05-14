@@ -340,9 +340,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   instancedMaterialLOD0: {fileID: 2100000, guid: cbf359a509b9a8240a49bca763543c21,
     type: 2}
-  instancedMaterialLOD1: {fileID: 2100000, guid: cbf359a509b9a8240a49bca763543c21,
+  instancedMaterialLOD1: {fileID: 2100000, guid: ec11335e946d1f24fb90f11ee5118d16,
     type: 2}
-  instancedMaterialLOD2: {fileID: 2100000, guid: cbf359a509b9a8240a49bca763543c21,
+  instancedMaterialLOD2: {fileID: 2100000, guid: 770925c81d6f0b145acd07d67aa953ac,
     type: 2}
   meshLOD0: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   meshLOD1: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}

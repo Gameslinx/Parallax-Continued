@@ -1,4 +1,5 @@
-﻿using Parallax.Debugging;
+﻿using Kopernicus.Configuration;
+using Parallax.Debugging;
 using Smooth.Collections;
 using System;
 using System.Collections.Generic;
@@ -30,6 +31,9 @@ namespace Parallax
         // Stores all parallax scatter bodies by planet name
         public static Dictionary<string, ParallaxScatterBody> parallaxScatterBodies = new Dictionary<string, ParallaxScatterBody>();
 
+        // Stores a cache of compute shaders to prevent slow instantiation
+        public static ObjectPool<ComputeShader> computeShaderPool;
+
         // Stores transparent material for terrain quads
         public static Material transparentMaterial;
 
@@ -60,6 +64,8 @@ namespace Parallax
 
             LoadTerrainConfigs(GetConfigsByName("Parallax"));
             LoadScatterConfigs(GetConfigsByName("ParallaxScatters"));
+            LoadSharedScatterConfigs(GetConfigsByName("ParallaxScatters"));
+            InitializeObjectPools(parallaxGlobalSettings);
 
             transparentMaterial = new Material(Shader.Find("Unlit/Transparent"));
             transparentMaterial.SetTexture("_MainTex", Resources.FindObjectsOfTypeAll<Texture>().FirstOrDefault(t => t.name == "Parallax/BlankAlpha"));
@@ -83,6 +89,18 @@ namespace Parallax
 
             ConfigNode debugSettingsNode = config.config.GetNode("DebugSettings");
             parallaxGlobalSettings.debugGlobalSettings.wireframeTerrain = bool.Parse(debugSettingsNode.GetValue("wireframeTerrain"));
+
+            ConfigNode objectPoolsNode = config.config.GetNode("ObjectPoolSettings");
+            parallaxGlobalSettings.objectPoolSettings.cachedComputeShaderCount = int.Parse(objectPoolsNode.GetValue("cachedComputeShaderCount"));
+        }
+        public static void InitializeObjectPools(ParallaxSettings settings)
+        {
+            ComputeShader templateComputeShader = Instantiate(AssetBundleLoader.parallaxComputeShaders["TerrainScatters"]);
+            long mem = GC.GetTotalMemory(true);
+            computeShaderPool = new ObjectPool<ComputeShader>(templateComputeShader, settings.objectPoolSettings.cachedComputeShaderCount);
+            long diff = GC.GetTotalMemory(true) - mem;
+            
+            Debug.Log("Memory used by compute shaders estimate: " + diff.ToString());
         }
         public static ShaderProperties LookupTemplateConfig(UrlDir.UrlConfig config, string shaderName, List<string> keywords)
         {
@@ -253,14 +271,14 @@ namespace Parallax
                 string nearestQuadSubdivisionLevel = rootNode.config.GetValue("nearestQuadSubdivisionLevel");
                 string nearestQuadSubdivisionRange = rootNode.config.GetValue("nearestQuadSubdivisionRange");
 
-                int nearestQuadSubdivisionLevelValue = (int)ConfigUtils.TryParse(body, "nearestQuadSubdivisionLevel", nearestQuadSubdivisionLevel, typeof(int));
-                float nearestQuadSubdivisionRangeValue = (float)ConfigUtils.TryParse(body, "nearestQuadSubdivisionRange", nearestQuadSubdivisionRange, typeof(float));
+                //int nearestQuadSubdivisionLevelValue = (int)ConfigUtils.TryParse(body, "nearestQuadSubdivisionLevel", nearestQuadSubdivisionLevel, typeof(int));
+                //float nearestQuadSubdivisionRangeValue = (float)ConfigUtils.TryParse(body, "nearestQuadSubdivisionRange", nearestQuadSubdivisionRange, typeof(float));
 
                 ParallaxScatterBody scatterBody = new ParallaxScatterBody(body);
-                scatterBody.nearestQuadSubdivisionLevel = nearestQuadSubdivisionLevelValue;
-                scatterBody.nearestQuadSubdivisionRange = nearestQuadSubdivisionRangeValue;
+                //scatterBody.nearestQuadSubdivisionLevel = nearestQuadSubdivisionLevelValue;
+                //scatterBody.nearestQuadSubdivisionRange = nearestQuadSubdivisionRangeValue;
                 // "Scatter"
-                ConfigNode.ConfigNodeList nodes = rootNode.config.nodes;
+                ConfigNode[] nodes = rootNode.config.GetNodes("Scatter");
                 foreach (ConfigNode node in nodes)
                 {
                     string scatterName = body + "-" + ConfigUtils.TryGetConfigValue(node, "name");
@@ -273,7 +291,7 @@ namespace Parallax
                     SubdivisionParams subdivisionParams = GetSubdivisionParams(body, node.GetNode("SubdivisionSettings"));
                     NoiseParams noiseParams = GetNoiseParams(body, node.GetNode("DistributionNoise"));
                     MaterialParams materialParams = GetMaterialParams(body, node.GetNode("Material"));
-                    DistributionParams distributionParams = GetDistributionParams(body, node.GetNode("Distribution"), materialParams);
+                    DistributionParams distributionParams = GetDistributionParams(body, node.GetNode("Distribution"), materialParams, false);
                     BiomeBlacklistParams biomeBlacklistParams = GetBiomeBlacklistParams(body, node.GetNode("Distribution"));
 
                     scatter.optimizationParams = optimizationParams;
@@ -286,11 +304,53 @@ namespace Parallax
                     PerformNormalisationConversions(scatter);
                     PerformAdditionalOperations(scatter);
 
+                    Debug.Log("Adding scatter: " + scatterName);
                     scatterBody.scatters.Add(scatterName, scatter);
                 }
-                scatterBody.fastScatters = scatterBody.scatters.Values.ToArray();
+
                 Debug.Log("Adding body with name: " + body + " to scatter bodies");
+                scatterBody.fastScatters = scatterBody.scatters.Values.ToArray();
                 parallaxScatterBodies.Add(body, scatterBody);
+            }
+        }
+        public static void LoadSharedScatterConfigs(UrlDir.UrlConfig[] allRootNodes)
+        {
+            foreach (UrlDir.UrlConfig rootNode in allRootNodes)
+            {
+                string body = rootNode.config.GetValue("body");
+
+                ParallaxScatterBody scatterBody = parallaxScatterBodies[body];
+
+                // Process shared scatters - These are scatters that share distribution data with another, so it doesn't need to be generated again
+
+                ConfigNode[] sharedNodes = rootNode.config.GetNodes("SharedScatter");
+                foreach (ConfigNode node in sharedNodes)
+                {
+                    string scatterName = body + "-" + ConfigUtils.TryGetConfigValue(node, "name");
+                    string parentName = body + "-" + ConfigUtils.TryGetConfigValue(node, "parentName");
+                    string model = ConfigUtils.TryGetConfigValue(node, "model");
+
+                    if (!parallaxScatterBodies[body].scatters.ContainsKey(parentName))
+                    {
+                        ParallaxDebug.LogError("Shared scatter: " + scatterName + " inherits from parent scatter: " + parentName + " but that scatter does not exist!");
+                        break;
+                    }
+                    Scatter parentScatter = parallaxScatterBodies[body].scatters[parentName];
+
+                    SharedScatter sharedScatter = new SharedScatter(scatterName, parentScatter);
+                    sharedScatter.modelPath = model;
+
+                    OptimizationParams optimizationParams = GetOptimizationParams(body, node);
+                    MaterialParams materialParams = GetMaterialParams(body, node.GetNode("Material"));
+                    DistributionParams distributionParams = GetDistributionParams(body, node.GetNode("Distribution"), materialParams, true);
+
+                    sharedScatter.optimizationParams = optimizationParams;
+                    sharedScatter.materialParams = materialParams;
+                    sharedScatter.distributionParams = distributionParams;
+
+                    PerformNormalisationConversions(sharedScatter);
+                    scatterBody.scatters.Add(scatterName, sharedScatter);
+                }
             }
         }
         public static OptimizationParams GetOptimizationParams(string planetName, ConfigNode node)
@@ -343,43 +403,46 @@ namespace Parallax
 
             return noiseParams;
         }
-        public static DistributionParams GetDistributionParams(string planetName, ConfigNode node, in MaterialParams baseMaterial)
+        public static DistributionParams GetDistributionParams(string planetName, ConfigNode node, in MaterialParams baseMaterial, bool onlyLODs)
         {
             DistributionParams distributionParams = new DistributionParams();
 
-            string seed = ConfigUtils.TryGetConfigValue(node, "seed");
-            string spawnChance = ConfigUtils.TryGetConfigValue(node, "spawnChance");
-            string range = ConfigUtils.TryGetConfigValue(node, "range");
-            string populationMultiplier = ConfigUtils.TryGetConfigValue(node, "populationMultiplier");
-            string minScale = ConfigUtils.TryGetConfigValue(node, "minScale");
-            string maxScale = ConfigUtils.TryGetConfigValue(node, "maxScale");
-            string scaleRandomness = ConfigUtils.TryGetConfigValue(node, "scaleRandomness");
-            string noiseCutoff = ConfigUtils.TryGetConfigValue(node, "cutoffScale");
-            string steepPower = ConfigUtils.TryGetConfigValue(node, "steepPower");
-            string steepContrast = ConfigUtils.TryGetConfigValue(node, "steepContrast");
-            string steepMidpoint = ConfigUtils.TryGetConfigValue(node, "steepMidpoint");
-            string maxNormalDeviance = ConfigUtils.TryGetConfigValue(node, "maxNormalDeviance");
-            string minAltitude = ConfigUtils.TryGetConfigValue(node, "minAltitude");
-            string maxAltitude = ConfigUtils.TryGetConfigValue(node, "maxAltitude");
-            string altitudeFadeRange = ConfigUtils.TryGetConfigValue(node, "altitudeFadeRange");
-            string alignToTerrainNormal = ConfigUtils.TryGetConfigValue(node, "alignToTerrainNormal");
+            if (!onlyLODs)
+            {
+                string seed = ConfigUtils.TryGetConfigValue(node, "seed");
+                string spawnChance = ConfigUtils.TryGetConfigValue(node, "spawnChance");
+                string range = ConfigUtils.TryGetConfigValue(node, "range");
+                string populationMultiplier = ConfigUtils.TryGetConfigValue(node, "populationMultiplier");
+                string minScale = ConfigUtils.TryGetConfigValue(node, "minScale");
+                string maxScale = ConfigUtils.TryGetConfigValue(node, "maxScale");
+                string scaleRandomness = ConfigUtils.TryGetConfigValue(node, "scaleRandomness");
+                string noiseCutoff = ConfigUtils.TryGetConfigValue(node, "cutoffScale");
+                string steepPower = ConfigUtils.TryGetConfigValue(node, "steepPower");
+                string steepContrast = ConfigUtils.TryGetConfigValue(node, "steepContrast");
+                string steepMidpoint = ConfigUtils.TryGetConfigValue(node, "steepMidpoint");
+                string maxNormalDeviance = ConfigUtils.TryGetConfigValue(node, "maxNormalDeviance");
+                string minAltitude = ConfigUtils.TryGetConfigValue(node, "minAltitude");
+                string maxAltitude = ConfigUtils.TryGetConfigValue(node, "maxAltitude");
+                string altitudeFadeRange = ConfigUtils.TryGetConfigValue(node, "altitudeFadeRange");
+                string alignToTerrainNormal = ConfigUtils.TryGetConfigValue(node, "alignToTerrainNormal");
 
-            distributionParams.seed = (float)ConfigUtils.TryParse(planetName, "seed", seed, typeof(float));
-            distributionParams.spawnChance = (float)ConfigUtils.TryParse(planetName, "spawnChance", spawnChance, typeof(float));
-            distributionParams.range = (float)ConfigUtils.TryParse(planetName, "range", range, typeof(float));
-            distributionParams.populationMultiplier = (int)ConfigUtils.TryParse(planetName, "populationMultiplier", populationMultiplier, typeof(int));
-            distributionParams.minScale = (Vector3)ConfigUtils.TryParse(planetName, "minScale", minScale, typeof(Vector3));
-            distributionParams.maxScale = (Vector3)ConfigUtils.TryParse(planetName, "maxScale", maxScale, typeof(Vector3));
-            distributionParams.scaleRandomness = (float)ConfigUtils.TryParse(planetName, "scaleRandomness", scaleRandomness, typeof(float));
-            distributionParams.noiseCutoff = (float)ConfigUtils.TryParse(planetName, "noiseCutoff", noiseCutoff, typeof(float));
-            distributionParams.steepPower = (float)ConfigUtils.TryParse(planetName, "steepPower", steepPower, typeof(float));
-            distributionParams.steepContrast = (float)ConfigUtils.TryParse(planetName, "steepContrast", steepContrast, typeof(float));
-            distributionParams.steepMidpoint = (float)ConfigUtils.TryParse(planetName, "steepMidpoint", steepMidpoint, typeof(float));
-            distributionParams.maxNormalDeviance = (float)ConfigUtils.TryParse(planetName, "maxNormalDeviance", maxNormalDeviance, typeof(float));
-            distributionParams.minAltitude = (float)ConfigUtils.TryParse(planetName, "minAltitude", minAltitude, typeof(float));
-            distributionParams.maxAltitude = (float)ConfigUtils.TryParse(planetName, "maxAltitude", maxAltitude, typeof(float));
-            distributionParams.altitudeFadeRange = (float)ConfigUtils.TryParse(planetName, "altitudeFadeRange", altitudeFadeRange, typeof(float));
-            distributionParams.alignToTerrainNormal = (bool)(ConfigUtils.TryParse(planetName, "alignToTerrainNormal", alignToTerrainNormal, typeof(bool))) ? 1 : 0;
+                distributionParams.seed = (float)ConfigUtils.TryParse(planetName, "seed", seed, typeof(float));
+                distributionParams.spawnChance = (float)ConfigUtils.TryParse(planetName, "spawnChance", spawnChance, typeof(float));
+                distributionParams.range = (float)ConfigUtils.TryParse(planetName, "range", range, typeof(float));
+                distributionParams.populationMultiplier = (int)ConfigUtils.TryParse(planetName, "populationMultiplier", populationMultiplier, typeof(int));
+                distributionParams.minScale = (Vector3)ConfigUtils.TryParse(planetName, "minScale", minScale, typeof(Vector3));
+                distributionParams.maxScale = (Vector3)ConfigUtils.TryParse(planetName, "maxScale", maxScale, typeof(Vector3));
+                distributionParams.scaleRandomness = (float)ConfigUtils.TryParse(planetName, "scaleRandomness", scaleRandomness, typeof(float));
+                distributionParams.noiseCutoff = (float)ConfigUtils.TryParse(planetName, "noiseCutoff", noiseCutoff, typeof(float));
+                distributionParams.steepPower = (float)ConfigUtils.TryParse(planetName, "steepPower", steepPower, typeof(float));
+                distributionParams.steepContrast = (float)ConfigUtils.TryParse(planetName, "steepContrast", steepContrast, typeof(float));
+                distributionParams.steepMidpoint = (float)ConfigUtils.TryParse(planetName, "steepMidpoint", steepMidpoint, typeof(float));
+                distributionParams.maxNormalDeviance = (float)ConfigUtils.TryParse(planetName, "maxNormalDeviance", maxNormalDeviance, typeof(float));
+                distributionParams.minAltitude = (float)ConfigUtils.TryParse(planetName, "minAltitude", minAltitude, typeof(float));
+                distributionParams.maxAltitude = (float)ConfigUtils.TryParse(planetName, "maxAltitude", maxAltitude, typeof(float));
+                distributionParams.altitudeFadeRange = (float)ConfigUtils.TryParse(planetName, "altitudeFadeRange", altitudeFadeRange, typeof(float));
+                distributionParams.alignToTerrainNormal = (bool)(ConfigUtils.TryParse(planetName, "alignToTerrainNormal", alignToTerrainNormal, typeof(bool))) ? 1 : 0;
+            }
 
             ConfigNode lods = node.GetNode("LODs");
             ConfigNode[] lodNodes = lods.GetNodes("LOD");

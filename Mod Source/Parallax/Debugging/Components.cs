@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using static KSP.UI.Screens.RDNode;
 
 namespace Parallax.Debugging
 {
@@ -18,9 +19,16 @@ namespace Parallax.Debugging
         }
         void Update()
         {
+            float scatterRange = ConfigLoader.parallaxScatterBodies[FlightGlobals.currentMainBody.name].scatters["Kerbin-Balls"].distributionParams.range;
             double quadDistance = quad.gcDist;
-            float percentage = (float)quadDistance / maxRange;
-            material.SetColor("_Color", Color.white * percentage);
+            if (quadDistance < scatterRange + Mathf.Sqrt(ScatterComponent.scatterQuadData[quad].sqrQuadWidth))
+            {
+                material.SetColor("_Color", Color.white);
+            }
+            else
+            {
+                material.SetColor("_Color", Color.black);
+            }
         }
     }
 

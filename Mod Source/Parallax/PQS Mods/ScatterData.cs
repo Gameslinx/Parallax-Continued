@@ -15,7 +15,7 @@ namespace Parallax
         // Grab reference to parent quad to access mesh data
         ScatterSystemQuadData parent;
         // The scatter we're generating
-        Scatter scatter;
+        public Scatter scatter;
         // Output evaluate results to the renderer
         ScatterRenderer scatterRenderer;
 
@@ -28,21 +28,22 @@ namespace Parallax
         public ComputeBuffer outputScatterDataBuffer;
 
         // Evaluation buffers
-        ComputeBuffer dispatchArgs;
-        ComputeBuffer objectLimits;
+        private ComputeBuffer dispatchArgs;
+        private ComputeBuffer objectLimits;
 
         // Distribution params that don't require a full reinitialization
         public bool requiresFullRestart = false;
 
         int numTriangles;
+        int outputSize;
 
         // Stores count of distribution output
         int[] count = new int[] { 0, 0, 0 };
         uint[] indirectArgs = { 1, 1, 1 };
 
-        bool readyForValidationChecks = false;
         bool eventAdded = false;
-        bool cleaned = false;
+        public bool cleaned = false;
+        public bool paused = false;
 
         public ScatterData(ScatterSystemQuadData parent, Scatter scatter)
         {
@@ -56,44 +57,39 @@ namespace Parallax
             InitializeEvaluate();
             Distribute();
 
-            readyForValidationChecks = true;
         }
         void Initialize()
         {
             scatterRenderer = ScatterManager.Instance.fastScatterRenderers[scatter.scatterName];
             numTriangles = parent.numMeshTriangles;
+            outputSize = scatter.distributionParams.populationMultiplier * numTriangles;
         }
         void InitializeDistribute()
         {
-            // For now....
-            scatterShader = UnityEngine.Object.Instantiate(AssetBundleLoader.parallaxComputeShaders["TerrainScatters"]);
-
-            int outputSize = scatter.distributionParams.populationMultiplier * numTriangles;
+            scatterShader = ConfigLoader.computeShaderPool.Fetch();
 
             // Required values
+            scatterShader.SetFloat("_PlanetRadius", parent.planetRadius);
+            scatterShader.SetInt("_MaxCount", outputSize);
+            scatterShader.SetInt("_NumberOfBiomes", scatter.biomeCount);
+
             scatterShader.SetVector("_PlanetNormal", parent.planetNormal);
             scatterShader.SetVector("_LocalPlanetNormal", parent.localPlanetNormal);
             scatterShader.SetVector("_PlanetOrigin", parent.planetOrigin);
-            scatterShader.SetFloat("_PlanetRadius", parent.planetRadius);
-
-            // Set for altitude calculation
-            scatterShader.SetMatrix("_ObjectToWorldMatrix", parent.quad.gameObject.transform.localToWorldMatrix);
-
-            scatterShader.SetInt("_MaxCount", outputSize);
-            scatterShader.SetInt("_NumberOfBiomes", scatter.biomeCount);
 
             distributeKernel = GetDistributeKernel();
             evaluateKernel = scatterShader.FindKernel("Evaluate");
 
             outputScatterDataBuffer = new ComputeBuffer(outputSize, PositionData.Size(), ComputeBufferType.Append);
+            scatterShader.SetBuffer(distributeKernel, "output", outputScatterDataBuffer);
+            scatterShader.SetBuffer(evaluateKernel, "positions", outputScatterDataBuffer);
 
             scatterShader.SetBuffer(distributeKernel, "vertices", parent.sourceVertsBuffer);
             scatterShader.SetBuffer(distributeKernel, "normals", parent.sourceNormalsBuffer);
             scatterShader.SetBuffer(distributeKernel, "triangles", parent.sourceTrianglesBuffer);
             scatterShader.SetBuffer(distributeKernel, "uvs", parent.sourceUVsBuffer);
             scatterShader.SetBuffer(distributeKernel, "directionsFromCenter", parent.sourceDirsFromCenterBuffer);
-            scatterShader.SetBuffer(distributeKernel, "output", outputScatterDataBuffer);
-
+            
             scatterShader.SetTexture(distributeKernel, "biomeMap", ScatterManager.currentBiomeMap);
             scatterShader.SetTexture(distributeKernel, "scatterBiomes", scatter.biomeControlMap);
 
@@ -205,7 +201,6 @@ namespace Parallax
         {
             scatterShader.SetBuffer(evaluateKernel, "triangles", parent.sourceTrianglesBuffer);
             scatterShader.SetBuffer(evaluateKernel, "vertices", parent.sourceVertsBuffer);
-            scatterShader.SetBuffer(evaluateKernel, "positions", outputScatterDataBuffer);
 
             scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD0", scatterRenderer.outputLOD0);
             scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD1", scatterRenderer.outputLOD1);
@@ -224,7 +219,8 @@ namespace Parallax
             // Quad is not in the view frustum
             if (!parent.quad.meshRenderer.isVisible || !parent.quad.isVisible) { return; }
             // Quad is out of range
-            if (parent.quad.gcDist > scatter.distributionParams.range + Mathf.Sqrt(parent.sqrQuadWidth)) { return; }
+            if (paused) { return; }
+            if (parent.cameraDistance > scatter.distributionParams.range + Mathf.Sqrt(parent.sqrQuadWidth)) { return; }
 
             // Update runtime shader vars
             // We need to know the size of the distribution before continuing with this
@@ -245,6 +241,8 @@ namespace Parallax
                 scatterRenderer.onEvaluateScatters -= Evaluate;
                 eventAdded = false;
             }
+
+            ConfigLoader.computeShaderPool.Add(scatterShader);
 
             outputScatterDataBuffer?.Dispose();
             dispatchArgs?.Dispose();

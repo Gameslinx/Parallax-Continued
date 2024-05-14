@@ -16,6 +16,7 @@ namespace Parallax
     {
         public TerrainGlobalSettings terrainGlobalSettings = new TerrainGlobalSettings();
         public DebugGlobalSettings debugGlobalSettings = new DebugGlobalSettings();
+        public ObjectPoolSettings objectPoolSettings = new ObjectPoolSettings();
     }
     public struct TerrainGlobalSettings
     {
@@ -26,6 +27,10 @@ namespace Parallax
     public struct DebugGlobalSettings
     {
         public bool wireframeTerrain;
+    }
+    public struct ObjectPoolSettings
+    {
+        public int cachedComputeShaderCount;
     }
     // Stores the loaded values from the configs for each planet, except for the textures which are stored via file path
     // Textures are loaded On-Demand and stored in loadedTextures, where they are unloaded on scene change
@@ -233,13 +238,17 @@ namespace Parallax
         public int nearestQuadSubdivisionLevel = 1;
         public float nearestQuadSubdivisionRange = 1.0f;
 
-        // Scatter dictionary for fast access
+        /// <summary>
+        /// Contains scatters and shared scatters
+        /// </summary>
         public Dictionary<string, Scatter> scatters = new Dictionary<string, Scatter>();
 
         // Shared textures across the planet
         public Dictionary<string, Texture2D> loadedTextures = new Dictionary<string, Texture2D>();
 
-        // Scatter array for fast iteration
+        /// <summary>
+        /// Contains all scatters for fast iteration, but not all sharedScatters
+        /// </summary>
         public Scatter[] fastScatters;
         public ParallaxScatterBody(string planetName)
         {
@@ -272,9 +281,21 @@ namespace Parallax
         public Texture2D biomeControlMap;
         public int biomeCount = 0;
 
+        public bool isShared = false;
+
         public Scatter(string scatterName)
         {
             this.scatterName = scatterName;
+        }
+    }
+    // Scatter that can have a unique material but shares its distribution with its parent to avoid generating it twice
+    public class SharedScatter : Scatter
+    {
+        public Scatter parent;
+        public SharedScatter(string scatterName, Scatter parent) : base(scatterName)
+        {
+            this.parent = parent;
+            this.isShared = true;
         }
     }
     // Stores the names of the variables, then the types as defined in the ShaderPropertiesTemplate.cfg

@@ -110,9 +110,21 @@ namespace Parallax
         {
             // Create output buffers - Evaluate() function on quads will will these
             int arbitraryMaxCount = 250000;
-            outputLOD0 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
-            outputLOD1 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
-            outputLOD2 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
+            if (!scatter.isShared) 
+            {
+                outputLOD0 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
+                outputLOD1 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
+                outputLOD2 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
+            }
+            else
+            {
+                // Get buffers from its renderer
+                Debug.Log("This is a shared scatter yippee");
+                ScatterRenderer renderer = ScatterManager.Instance.GetSharedScatterRenderer(scatter as SharedScatter);
+                outputLOD0 = renderer.outputLOD0;
+                outputLOD1 = renderer.outputLOD1;
+                outputLOD2 = renderer.outputLOD2;
+            }
 
             // Set the instance data on the material
             instancedMaterialLOD0.SetBuffer("_InstanceData", outputLOD0);
@@ -159,14 +171,18 @@ namespace Parallax
         public void Render()
         {
             // Hugely important we set the count to 0 or the buffer will keep filling up
-            outputLOD0.SetCounterValue(0);
-            outputLOD1.SetCounterValue(0);
-            outputLOD2.SetCounterValue(0);
-
-            // Fill the buffer with our instanced data
-            if (onEvaluateScatters != null)
+            // For shared scatters, this is already done in the parent scatter renderer so we can skip it here
+            if (!scatter.isShared)
             {
-                onEvaluateScatters();
+                outputLOD0.SetCounterValue(0);
+                outputLOD1.SetCounterValue(0);
+                outputLOD2.SetCounterValue(0);
+
+                // Fill the buffer with our instanced data
+                if (onEvaluateScatters != null)
+                {
+                    onEvaluateScatters();
+                }
             }
 
             // Copy the count from the output buffer to the indirect args for instancing

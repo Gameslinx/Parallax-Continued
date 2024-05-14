@@ -40,6 +40,7 @@ namespace Parallax
                 perPlanetRenderer.SetActive(false);
 
                 // Now add a renderer for each scatter on this body and parent it to the per-planet GameObject
+                // This includes shared scatters and adds them appropriately!
                 foreach (KeyValuePair<string, Scatter> scatter in body.Value.scatters)
                 {
                     ScatterRenderer renderer = perPlanetRenderer.AddComponent<ScatterRenderer>();
@@ -47,6 +48,7 @@ namespace Parallax
                     renderer.scatter = scatter.Value;
                     scatterRenderers.Add(renderer);
                     fastScatterRenderers.Add(scatter.Key, renderer);
+                    Debug.Log("Init new renderer: " + scatter.Value.scatterName);
                 }
 
                 Debug.Log("Init new manager body: " + body.Key);
@@ -96,17 +98,10 @@ namespace Parallax
                 renderer.Render();
             }
         }
-        // Create single channel 8 bpp biome map - stores indices of each biome 
-        Texture2D CreateBiomeIndexMap(CBAttributeMapSO biomeMap)
+        public ScatterRenderer GetSharedScatterRenderer(SharedScatter scatter)
         {
-            Type type = biomeMap.GetType();
-            FieldInfo fieldInfo = type.GetField("_data", BindingFlags.NonPublic | BindingFlags.Instance);
-            byte[] data = (byte[])fieldInfo.GetValue(biomeMap);
-
-            Texture2D tex = new Texture2D(biomeMap.Width, biomeMap.Height, TextureFormat.R8, false);
-            tex.LoadRawTextureData(data);
-            tex.Apply(false, false);
-            return tex;
+            Debug.Log("Parent = " + scatter.parent.scatterName);
+            return fastScatterRenderers[scatter.parent.scatterName];
         }
         void OnDestroy()
         {

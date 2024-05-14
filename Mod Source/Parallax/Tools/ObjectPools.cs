@@ -39,6 +39,7 @@ namespace Parallax
             if (pool.Count == 0)
             {
                 ParallaxDebug.LogError("Warning: Object pool with type " + typeof(T).Name + " is empty! Consider initialising with a larger number of items, or fix what's using so many");
+                ParallaxDebug.LogError(" - Initial count was " + capacity);
                 return InitSingle();
             }
             return pool.Dequeue();
@@ -46,25 +47,6 @@ namespace Parallax
         public virtual void Add(T obj)
         {
             pool.Enqueue(obj);
-        }
-    }
-
-    [KSPAddon(KSPAddon.Startup.Instantly, true)]
-    public class ParallaxObjectPools : MonoBehaviour
-    {
-        public static ObjectPool<GameObject> terrainQuadPoolInstance;
-        void Start()
-        {
-            InitTerrainQuadPool();
-        }
-        void InitTerrainQuadPool()
-        {
-            GameObject baseObject = new GameObject("ParallaxAvdSubdivisionQuad");
-            baseObject.AddComponent<MeshFilter>();
-            baseObject.AddComponent<MeshRenderer>();
-            baseObject.SetActive(false);
-
-            terrainQuadPoolInstance = new ObjectPool<GameObject>(baseObject, 8);
         }
     }
 }

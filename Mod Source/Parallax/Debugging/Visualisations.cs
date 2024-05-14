@@ -38,6 +38,14 @@ namespace Parallax
                 if (showingBiomes) { QuadBiomeDisplay.ShowQuadBiomes(); }
                 if (!showingBiomes) { QuadBiomeDisplay.Cleanup(); }
             }
+
+
+
+            bool logVRAMStats = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha4);
+            if (logVRAMStats)
+            {
+                ParallaxDiagnostics.LogComputeShaderResourceUsage();
+            }
         }
         public static GameObject CreateQuadGameObject(PQ quad, out MeshRenderer meshRenderer, out MeshFilter meshFilter)
         {

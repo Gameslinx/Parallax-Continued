@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using static KSP.UI.Screens.RDNode;
 
 namespace Parallax
 {
@@ -21,6 +22,7 @@ namespace Parallax
         public int subdivisionLevel;
         public float subdivisionRadius;
         public float sqrQuadWidth;
+        public float cameraDistance;
 
         // Direction from planet to quad in world and local space
         public Vector3 planetNormal;
@@ -101,8 +103,31 @@ namespace Parallax
             GetCornerBiomes(body);
             DetermineScatters();
         }
+        // Get the square distance from the quad to the camera
+        public void UpdateQuadCameraDistance()
+        {
+            cameraDistance = (quad.gameObject.transform.position - RuntimeOperations.vectorCameraPos).magnitude;
+            //foreach (ScatterData scatter in quadScatters)
+            //{
+            //    if (cameraDistance > scatter.scatter.distributionParams.range + Mathf.Sqrt(sqrQuadWidth))
+            //    { 
+            //        scatter.Cleanup(); 
+            //    }
+            //    else
+            //    {
+            //        if (scatter.cleaned)
+            //        {
+            //            Stopwatch sw = Stopwatch.StartNew();
+            //            scatter.cleaned = false;
+            //            scatter.Start();
+            //            sw.Stop();
+            //            ParallaxDebug.Log("Reinit: " + sw.Elapsed.TotalMilliseconds.ToString("F10"));
+            //        }
+            //    }
+            //}
+        }
         /// <summary>
-        /// Determine what scatters appear on this quad with some optimization to skip scatters that aren't eligible.
+        /// Determines what scatters appear on this quad with some optimization to skip scatters that aren't eligible.
         /// </summary>
         public void DetermineScatters()
         {
@@ -125,7 +150,7 @@ namespace Parallax
         public bool ScatterEligible(Scatter scatter)
         {
             // Max level quads are always eligible because they're in range
-            
+
             float range = scatter.distributionParams.range;
 
             // The distance at which this quad will subdivide next

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -50,18 +52,25 @@ namespace Parallax
                 }
             }
 
-            // Get the camera position
+            // Get the camera position and frustum planes
             Camera cam = Camera.allCameras.FirstOrDefault(_cam => _cam.name == "Camera 00");
             if (cam != null)
             {
                 cameraPos = cam.gameObject.transform.position;
                 vectorCameraPos = cam.gameObject.transform.position;
-            }
-            else
-            {
-                return;
+                SetCameraFrustumPlanes(cam);
             }
 
+            // Update quad-camera distances
+            Dictionary<PQ, ScatterSystemQuadData>.ValueCollection quadData = ScatterComponent.scatterQuadData.Values;
+            foreach (ScatterSystemQuadData data in quadData)
+            {
+                data.UpdateQuadCameraDistance();
+            }
+        }
+
+        void SetCameraFrustumPlanes(Camera cam)
+        {
             // Calculate camera frustum planes for frustum culling
             planes = GeometryUtility.CalculateFrustumPlanes(cam);
             for (int i = 0; i < planes.Length; i++)
@@ -79,6 +88,7 @@ namespace Parallax
                 floatCameraFrustumPlanes[i * 4 + 3] = planes[i].distance;
             }
         }
+
         Vector3 terrainShaderOffset;
         Vector3 bodyPosition;
         float bodyRadius;
