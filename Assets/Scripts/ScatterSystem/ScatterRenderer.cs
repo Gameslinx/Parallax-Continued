@@ -20,6 +20,9 @@ public class ScatterRenderer : MonoBehaviour
     ComputeBuffer indirectArgsLOD1;
     ComputeBuffer indirectArgsLOD2;
 
+    public bool castShadows = true;
+    public bool receiveShadows = true;
+
     Bounds rendererBounds;
 
     public List<TerrainScatters> scatterComponents;
@@ -103,9 +106,9 @@ public class ScatterRenderer : MonoBehaviour
         ComputeBuffer.CopyCount(outputLOD2, indirectArgsLOD2, 4);
 
         // Render instanced data
-        Graphics.DrawMeshInstancedIndirect(meshLOD0, 0, instancedMaterialLOD0, rendererBounds, indirectArgsLOD0, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, null);
-        Graphics.DrawMeshInstancedIndirect(meshLOD1, 0, instancedMaterialLOD1, rendererBounds, indirectArgsLOD1, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, null);
-        Graphics.DrawMeshInstancedIndirect(meshLOD2, 0, instancedMaterialLOD2, rendererBounds, indirectArgsLOD2, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, null);
+        Graphics.DrawMeshInstancedIndirect(meshLOD0, 0, instancedMaterialLOD0, rendererBounds, indirectArgsLOD0, 0, null, castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, receiveShadows, 0, null);
+        Graphics.DrawMeshInstancedIndirect(meshLOD1, 0, instancedMaterialLOD1, rendererBounds, indirectArgsLOD1, 0, null, castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, receiveShadows, 0, null);
+        Graphics.DrawMeshInstancedIndirect(meshLOD2, 0, instancedMaterialLOD2, rendererBounds, indirectArgsLOD2, 0, null, castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, receiveShadows, 0, null);
     }
     void Cleanup()
     {

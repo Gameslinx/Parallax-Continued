@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Parallax.Harmony_Patches;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -286,6 +287,13 @@ namespace Parallax
         public Scatter(string scatterName)
         {
             this.scatterName = scatterName;
+        }
+        public void ReinitializeDistribution()
+        {
+            foreach (KeyValuePair<PQ, ScatterSystemQuadData> quadData in ScatterComponent.scatterQuadData)
+            {
+                quadData.Value.ReinitializeScatters(this);
+            }
         }
     }
     // Scatter that can have a unique material but shares its distribution with its parent to avoid generating it twice

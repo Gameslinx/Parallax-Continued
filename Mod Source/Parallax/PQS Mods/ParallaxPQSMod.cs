@@ -27,7 +27,6 @@ namespace Parallax
 
         public ParallaxScatterBody scatterBody;
 
-        bool hasScatters = false;
         bool hasTerrainShader = false;
         public override void OnSetup()
         {

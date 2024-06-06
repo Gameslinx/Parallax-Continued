@@ -43,7 +43,6 @@ namespace Parallax
 
         bool eventAdded = false;
         public bool cleaned = false;
-        public bool paused = false;
 
         public ScatterData(ScatterSystemQuadData parent, Scatter scatter)
         {
@@ -56,10 +55,10 @@ namespace Parallax
             InitializeDistribute();
             InitializeEvaluate();
             Distribute();
-
         }
         void Initialize()
         {
+            cleaned = false;
             scatterRenderer = ScatterManager.Instance.fastScatterRenderers[scatter.scatterName];
             numTriangles = parent.numMeshTriangles;
             outputSize = scatter.distributionParams.populationMultiplier * numTriangles;
@@ -76,6 +75,8 @@ namespace Parallax
             scatterShader.SetVector("_PlanetNormal", parent.planetNormal);
             scatterShader.SetVector("_LocalPlanetNormal", parent.localPlanetNormal);
             scatterShader.SetVector("_PlanetOrigin", parent.planetOrigin);
+
+            scatterShader.SetMatrix("_ObjectToWorldMatrix", parent.quad.gameObject.transform.localToWorldMatrix);
 
             distributeKernel = GetDistributeKernel();
             evaluateKernel = scatterShader.FindKernel("Evaluate");
@@ -193,7 +194,7 @@ namespace Parallax
             // Ready to start evaluating
             scatterRenderer.onEvaluateScatters += Evaluate;
 
-            // This part of the code may never execute because the quad tries to cleanup before the readback is complete
+            // This function may never execute because the quad tries to cleanup before the readback is complete
             // So add this guard to prevent trying to remove the event before it was ever added
             eventAdded = true;
         }
@@ -219,8 +220,8 @@ namespace Parallax
             // Quad is not in the view frustum
             if (!parent.quad.meshRenderer.isVisible || !parent.quad.isVisible) { return; }
             // Quad is out of range
-            if (paused) { return; }
             if (parent.cameraDistance > scatter.distributionParams.range + Mathf.Sqrt(parent.sqrQuadWidth)) { return; }
+            if (!eventAdded) { return; }
 
             // Update runtime shader vars
             // We need to know the size of the distribution before continuing with this

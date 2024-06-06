@@ -29,8 +29,9 @@ Shader "Custom/ParallaxInstancedSolid"
         [Space(10)]
         [Header(Lighting Parameters)]
         [Space(10)]
-        [PowerSlider(3.0)]
-        _SpecularPower("Specular Power", Range(0.001, 1000)) = 1
+        _Color("Color", COLOR) = (1, 1, 1)
+        _BumpScale("Bump Scale", Range(0, 2)) = 1
+        [PowerSlider(3.0)] _SpecularPower("Specular Power", Range(0.001, 1000)) = 1
         _SpecularIntensity("Specular Intensity", Range(0.0, 5.0)) = 1
         _FresnelPower("Fresnel Power", Range(0.001, 20)) = 1
         _FresnelColor("Fresnel Color", COLOR) = (0, 0, 0)
@@ -63,6 +64,8 @@ Shader "Custom/ParallaxInstancedSolid"
             #pragma multi_compile _ WIND
             #pragma multi_compile _ ALPHA_CUTOFF
             #pragma multi_compile _ ALTERNATE_SPECULAR_TEXTURE
+            #pragma multi_compile _ BILLBOARD
+            #pragma multi_compile _ BILLBOARD_USE_MESH_NORMALS
 
             #pragma vertex vert
             #pragma fragment frag
@@ -88,11 +91,13 @@ Shader "Custom/ParallaxInstancedSolid"
                 v2f o;
 
                 float4x4 objectToWorld = INSTANCE_DATA.objectToWorld;
+                BILLBOARD_IF_ENABLED(i.vertex, i.normal, i.tangent, objectToWorld);
+
                 float3 worldPos = mul(objectToWorld, i.vertex);
 
                 o.worldNormal = mul(objectToWorld, float4(i.normal, 0)).xyz;
-                o.worldTangent = mul(objectToWorld, i.tangent);
-                o.worldBinormal = mul(objectToWorld, cross(o.worldNormal, o.worldTangent)) * i.tangent.w;
+                o.worldTangent = mul(objectToWorld, float4(i.tangent.xyz, 0));
+                o.worldBinormal = cross(o.worldTangent, o.worldNormal) * i.tangent.w;
 
                 PROCESS_WIND(worldPos, o.worldNormal);
                 
@@ -101,22 +106,24 @@ Shader "Custom/ParallaxInstancedSolid"
                 o.uv = i.uv;
 
                 o.viewDir = _WorldSpaceCameraPos - worldPos;
-                o.pos = UnityWorldToClipPos(o.worldPos);
+                o.pos = UnityWorldToClipPos(worldPos);
 
                 TRANSFER_VERTEX_TO_FRAGMENT(o);
+
                 return o;
             }
 
             fixed4 frag(PIXEL_SHADER_INPUT(v2f)) : SV_Target
             {   
-                // Remove this from build
-                i.uv.y = -i.uv.y;
                 // Do as little work as possible, clip immediately
                 float4 mainTex = tex2D(_MainTex, i.uv * _MainTex_ST);
+
                 ALPHA_CLIP(mainTex.a);
-
+                
+                mainTex.rgb *= _Color;
+                
                 GET_SPECULAR(mainTex, i.uv * _MainTex_ST);
-
+                
                 i.worldNormal = normalize(i.worldNormal);
                 i.worldTangent = normalize(i.worldTangent);
                 i.worldBinormal = normalize(i.worldBinormal);
@@ -152,6 +159,7 @@ Shader "Custom/ParallaxInstancedSolid"
             #pragma multi_compile _ WIND
             #pragma multi_compile _ ALPHA_CUTOFF
             #pragma multi_compile _ ALTERNATE_SPECULAR_TEXTURE
+            #pragma multi_compile _ BILLBOARD
 
             #pragma vertex vert
             #pragma fragment frag
@@ -177,11 +185,15 @@ Shader "Custom/ParallaxInstancedSolid"
                 v2f o;
 
                 float4x4 objectToWorld = INSTANCE_DATA.objectToWorld;
+                float4 binormal = 0;
+
+                BILLBOARD_IF_ENABLED(i.vertex, i.normal, i.tangent, objectToWorld);
+
                 float3 worldPos = mul(objectToWorld, i.vertex);
 
                 o.worldNormal = mul(objectToWorld, float4(i.normal, 0)).xyz;
-                o.worldTangent = mul(objectToWorld, i.tangent);
-                o.worldBinormal = mul(objectToWorld, cross(o.worldNormal, o.worldTangent)) * i.tangent.w;
+                o.worldTangent = mul(objectToWorld, float4(i.tangent.xyz, 0));
+                o.worldBinormal = cross(o.worldTangent, o.worldNormal) * i.tangent.w;
 
                 PROCESS_WIND(worldPos, o.worldNormal);
                 
@@ -190,14 +202,17 @@ Shader "Custom/ParallaxInstancedSolid"
                 o.uv = i.uv;
 
                 o.viewDir = _WorldSpaceCameraPos - worldPos;
-                o.pos = UnityWorldToClipPos(o.worldPos);
+                o.pos = UnityWorldToClipPos(worldPos);
+
+                o.pos = UnityApplyLinearShadowBias(o.pos);
+
                 return o;
             }
 
             void frag(PIXEL_SHADER_INPUT(v2f))
             {   
                 // Remove this from build
-                i.uv.y = -i.uv.y;
+                //i.uv.y = -i.uv.y;
                 // Do as little work as possible, clip immediately
                 float mainTex = tex2D(_MainTex, i.uv * _MainTex_ST).a;
                 ALPHA_CLIP(mainTex);

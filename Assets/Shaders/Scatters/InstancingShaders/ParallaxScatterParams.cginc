@@ -10,6 +10,7 @@ float2 _BumpMap_ST;
 float _BumpScale;
 float3 _PlanetOrigin;
 float3 _FresnelColor;
+float3 _Color;
 
 // Wind
 sampler2D _WindMap;

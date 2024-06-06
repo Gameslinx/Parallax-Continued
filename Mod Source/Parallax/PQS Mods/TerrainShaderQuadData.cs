@@ -59,7 +59,7 @@ namespace Parallax
 
             if (isMaxLevel)
             {
-                // Sadly a requirement or NRE spam in PQS code
+                // Sadly a requirement or quad meshes become corrupt
                 mesh = UnityEngine.Object.Instantiate(quad.mesh);
                 
                 quadWidth = (float)((2f * Mathf.PI * quad.sphereRoot.radius / 4f) / (Mathf.Pow(2f, quad.sphereRoot.maxLevel)));

@@ -1,4 +1,4 @@
-﻿﻿Shader "Custom/ShowNoise" {
+﻿﻿Shader "Custom/ShowNoiseEditor" {
     Properties
     {
         _MainTex("Main Tex", 2D) = "white" {}
@@ -91,7 +91,7 @@
             fixed4 frag(v2f i) : SV_Target
             {
                 int b = 0;
-                float3 dirFromCenter = normalize(i.directions.xyz);
+                float3 dirFromCenter = normalize(i.worldPos - _PlanetOrigin);
                 float noiseValue = 0;
 
                 // Defaults to 1 on first run

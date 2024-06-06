@@ -97,3 +97,36 @@ float3 GetUnalignedVectorComponents(float3 a, float3 b)
 #else
     #define GET_SPECULAR(resultColor, uv)
 #endif
+
+// Billboard
+void Billboard(inout float4 vertex, inout float3 normal, inout float4 tangent, float4x4 mat)
+{
+    float3 local = vertex.xyz;
+                
+    float3 upVector = float3(0, 1, 0);
+    float3 forwardVector = mul(UNITY_MATRIX_IT_MV[2].xyz, mat);
+    float3 rightVector = normalize(cross(forwardVector, upVector));
+             
+    float3 position = local.x * rightVector + local.y * upVector + local.z * forwardVector;
+   
+    float3x3 rotMat = float3x3(forwardVector, upVector, rightVector);
+                
+    vertex = float4(position, 1);
+    
+    #if !defined (BILLBOARD_USE_MESH_NORMALS)
+    // Since we're in local space, we can set the y coordinate of the normal to 0 to prevent dependence on vertical viewing angle
+    normal = normalize(float3(forwardVector.x, 0, forwardVector.z));
+    tangent.xyz = rightVector;
+    #else
+    // At the moment, not sure how to do appropriate normal mapping for mesh normals where normals are pointing up
+    #endif
+    
+    
+    
+    // Output local space position
+}
+#if defined (BILLBOARD)
+    #define BILLBOARD_IF_ENABLED(vertex, normal, tangent, objectToWorldMatrix)    Billboard(vertex, normal, tangent, objectToWorldMatrix);
+#else
+    #define BILLBOARD_IF_ENABLED(vertex, normal, tangent, objectToWorldMatrix)
+#endif

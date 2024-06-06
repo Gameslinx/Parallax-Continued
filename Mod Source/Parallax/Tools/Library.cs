@@ -124,7 +124,7 @@ namespace Parallax
                 catch
                 {
                     ParallaxDebug.LogParseError(name, planetName, type.Name, value);
-                    result = 0;
+                    result = 0.0f;
                 }
             }
             else if (type == typeof(int))

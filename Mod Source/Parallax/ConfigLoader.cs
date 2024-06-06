@@ -139,7 +139,7 @@ namespace Parallax
             return shaderProperties;
         }
         // Template configs tell Parallax what variable names and type are supported by the shader
-        // We can use this recursively almost with shader keywords
+        // We can use this recursively with shader keywords
         public static void InitializeTemplateConfig(ConfigNode config, ShaderProperties properties)
         {
             ConfigNode.ConfigNodeList nodes = config.nodes;
@@ -267,6 +267,12 @@ namespace Parallax
             foreach (UrlDir.UrlConfig rootNode in allRootNodes)
             {
                 string body = rootNode.config.GetValue("body");
+                string configVersion = rootNode.config.GetValue("configVersion");
+                if (configVersion == null)
+                {
+                    ParallaxDebug.LogError("Legacy configs detected for: " + body + ", either configVersion is missing from the file, or your configs are not supported on this version!");
+                    continue;
+                }
 
                 string nearestQuadSubdivisionLevel = rootNode.config.GetValue("nearestQuadSubdivisionLevel");
                 string nearestQuadSubdivisionRange = rootNode.config.GetValue("nearestQuadSubdivisionRange");
@@ -287,7 +293,7 @@ namespace Parallax
                     Scatter scatter = new Scatter(scatterName);
                     scatter.modelPath = model;
 
-                    OptimizationParams optimizationParams = GetOptimizationParams(body, node);
+                    OptimizationParams optimizationParams = GetOptimizationParams(body, node.GetNode("Optimizations"));
                     SubdivisionParams subdivisionParams = GetSubdivisionParams(body, node.GetNode("SubdivisionSettings"));
                     NoiseParams noiseParams = GetNoiseParams(body, node.GetNode("DistributionNoise"));
                     MaterialParams materialParams = GetMaterialParams(body, node.GetNode("Material"));
@@ -340,7 +346,7 @@ namespace Parallax
                     SharedScatter sharedScatter = new SharedScatter(scatterName, parentScatter);
                     sharedScatter.modelPath = model;
 
-                    OptimizationParams optimizationParams = GetOptimizationParams(body, node);
+                    OptimizationParams optimizationParams = GetOptimizationParams(body, node.GetNode("Optimizations"));
                     MaterialParams materialParams = GetMaterialParams(body, node.GetNode("Material"));
                     DistributionParams distributionParams = GetDistributionParams(body, node.GetNode("Distribution"), materialParams, true);
 
@@ -357,8 +363,8 @@ namespace Parallax
         {
             OptimizationParams optimizationParams = new OptimizationParams();
 
-            string frustumCullingIgnoreRadius = ConfigUtils.TryGetConfigValue(node, "cullingRange");
-            string frustumCullingSafetyMargin = ConfigUtils.TryGetConfigValue(node, "cullingLimit");
+            string frustumCullingIgnoreRadius = ConfigUtils.TryGetConfigValue(node, "frustumCullingStartRange");
+            string frustumCullingSafetyMargin = ConfigUtils.TryGetConfigValue(node, "frustumCullingScreenMargin");
             string maxRenderableObjects = ConfigUtils.TryGetConfigValue(node, "maxObjects");
 
             optimizationParams.frustumCullingIgnoreRadius = (float)ConfigUtils.TryParse(planetName, "cullingRange", frustumCullingIgnoreRadius, typeof(float));
@@ -653,6 +659,12 @@ namespace Parallax
         {
             // Cube the normal deviance, as it gives better results and becomes more sensitive to larger values
             scatter.distributionParams.maxNormalDeviance = scatter.distributionParams.maxNormalDeviance * scatter.distributionParams.maxNormalDeviance * scatter.distributionParams.maxNormalDeviance;
+
+            // Fade range function is NaN when fade range is 0
+            if (scatter.distributionParams.altitudeFadeRange == 0)
+            {
+                scatter.distributionParams.altitudeFadeRange = 0.05f;
+            }
         }
         void OnDestroy()
         {

@@ -49,11 +49,16 @@ namespace Parallax
             instancedMaterialLOD1 = new Material(AssetBundleLoader.parallaxScatterShaders[scatter.distributionParams.lod1.materialOverride.shader]);
             instancedMaterialLOD2 = new Material(AssetBundleLoader.parallaxScatterShaders[scatter.distributionParams.lod2.materialOverride.shader]);
 
-            SetMaterialParams(scatter.materialParams, instancedMaterialLOD0);
-            SetMaterialParams(scatter.distributionParams.lod1.materialOverride, instancedMaterialLOD1);
-            SetMaterialParams(scatter.distributionParams.lod2.materialOverride, instancedMaterialLOD2);
+            SetLOD0MaterialParams();
+            SetLOD1MaterialParams();
+            SetLOD2MaterialParams();
         }
-        void SetMaterialParams(in MaterialParams materialParams, Material material)
+        /// <summary>
+        /// Sets the actual material parameters for a given set of params and scatter material
+        /// </summary>
+        /// <param name="materialParams"></param>
+        /// <param name="material"></param>
+        public void SetMaterialParams(in MaterialParams materialParams, Material material)
         {
             ShaderProperties properties = materialParams.shaderProperties;
             // Set textures - OnEnable is called when the renderer is re-enabled on planet change, so we can load textures here
@@ -70,14 +75,15 @@ namespace Parallax
             foreach (KeyValuePair<string, string> texturePair in properties.shaderTextures)
             {
                 Texture2D texture;
-                if (!ConfigLoader.parallaxScatterBodies[planetName].loadedTextures.ContainsKey(texturePair.Key))
+                if (!ConfigLoader.parallaxScatterBodies[planetName].loadedTextures.ContainsKey(texturePair.Value))
                 {
                     bool linear = TextureUtils.IsLinear(texturePair.Key);
                     texture = TextureLoader.LoadTexture(texturePair.Value, linear);
+                    ConfigLoader.parallaxScatterBodies[planetName].loadedTextures.Add(texturePair.Value, texture);
                 }
                 else
                 {
-                    texture = ConfigLoader.parallaxScatterBodies[planetName].loadedTextures[texturePair.Key];
+                    texture = ConfigLoader.parallaxScatterBodies[planetName].loadedTextures[texturePair.Value];
                 }
                 material.SetTexture(texturePair.Key, texture);
             }
@@ -106,6 +112,28 @@ namespace Parallax
                 material.SetInt(intPair.Key, intPair.Value);
             }
         }
+        /// <summary>
+        /// Explicitly set LOD0 material params
+        /// </summary>
+        public void SetLOD0MaterialParams()
+        {
+            SetMaterialParams(scatter.materialParams, instancedMaterialLOD0);
+        }
+        /// <summary>
+        /// Explicitly set LOD1 material params
+        /// </summary>
+        public void SetLOD1MaterialParams()
+        {
+            SetMaterialParams(scatter.distributionParams.lod1.materialOverride, instancedMaterialLOD1);
+        }
+        /// <summary>
+        /// Explicitly set LOD2 material params
+        /// </summary>
+        public void SetLOD2MaterialParams()
+        {
+            SetMaterialParams(scatter.distributionParams.lod2.materialOverride, instancedMaterialLOD2);
+        }
+
         void Initialize()
         {
             // Create output buffers - Evaluate() function on quads will will these
@@ -119,7 +147,6 @@ namespace Parallax
             else
             {
                 // Get buffers from its renderer
-                Debug.Log("This is a shared scatter yippee");
                 ScatterRenderer renderer = ScatterManager.Instance.GetSharedScatterRenderer(scatter as SharedScatter);
                 outputLOD0 = renderer.outputLOD0;
                 outputLOD1 = renderer.outputLOD1;

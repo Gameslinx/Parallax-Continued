@@ -237,7 +237,7 @@ float LerpStep(float a, float b, float t)
 
 float GetNoiseValue(float3 worldPos)
 {
-    return SimplexPerlin3D(worldPos);
+    return SimplexPerlin3D(worldPos) * 1.5f;
 }
 
 #elif defined (NOISEMODE_CELLULAR)

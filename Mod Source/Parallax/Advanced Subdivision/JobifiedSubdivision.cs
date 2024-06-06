@@ -10,6 +10,12 @@ using UnityEngine;
 
 namespace Parallax
 {
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Hello everyone of GitHub                                                                                                                 //
+    // If someone could figure out how to chain the jobs together using dependencies instead of relying on their completion in an Update() loop //
+    // So that I only need to schedule one job instead of having it spread out over 4 frames that would be greatly appreciated                  //
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     // Added as a component to the new terrain gameobject created in TerrainShaderQuadData
     public class JobifiedSubdivision : MonoBehaviour
     {
@@ -201,7 +207,7 @@ namespace Parallax
             {
                 triReader = trisReader,
                 vertices = storedVertTris,
-                count = -1,
+                count = 0,
                 foreachCount = this.streamForeachCount
             };
             removeVertexPairsJobHandle = removeVertexPairsJob.Schedule(subdivideJobHandle);

@@ -63,12 +63,15 @@ namespace Parallax
             this.subdivisionLevel = subdivisionLevel;
             this.subdivisionRadius = subdivisionRadius;
         }
+        /// <summary>
+        /// Perform a first time initialization of this quad. Gets all prerequisite data and generates all scatters.
+        /// </summary>
         public void Initialize()
         {
             sqrQuadWidth = (float)((2f * Mathf.PI * quad.sphereRoot.radius / 4f) / (Mathf.Pow(2f, quad.sphereRoot.maxLevel)));
             sqrQuadWidth *= sqrQuadWidth;
 
-            mesh = UnityEngine.Object.Instantiate(quad.mesh);
+            mesh = quad.mesh;
             vertices = mesh.vertices;
             normals = mesh.normals;
             triangles = mesh.triangles;
@@ -103,10 +106,47 @@ namespace Parallax
             GetCornerBiomes(body);
             DetermineScatters();
         }
+        /// <summary>
+        /// Reinitialize the prerequisite data on this quad that must be refreshed. It does NOT reinitialize all scatters. Use this if regenerating scatters.
+        /// </summary>
+        public void Reinitialize()
+        {
+            planetNormal = Vector3.Normalize(quad.transform.position - quad.quadRoot.transform.position);
+            localPlanetNormal = quad.gameObject.transform.InverseTransformDirection(planetNormal);
+
+            CelestialBody body = FlightGlobals.GetBodyByName(quad.sphereRoot.name);
+            planetOrigin = body.transform.position;
+
+            directionsFromCenter = GetDirectionsFromCenter(vertices, quad.sphereRoot.gameObject.transform.position);
+            sourceDirsFromCenterBuffer.SetData(directionsFromCenter);
+        }
+        /// <summary>
+        /// Reinitializes an amount of scatters. Refreshes prerequisite data and regenerates the scatters specified.
+        /// Performs a linear search on all scatters on this quad, so use this sparingly. Parallax only uses this for GUI refreshes.
+        /// </summary>
+        /// <param name="scatters"></param>
+        public void ReinitializeScatters(params Scatter[] scatters)
+        {
+            // Fetch updated quad data
+            Reinitialize();
+            foreach (Scatter scatter in scatters)
+            {
+                // First check if this scatter is on this quad
+                ScatterData data = quadScatters.Where((x) => x.scatter.scatterName == scatter.scatterName).FirstOrDefault();
+                if (data != null)
+                {
+                    data.Cleanup();
+                    data.Start();
+                }
+            }
+        }
         // Get the square distance from the quad to the camera
         public void UpdateQuadCameraDistance()
         {
             cameraDistance = (quad.gameObject.transform.position - RuntimeOperations.vectorCameraPos).magnitude;
+
+            // Warning - bugged
+
             //foreach (ScatterData scatter in quadScatters)
             //{
             //    if (cameraDistance > scatter.scatter.distributionParams.range + Mathf.Sqrt(sqrQuadWidth))
@@ -117,11 +157,16 @@ namespace Parallax
             //    {
             //        if (scatter.cleaned)
             //        {
-            //            Stopwatch sw = Stopwatch.StartNew();
+            //            // Update required vars
+            //            planetNormal = Vector3.Normalize(quad.transform.position - quad.quadRoot.transform.position);
+            //            localPlanetNormal = quad.gameObject.transform.InverseTransformDirection(planetNormal);
+            //            directionsFromCenter = GetDirectionsFromCenter(vertices, quad.sphereRoot.gameObject.transform.position);
+            //
+            //            CelestialBody body = FlightGlobals.GetBodyByName(quad.sphereRoot.name);
+            //            planetOrigin = body.transform.position;
+            //
             //            scatter.cleaned = false;
             //            scatter.Start();
-            //            sw.Stop();
-            //            ParallaxDebug.Log("Reinit: " + sw.Elapsed.TotalMilliseconds.ToString("F10"));
             //        }
             //    }
             //}

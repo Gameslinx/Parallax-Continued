@@ -10,6 +10,8 @@ using Unity.Jobs;
 using UnityEngine;
 using Unity.Mathematics;
 using Unity.Burst;
+using Unity.Burst.CompilerServices;
+using System.Diagnostics;
 
 namespace Parallax
 {
@@ -56,7 +58,7 @@ namespace Parallax
         }
         public static void Return(int counter)
         {
-            Debug.Log("Returning identifier: " + counter);
+            UnityEngine.Debug.Log("Returning identifier: " + counter);
             triangleReadbackCounters[counter] = -3;
             uniqueQuadIdentifiers.Enqueue(counter);
         }
@@ -172,6 +174,10 @@ namespace Parallax
         [WriteOnly] public NativeHashMap<float3, int> vertices;
         [ReadOnly] public int foreachCount;
         public int count;
+
+        // This version of Burst contains an error that will throw exceptions 50% of the time
+        // The code is not wrong, but we want to hide the exception from the log because it's big and not indicative of an actual failure
+        // Error is always on Line 200
         public void Execute()
         {
             SubdividableTriangle val;
@@ -183,15 +189,15 @@ namespace Parallax
                 for (int i = 0; i < itemsInLocalStream; i++)
                 {
                     val = triReader.Read<SubdividableTriangle>();
-                    if (vertices.TryAdd(val.v1 * 0.001f, count + 1))
+                    if (vertices.TryAdd(val.v1 * 0.001f, count))
                     {
                         count++;
                     }
-                    if (vertices.TryAdd(val.v2 * 0.001f, count + 1))
+                    if (vertices.TryAdd(val.v2 * 0.001f, count))
                     {
                         count++;
                     }
-                    if (vertices.TryAdd(val.v3 * 0.001f, count + 1))
+                    if (vertices.TryAdd(val.v3 * 0.001f, count))
                     {
                         count++;
                     }
