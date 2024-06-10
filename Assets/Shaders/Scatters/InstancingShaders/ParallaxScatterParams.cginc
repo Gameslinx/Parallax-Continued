@@ -21,3 +21,9 @@ float _WindSpeed;
 
 // AlphaCutoff
 float _Cutoff;
+
+// Subsurface
+float _SubsurfaceNormalInfluence;
+float _SubsurfacePower;
+float _SubsurfaceIntensity;
+float3 _SubsurfaceColor;

@@ -1,10 +1,12 @@
 ﻿using Parallax.Harmony_Patches;
+using Parallax.Tools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using static Parallax.Legacy.LegacyConfigLoader;
 
 namespace Parallax
 {
@@ -16,6 +18,7 @@ namespace Parallax
     public class ParallaxSettings
     {
         public TerrainGlobalSettings terrainGlobalSettings = new TerrainGlobalSettings();
+        public ScatterGlobalSettings scatterGlobalSettings = new ScatterGlobalSettings();
         public DebugGlobalSettings debugGlobalSettings = new DebugGlobalSettings();
         public ObjectPoolSettings objectPoolSettings = new ObjectPoolSettings();
     }
@@ -24,6 +27,12 @@ namespace Parallax
         public float maxTessellation;
         public float tessellationEdgeLength;
         public float maxTessellationRange;
+    }
+    public struct ScatterGlobalSettings
+    {
+        public float densityMultiplier;
+        public float rangeMultiplier;
+        public float fadeOutStartRange;
     }
     public struct DebugGlobalSettings
     {
@@ -218,6 +227,7 @@ namespace Parallax
         public string modelPathOverride;
         public MaterialParams materialOverride;
         public float range;
+        public bool inheritsMaterial;
     }
     // Holds shader and its variations - rest is processed at load time from shaderbank
     public struct MaterialParams
@@ -248,7 +258,7 @@ namespace Parallax
         public Dictionary<string, Texture2D> loadedTextures = new Dictionary<string, Texture2D>();
 
         /// <summary>
-        /// Contains all scatters for fast iteration, but not all sharedScatters
+        /// Contains all scatters for fast iteration, but not sharedScatters
         /// </summary>
         public Scatter[] fastScatters;
         public ParallaxScatterBody(string planetName)
@@ -295,6 +305,173 @@ namespace Parallax
                 quadData.Value.ReinitializeScatters(this);
             }
         }
+        public virtual ConfigNode ToConfigNode()
+        {
+            ConfigNode scatterNode = new ConfigNode("Scatter");
+            ConfigNode optimizationNode = scatterNode.AddNode("Optimizations");
+            ConfigNode subdivisionSettingsNode = scatterNode.AddNode("SubdivisionSettings");
+            ConfigNode distributionNoiseNode = scatterNode.AddNode("DistributionNoise");
+            ConfigNode materialNode = scatterNode.AddNode("Material");
+            ConfigNode distributionNode = scatterNode.AddNode("Distribution");
+
+            PopulateScatterNode(scatterNode);
+            PopulateOptimizationNode(optimizationNode);
+            PopulateSubdivisionSettingsNode(subdivisionSettingsNode);
+            PopulateDistributionNoiseNode(distributionNoiseNode);
+            PopulateMaterialNode(materialNode, materialParams);
+            PopulateDistributionNode(distributionNode);
+
+            return scatterNode;
+        }
+        protected virtual void PopulateScatterNode(ConfigNode node)
+        {
+            // Remove planet name from the start of the scatter name
+            node.AddValue("name", scatterName.Split('-')[1]);
+
+            node.AddValue("model", modelPath);
+            node.AddValue("collisionLevel", 1);
+        }
+        protected virtual void PopulateOptimizationNode(ConfigNode node)
+        {
+            node.AddValue("frustumCullingStartRange", optimizationParams.frustumCullingIgnoreRadius * distributionParams.range);
+            node.AddValue("frustumCullingScreenMargin", optimizationParams.frustumCullingSafetyMargin);
+            node.AddValue("maxObjects", optimizationParams.maxRenderableObjects);
+        }
+        protected virtual void PopulateSubdivisionSettingsNode(ConfigNode node)
+        {
+            node.AddValue("subdivisionRangeMode", "noSubdivision");
+        }
+        protected virtual void PopulateDistributionNoiseNode(ConfigNode node)
+        {
+            node.AddValue("noiseType", noiseParams.noiseType.ToString());
+            node.AddValue("inverted", noiseParams.inverted);
+            node.AddValue("frequency", noiseParams.frequency);
+            node.AddValue("octaves", noiseParams.octaves);
+            node.AddValue("lacunarity", noiseParams.lacunarity);
+            node.AddValue("seed", noiseParams.seed);
+        }
+        protected virtual void PopulateMaterialNode(ConfigNode node, MaterialParams materialParams)
+        {
+            node.AddValue("shader", materialParams.shader);
+            ShaderProperties properties = materialParams.shaderProperties;
+
+            foreach (KeyValuePair<string, string> texturePair in properties.shaderTextures)
+            {
+                node.AddValue(texturePair.Key, texturePair.Value);
+            }
+
+            foreach (KeyValuePair<string, float> floatPair in properties.shaderFloats)
+            {
+                node.AddValue(floatPair.Key, floatPair.Value);
+            }
+
+            foreach (KeyValuePair<string, Vector3> vectorPair in properties.shaderVectors)
+            {
+                node.AddValue(vectorPair.Key, vectorPair.Value);
+            }
+
+            foreach (KeyValuePair<string, Color> colorPair in properties.shaderColors)
+            {
+                node.AddValue(colorPair.Key, colorPair.Value);
+            }
+
+            foreach (KeyValuePair<string, int> intPair in properties.shaderInts)
+            {
+                node.AddValue(intPair.Key, intPair.Value);
+            }
+
+            ConfigNode keywordsNode = node.AddNode("Keywords");
+            foreach (string keyword in materialParams.shaderKeywords)
+            {
+                keywordsNode.AddValue("name", keyword);
+            }
+
+        }
+        protected virtual void PopulateDistributionNode(ConfigNode node)
+        {
+            node.AddValue("seed", distributionParams.seed);
+            node.AddValue("spawnChance", distributionParams.spawnChance);
+            node.AddValue("range", distributionParams.range);
+            node.AddValue("populationMultiplier", (int)distributionParams.populationMultiplier);
+            node.AddValue("minScale", distributionParams.minScale);
+            node.AddValue("maxScale", distributionParams.maxScale);
+            node.AddValue("scaleRandomness", distributionParams.scaleRandomness);
+            node.AddValue("cutoffScale", distributionParams.noiseCutoff);
+            node.AddValue("steepPower", distributionParams.steepPower);
+            node.AddValue("steepContrast", distributionParams.steepContrast);
+            node.AddValue("steepMidpoint", distributionParams.steepMidpoint);
+            node.AddValue("maxNormalDeviance", Mathf.Pow(distributionParams.maxNormalDeviance, 0.333333f));
+            node.AddValue("minAltitude", distributionParams.minAltitude);
+            node.AddValue("maxAltitude", distributionParams.maxAltitude);
+            node.AddValue("altitudeFadeRange", distributionParams.altitudeFadeRange);
+            node.AddValue("alignToTerrainNormal", distributionParams.alignToTerrainNormal == 1 ? true : false);
+
+            ConfigNode lodNode = node.AddNode("LODs");
+
+            ConfigNode lod1 = lodNode.AddNode("LOD");
+            ConfigNode lod2 = lodNode.AddNode("LOD");
+            ProcessLOD(lod1, distributionParams.lod1);
+            ProcessLOD(lod2, distributionParams.lod2);
+
+            if (biomeBlacklistParams.blacklistedBiomes.Count > 0)
+            {
+                ConfigNode biomeBlacklistNode = node.AddNode("BiomeBlacklist");
+                foreach (string biome in biomeBlacklistParams.blacklistedBiomes)
+                {
+                    biomeBlacklistNode.AddValue("name", biome);
+                }
+            }
+
+
+        }
+        protected virtual void ProcessLOD(ConfigNode lodNode, LOD lod)
+        {
+            lodNode.AddValue("model", lod.modelPathOverride);
+            lodNode.AddValue("range", lod.range * distributionParams.range);
+
+            ShaderProperties properties = lod.materialOverride.shaderProperties;
+
+            if (lod.materialOverride.shaderKeywords.SequenceEqual(materialParams.shaderKeywords) && lod.materialOverride.shader == materialParams.shader)
+            {
+                // Material can be stored as an override - now work out what changed
+                ConfigNode materialNode = lodNode.AddNode("MaterialOverride");
+
+                List<string> texKeyDifferences = properties.shaderTextures.GetDifferingKeys(materialParams.shaderProperties.shaderTextures);
+                foreach (string textureDiff in texKeyDifferences)
+                {
+                    materialNode.AddValue(textureDiff, properties.shaderTextures[textureDiff]);
+                }
+
+                List<string> floatKeyDifferences = properties.shaderFloats.GetDifferingKeys(materialParams.shaderProperties.shaderFloats);
+                foreach (string floatDiff in floatKeyDifferences)
+                {
+                    materialNode.AddValue(floatDiff, properties.shaderFloats[floatDiff]);
+                }
+
+                List<string> vectorKeyDifferences = properties.shaderVectors.GetDifferingKeys(materialParams.shaderProperties.shaderVectors);
+                foreach (string vectorDiff in vectorKeyDifferences)
+                {
+                    materialNode.AddValue(vectorDiff, properties.shaderVectors[vectorDiff]);
+                }
+
+                List<string> colorKeyDifferences = properties.shaderColors.GetDifferingKeys(materialParams.shaderProperties.shaderColors);
+                foreach (string colorDiff in colorKeyDifferences)
+                {
+                    materialNode.AddValue(colorDiff, properties.shaderColors[colorDiff]);
+                }
+
+                List<string> intKeyDifferences = properties.shaderInts.GetDifferingKeys(materialParams.shaderProperties.shaderInts);
+                foreach (string intDiff in intKeyDifferences)
+                {
+                    materialNode.AddValue(intDiff, properties.shaderInts[intDiff]);
+                }
+            }
+            else
+            {
+                // Keywords were changed, so we must define the material explicitly
+                PopulateMaterialNode(lodNode.AddNode("Material"), lod.materialOverride);
+            }
+        }
     }
     // Scatter that can have a unique material but shares its distribution with its parent to avoid generating it twice
     public class SharedScatter : Scatter
@@ -304,6 +481,43 @@ namespace Parallax
         {
             this.parent = parent;
             this.isShared = true;
+        }
+        public override ConfigNode ToConfigNode()
+        {
+            ConfigNode scatterNode = new ConfigNode("SharedScatter");
+            ConfigNode optimizationNode = scatterNode.AddNode("Optimizations");
+            ConfigNode materialNode = scatterNode.AddNode("Material");
+            ConfigNode distributionNode = scatterNode.AddNode("Distribution");
+
+            PopulateScatterNode(scatterNode);
+            PopulateOptimizationNode(optimizationNode);
+            PopulateMaterialNode(materialNode, materialParams);
+            PopulateDistributionNode(distributionNode);
+
+            return scatterNode;
+        }
+        protected override void PopulateDistributionNode(ConfigNode node)
+        {
+            // Do not process distribution params
+
+            ConfigNode lodNode = node.AddNode("LODs");
+
+            ConfigNode lod1 = lodNode.AddNode("LOD");
+            ConfigNode lod2 = lodNode.AddNode("LOD");
+
+            ProcessLOD(lod1, distributionParams.lod1);
+            ProcessLOD(lod2, distributionParams.lod2);
+
+            // Do not process biome blacklist params
+        }
+        protected override void PopulateScatterNode(ConfigNode node)
+        {
+            // Remove planet name from the start of the scatter name
+            node.AddValue("name", scatterName.Split('-')[1]);
+
+            node.AddValue("model", modelPath);
+            node.AddValue("collisionLevel", 1);
+            node.AddValue("parentName", parent.scatterName.Split('-')[1]);
         }
     }
     // Stores the names of the variables, then the types as defined in the ShaderPropertiesTemplate.cfg

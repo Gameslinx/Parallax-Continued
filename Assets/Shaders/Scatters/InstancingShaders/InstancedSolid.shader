@@ -38,6 +38,15 @@ Shader "Custom/ParallaxInstancedSolid"
         _EnvironmentMapFactor("Environment Map Factor", Range(0.0, 2.0)) = 1
         _RefractionIntensity("Refraction Intensity", Range(0, 2)) = 1
 
+        // Subsurface
+        [Space(10)]
+        [Header(Subsurface Parameters)]
+        [Space(10)]
+        _SubsurfaceNormalInfluence("Subsurface Normal Influence", Range(0, 1)) = 0.5
+        _SubsurfacePower("Subsurface Power", Range(0.001, 6)) = 2
+        _SubsurfaceIntensity("Subsurface Intensity", Range(0, 3)) = 1
+        _SubsurfaceColor("Subsurface Color", COLOR) = (1, 1, 1)
+
         // Other params
         [Space(10)]
         [Header(Other Parameters)]
@@ -66,6 +75,8 @@ Shader "Custom/ParallaxInstancedSolid"
             #pragma multi_compile _ ALTERNATE_SPECULAR_TEXTURE
             #pragma multi_compile _ BILLBOARD
             #pragma multi_compile _ BILLBOARD_USE_MESH_NORMALS
+            #pragma multi_compile _ DEBUG_FACE_ORIENTATION
+            #pragma multi_compile _ SUBSURFACE_SCATTERING
 
             #pragma vertex vert
             #pragma fragment frag
@@ -142,8 +153,11 @@ Shader "Custom/ParallaxInstancedSolid"
                 float3 normal = normalize(UnpackScaleNormal(bumpMap, _BumpScale));
                 float3 worldNormal = normalize(mul(TBN, normal));
 
-                // Uses second variant of CalculateLighting
-                float3 result = CalculateLighting(mainTex, worldNormal, viewDir, GET_SHADOW, lightDir);
+                // Calculate lighting from core params, plus potential additional params (worldpos required for subsurface scattering)
+                float3 result = CalculateLighting(mainTex, worldNormal, viewDir, GET_SHADOW, lightDir ADDITIONAL_LIGHTING_PARAMS(i.worldPos));
+
+                // Process any debug options are enabled that affect the output colour
+                DEBUG_IF_ENABLED
                 return float4(result, 1);
             }
 

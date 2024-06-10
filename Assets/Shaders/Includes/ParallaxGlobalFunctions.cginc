@@ -69,7 +69,28 @@ float FresnelEffect(float3 worldNormal, float3 viewDir, float power)
     #endif
 #endif
 
-float3 CalculateLighting(float4 col, float3 worldNormal, float3 viewDir, float shadow, float3 lightDir)
+#if defined (SUBSURFACE_SCATTERING)
+float3 SubsurfaceScattering(float3 worldPos, float3 worldNormal, float3 viewDir, float3 lightDir)
+{
+    float3 NplusL = -normalize(worldNormal * _SubsurfaceNormalInfluence + lightDir);
+    float VdotNpL = max(0, (dot(NplusL, viewDir)));
+    float ss = pow(VdotNpL, _SubsurfacePower) * _SubsurfaceIntensity;
+    
+    float generalLightIntensity = max(0, dot(normalize(worldPos - _PlanetOrigin), lightDir));
+    // Mult by thickness map
+    
+    return ss * _SubsurfaceColor * generalLightIntensity;
+}
+#endif
+
+// The terrain shader will never use subsurface scattering. This is reserved for the scatter shader
+#if defined (SUBSURFACE_SCATTERING)
+    #define LIGHTING_INPUT  float4 col, float3 worldNormal, float3 viewDir, float shadow, float3 lightDir, float3 worldPos
+#else
+    #define LIGHTING_INPUT  float4 col, float3 worldNormal, float3 viewDir, float shadow, float3 lightDir
+#endif
+
+float3 CalculateLighting(LIGHTING_INPUT)
 {
 	// Main light
     float NdotL = max(0, dot(worldNormal, lightDir)) * shadow;
@@ -88,6 +109,11 @@ float3 CalculateLighting(float4 col, float3 worldNormal, float3 viewDir, float s
     float3 specular = spec * _LightColor0.rgb;
     float3 reflection = fresnel * reflColor * col.a * _EnvironmentMapFactor + (1 - fresnel) * refrColor * _RefractionIntensity; // For refraction
     reflection *= shadow + UNITY_LIGHTMODEL_AMBIENT;
+    float3 scattering = 0;
     
-    return diffuse + ambient + specular + reflection;
+    #if defined (SUBSURFACE_SCATTERING)
+    scattering = SubsurfaceScattering(worldPos, worldNormal, viewDir, lightDir);
+    #endif
+    
+    return diffuse + ambient + specular + reflection + scattering;
 }

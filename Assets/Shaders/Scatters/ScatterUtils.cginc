@@ -223,6 +223,19 @@ float GetAltitudeScalar(float3 worldPosition)
     return rangeFadeMin * (midpoint < 0.5) + rangeFadeMax * (midpoint > 0.5);
 }
 
+// Get random chance to cull before max range
+bool IsOutOfRangeEarly(float normalisedRange, float3 localPosition)
+{
+    // 0 when at _RangeFadeStart, 1 at cutoff
+    float despawnWeight = GetPercentageBetween(normalisedRange, _RangeFadeStart, 1);
+    
+    // Use local positions as the random seed for despawning
+    float despawnChance = Rand(localPosition);
+    
+    // Despawn if the chance is lower than the weight
+    return despawnChance < despawnWeight;
+}
+
 // Lerp between two points in a step - 0 at a, 1 at b
 float LerpStep(float a, float b, float t)
 {

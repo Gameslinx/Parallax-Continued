@@ -15,7 +15,7 @@
 //  Structs
 //
 
-#if defined (TWO_SIDED)
+#if defined (TWO_SIDED) || defined (DEBUG_FACE_ORIENTATION)
     #define PIXEL_SHADER_INPUT(inputStructName) inputStructName i, float facing : VFACE
 #else
     #define PIXEL_SHADER_INPUT(inputStructName) inputStructName i

@@ -34,6 +34,10 @@ namespace Parallax
 
         private static int activeBoolField = -1;
 
+        private static int activeEnumField = -1;
+        private static NoiseType activeEnumFieldLastValue = NoiseType.simplexPerlin;
+        private static string activeEnumFieldString = "";
+
         /// <summary>
         /// Float Field for ingame purposes. Behaves exactly like UnityEditor.EditorGUILayout.FloatField.
         /// From https://forum.unity.com/threads/float-input-gui-item.83739/
@@ -55,7 +59,6 @@ namespace Parallax
             { // Value has been modified externally
                 activeFloatFieldLastValue = value;
                 activeFloatFieldString = value.ToString();
-                valueWasChanged = true;
             }
 
             // Get stored string for the text field if this one is recorded
@@ -156,7 +159,6 @@ namespace Parallax
             { // Value has been modified externally
                 activeIntFieldLastValue = value;
                 activeIntFieldString = value.ToString();
-                valueWasChanged = true;
             }
 
             // Get stored string for the text field if this one is recorded
@@ -204,7 +206,7 @@ namespace Parallax
             valueWasChanged = false;
 
             // Get rect and control for this Vector3 field for identification
-            Rect pos = GUILayoutUtility.GetRect(new GUIContent(value.ToString()), HighLogic.Skin.label, new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.MinWidth(80) });
+            Rect pos = GUILayoutUtility.GetRect(new GUIContent(value.ToString("F3")), HighLogic.Skin.label, new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.MinWidth(80) });
             int vector3FieldID = GUIUtility.GetControlID("Vector3Field".GetHashCode(), FocusType.Keyboard, pos) + 1;
             if (vector3FieldID == 0)
                 return value;
@@ -215,12 +217,11 @@ namespace Parallax
             if (active && recorded && activeVector3FieldLastValue != value)
             { // Value has been modified externally
                 activeVector3FieldLastValue = value;
-                activeVector3FieldString = value.ToString();
-                valueWasChanged = true;
+                activeVector3FieldString = VectorToString(value);
             }
 
             // Get stored string for the text field if this one is recorded
-            string str = recorded ? activeVector3FieldString : value.ToString();
+            string str = recorded ? activeVector3FieldString : VectorToString(value);
 
             // pass it in the text field
             string strValue = GUI.TextField(pos, str, HighLogic.Skin.textField);
@@ -231,11 +232,11 @@ namespace Parallax
 
             // Try Parse if value got changed. If the string could not be parsed, ignore it and keep last value
             bool parsed = true;
-            if (strValue != value.ToString())
+            if (strValue != VectorToString(value))
             {
                 Vector3 newValue;
                 parsed = TryParseVector3(strValue, out newValue);
-                if (parsed)
+                if (parsed && newValue != activeVector3FieldLastValue)
                 {
                     value = activeVector3FieldLastValue = newValue;
                     valueWasChanged = true;
@@ -281,7 +282,7 @@ namespace Parallax
             valueWasChanged = false;
 
             // Get rect and control for this Color field for identification
-            Rect pos = GUILayoutUtility.GetRect(new GUIContent(value.ToString()), HighLogic.Skin.label, new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.MinWidth(80) });
+            Rect pos = GUILayoutUtility.GetRect(new GUIContent(value.ToString("F3")), HighLogic.Skin.label, new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.MinWidth(80) });
             int colorFieldID = GUIUtility.GetControlID("ColorField".GetHashCode(), FocusType.Keyboard, pos) + 1;
             if (colorFieldID == 0)
                 return value;
@@ -293,7 +294,6 @@ namespace Parallax
             { // Value has been modified externally
                 activeColorFieldLastValue = value;
                 activeColorFieldString = ColorToString(value);
-                valueWasChanged = true;
             }
 
             // Get stored string for the text field if this one is recorded
@@ -316,6 +316,7 @@ namespace Parallax
                 {
                     value = activeColorFieldLastValue = newValue;
                     valueWasChanged = true;
+                    
                 }
             }
 
@@ -370,6 +371,71 @@ namespace Parallax
             return value;
         }
 
+        public static NoiseType EnumField(NoiseType value, out bool valueWasChanged)
+        {
+            valueWasChanged = false;
+
+            // Get rect and control for this enum field for identification
+            Rect pos = GUILayoutUtility.GetRect(new GUIContent(value.ToString()), HighLogic.Skin.label, new GUILayoutOption[] { GUILayout.ExpandWidth(false), GUILayout.MinWidth(140) });
+            int enumFieldID = GUIUtility.GetControlID("EnumField".GetHashCode(), FocusType.Keyboard, pos) + 1;
+            if (enumFieldID == 0)
+                return value;
+
+            bool recorded = activeEnumField == enumFieldID;
+            bool active = enumFieldID == GUIUtility.keyboardControl;
+
+            if (active && recorded && !activeEnumFieldLastValue.Equals(value))
+            { // Value has been modified externally
+                activeEnumFieldLastValue = value;
+                activeEnumFieldString = value.ToString();
+            }
+
+            // Get stored string for the text field if this one is recorded
+            string str = recorded ? activeEnumFieldString : value.ToString();
+
+            // pass it in the text field
+            string strValue = GUI.TextField(pos, str, HighLogic.Skin.textField);
+
+            // Update stored value if this one is recorded
+            if (recorded)
+                activeEnumFieldString = strValue;
+
+            // Try Parse if value got changed. If the string could not be parsed, ignore it and keep last value
+            bool parsed = true;
+            if (strValue != value.ToString())
+            {
+                NoiseType newValue;
+                parsed = TryParseEnum(strValue, out newValue);
+                if (parsed)
+                {
+                    value = activeEnumFieldLastValue = newValue;
+                    valueWasChanged = true;
+                }
+            }
+
+            if (active && !recorded)
+            { // Gained focus this frame
+                activeEnumField = enumFieldID;
+                activeEnumFieldString = strValue;
+                activeEnumFieldLastValue = value;
+            }
+            else if (!active && recorded)
+            { // Lost focus this frame
+                activeEnumField = -1;
+                if (!parsed)
+                    value = TryParseEnum(strValue, out NoiseType forcedValue) ? forcedValue : value;
+            }
+
+            return value;
+        }
+
+        // Helper method to parse NoiseType enum from a string
+        private static bool TryParseEnum(string str, out NoiseType result)
+        {
+            return Enum.TryParse(str, true, out result) && Enum.IsDefined(typeof(NoiseType), result);
+        }
+
+
         // Helper method to parse Color from a string
         private static bool TryParseColor(string str, out Color result)
         {
@@ -390,7 +456,13 @@ namespace Parallax
         // Helper method to convert Color to string
         private static string ColorToString(Color color)
         {
-            return $"({color.r},{color.g},{color.b},{color.a})";
+            return $"{color.r.ToString("F3")}, {color.g.ToString("F3")}, {color.b.ToString("F3")}, {color.a.ToString("F3")}".Replace("(", string.Empty).Replace(")", string.Empty);
+        }
+
+        // Helper method to convert Vector3 to string
+        private static string VectorToString(Vector3 vector)
+        {
+            return vector.ToString("F3").Replace("(", string.Empty).Replace(")", string.Empty);
         }
     }
 }

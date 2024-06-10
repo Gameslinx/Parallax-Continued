@@ -105,7 +105,7 @@ Shader "Custom/Parallax"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
             
-            #include "../Includes/ParallaxGlobalFunctions.cginc"
+            #include "../Includes/ParallaxGlobalFunctions.cginc" 
             #include "ParallaxStructs.cginc"
             #include "ParallaxVariables.cginc"
             #include "ParallaxUtils.cginc"

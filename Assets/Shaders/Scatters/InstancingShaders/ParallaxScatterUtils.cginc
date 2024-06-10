@@ -120,13 +120,34 @@ void Billboard(inout float4 vertex, inout float3 normal, inout float4 tangent, f
     #else
     // At the moment, not sure how to do appropriate normal mapping for mesh normals where normals are pointing up
     #endif
-    
-    
-    
     // Output local space position
 }
+
 #if defined (BILLBOARD)
     #define BILLBOARD_IF_ENABLED(vertex, normal, tangent, objectToWorldMatrix)    Billboard(vertex, normal, tangent, objectToWorldMatrix);
 #else
     #define BILLBOARD_IF_ENABLED(vertex, normal, tangent, objectToWorldMatrix)
 #endif
+
+#if defined (DEBUG_FACE_ORIENTATION)
+#define DEBUG_IF_ENABLED                                                     \
+        float3 frontFaceColor = float3(0.345, 0.345, 0.898);                 \
+        float3 backFaceColor = float3(0.898, 0.345, 0.345);                  \
+        float3 faceColor = lerp(frontFaceColor, backFaceColor, -facing);     \
+        result.rgb = faceColor;
+#else
+    #define DEBUG_IF_ENABLED
+#endif
+
+//
+// Lighting 
+//
+
+// ADDITIONAL_LIGHTING_PARAMS must include every possible param that can be passed in, but only needs to pass in the required ones for this effect
+#if defined (SUBSURFACE_SCATTERING)
+    // Only subsurface scattering defined
+    #define ADDITIONAL_LIGHTING_PARAMS(worldPos) , worldPos
+#else
+    #define ADDITIONAL_LIGHTING_PARAMS(worldPos)
+#endif
+

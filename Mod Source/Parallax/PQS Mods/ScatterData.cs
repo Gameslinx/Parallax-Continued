@@ -152,6 +152,8 @@ namespace Parallax
             scatterShader.SetFloat("_MinAltitude", scatter.distributionParams.minAltitude);
             scatterShader.SetFloat("_MaxAltitude", scatter.distributionParams.maxAltitude);
             scatterShader.SetFloat("_AltitudeFadeRange", scatter.distributionParams.altitudeFadeRange);
+
+            scatterShader.SetFloat("_RangeFadeStart", ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.fadeOutStartRange);
         }
         public void Distribute()
         {

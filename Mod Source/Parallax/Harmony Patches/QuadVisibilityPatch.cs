@@ -98,7 +98,6 @@ namespace Parallax.Harmony_Patches
 
         static bool Prefix(PQ __instance, PQ quad)
         {
-            Debug.Log("Try quad destroy");
             if (quad.isBuilt)
             {
                 ScatterComponent.OnQuadDestroyed(quad);

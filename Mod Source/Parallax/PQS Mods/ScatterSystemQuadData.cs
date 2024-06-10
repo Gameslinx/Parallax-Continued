@@ -140,12 +140,20 @@ namespace Parallax
                 }
             }
         }
+        public void ReinitializeScatters(params ScatterData[] scatterData)
+        {
+            Reinitialize();
+            foreach (ScatterData data in scatterData)
+            {
+                data.Start();
+            }
+        }
         // Get the square distance from the quad to the camera
         public void UpdateQuadCameraDistance()
         {
             cameraDistance = (quad.gameObject.transform.position - RuntimeOperations.vectorCameraPos).magnitude;
 
-            // Warning - bugged
+            // Warning - bugged - Especially on GUI refreshes
 
             //foreach (ScatterData scatter in quadScatters)
             //{
@@ -157,16 +165,7 @@ namespace Parallax
             //    {
             //        if (scatter.cleaned)
             //        {
-            //            // Update required vars
-            //            planetNormal = Vector3.Normalize(quad.transform.position - quad.quadRoot.transform.position);
-            //            localPlanetNormal = quad.gameObject.transform.InverseTransformDirection(planetNormal);
-            //            directionsFromCenter = GetDirectionsFromCenter(vertices, quad.sphereRoot.gameObject.transform.position);
-            //
-            //            CelestialBody body = FlightGlobals.GetBodyByName(quad.sphereRoot.name);
-            //            planetOrigin = body.transform.position;
-            //
-            //            scatter.cleaned = false;
-            //            scatter.Start();
+            //            ReinitializeScatters(scatter);
             //        }
             //    }
             //}

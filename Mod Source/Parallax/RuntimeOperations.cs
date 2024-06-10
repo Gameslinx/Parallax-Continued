@@ -19,9 +19,6 @@ namespace Parallax
 
         public static GameObject flightProbeObject;
 
-        public delegate void DominantBodyChanged(CelestialBody body);
-        public static event DominantBodyChanged onDominantBodyChanged;
-
         // Used in mesh subdivision frustum culling
         public static ParallaxPlane[] cameraFrustumPlanes = new ParallaxPlane[6];
 
@@ -29,6 +26,12 @@ namespace Parallax
         public static float[] floatCameraFrustumPlanes = new float[24];
         public static float3 cameraPos = float3.zero;
         public static Vector3 vectorCameraPos = Vector3.zero;
+
+        // Used in most shaders
+        /// <summary>
+        /// The current world space position of the current main body. If the current main body is null, this is set to 0.
+        /// </summary>
+        public static Vector3 currentPlanetOrigin = Vector3.zero;
         Plane[] planes;
         public void Start()
         {
@@ -46,10 +49,14 @@ namespace Parallax
             if (EventHandler.currentParallaxBody != null && FlightGlobals.currentMainBody != null)
             {
                 SetParallaxMaterialVars(EventHandler.currentParallaxBody.parallaxMaterials);
-                if (onDominantBodyChanged != null)
-                {
-                    onDominantBodyChanged(FlightGlobals.currentMainBody);
-                }
+            }
+            if (FlightGlobals.currentMainBody != null)
+            {
+                currentPlanetOrigin = FlightGlobals.currentMainBody.transform.position;
+            }
+            else
+            {
+                currentPlanetOrigin = Vector3.zero;
             }
 
             // Get the camera position and frustum planes

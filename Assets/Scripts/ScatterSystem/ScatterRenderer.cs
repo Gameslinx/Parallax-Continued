@@ -109,6 +109,14 @@ public class ScatterRenderer : MonoBehaviour
         Graphics.DrawMeshInstancedIndirect(meshLOD0, 0, instancedMaterialLOD0, rendererBounds, indirectArgsLOD0, 0, null, castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, receiveShadows, 0, null);
         Graphics.DrawMeshInstancedIndirect(meshLOD1, 0, instancedMaterialLOD1, rendererBounds, indirectArgsLOD1, 0, null, castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, receiveShadows, 0, null);
         Graphics.DrawMeshInstancedIndirect(meshLOD2, 0, instancedMaterialLOD2, rendererBounds, indirectArgsLOD2, 0, null, castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, receiveShadows, 0, null);
+
+        if (scatterComponents.Count > 0 )
+        {
+            instancedMaterialLOD0.SetVector("_PlanetOrigin", scatterComponents[0]._PlanetOrigin);
+            instancedMaterialLOD1.SetVector("_PlanetOrigin", scatterComponents[0]._PlanetOrigin);
+            instancedMaterialLOD2.SetVector("_PlanetOrigin", scatterComponents[0]._PlanetOrigin);
+        }
+        
     }
     void Cleanup()
     {

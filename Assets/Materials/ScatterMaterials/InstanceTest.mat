@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: InstanceTest
   m_Shader: {fileID: 4800000, guid: c26be5ad2dbe5714e9df106a69036cfa, type: 3}
-  m_ShaderKeywords: 
+  m_ShaderKeywords: TWO_SIDED
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -44,7 +44,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: cc5b2cfa5cc22fa408ba46603b97bfaa, type: 3}
+        m_Texture: {fileID: 2800000, guid: 95f5fa3b0b2e8be41b451b0453cb4906, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -88,6 +88,9 @@ Material:
     - _SpecularIntensity: 0.7
     - _SpecularPower: 35
     - _SrcBlend: 1
+    - _SubsurfaceIntensity: 1.84
+    - _SubsurfaceNormalInfluence: 0
+    - _SubsurfacePower: 2
     - _Transmission: 0.5
     - _UVSec: 0
     - _WindHeightFactor: 2
@@ -99,4 +102,5 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _FresnelColor: {r: 0.5248413, g: 0.6421588, b: 0.77800006, a: 1}
-    - _PlanetOrigin: {r: 5, g: 0, b: -5, a: 1}
+    - _PlanetOrigin: {r: 5, g: -10000, b: -5, a: 0}
+    - _SubsurfaceColor: {r: 0.6417675, g: 0.6792453, b: 0.2979708, a: 1}

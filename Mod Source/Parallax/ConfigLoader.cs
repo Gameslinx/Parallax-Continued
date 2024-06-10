@@ -80,12 +80,99 @@ namespace Parallax
         {
             return GameDatabase.Instance.GetConfigs(name)[0];
         }
+        public static UrlDir.UrlConfig GetPlanetNode(string planetName)
+        {
+            UrlDir.UrlConfig[] baseConfig = GetConfigsByName("ParallaxScatters");
+            return baseConfig.Where((x) => x.config.GetValue("body") == planetName).FirstOrDefault();
+        }
+        public static ConfigNode GetScatterConfigNode(string planetName, string scatterName, bool isShared = false)
+        {
+            return GetScatterConfigNode(planetName, scatterName, GetPlanetNode(planetName), isShared);
+        }
+        public static ConfigNode GetScatterConfigNode(string planetName, string scatterName, UrlDir.UrlConfig baseConfig, bool isShared = false)
+        {
+            // Gets the scatter node
+            if (!isShared)
+            {
+                // Gets the scatter node
+                return baseConfig.config.GetNodes("Scatter").Where((x) => (planetName + "-" + x.GetValue("name")) == scatterName).FirstOrDefault();
+            }
+            else
+            {
+                return baseConfig.config.GetNodes("SharedScatter").Where((x) => (planetName + "-" + x.GetValue("name")) == scatterName).FirstOrDefault();
+            }
+        }
+        // Used to preserve a scatter's position in the config
+        public static void DeterminePrecedingAndTrailingNodes(ConfigNode parent, ConfigNode node, List<ConfigNode> preceding, List<ConfigNode> trailing)
+        {
+            bool isPreceding = true;
+            ConfigNode[] nodes = parent.GetNodes();
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                ConfigNode searchNode = nodes[i];
+                if (searchNode == node)
+                {
+                    isPreceding = false;
+                    continue;
+                }
+                if (isPreceding)
+                {
+                    preceding.Add(searchNode);
+                }
+                else
+                {
+                    trailing.Add(searchNode);
+                }
+            }
+        }
+        // Preserve order
+        public static void OverwriteConfigNode(ConfigNode parentNode, ConfigNode newNode, List<ConfigNode> preceding, List<ConfigNode> trailing)
+        {
+            parentNode.RemoveNodes("Scatter");
+            parentNode.RemoveNodes("SharedScatter");
+            
+            foreach (ConfigNode node in preceding)
+            {
+                parentNode.AddNode(node);
+            }
+
+            parentNode.AddNode(newNode);
+
+            foreach (ConfigNode node in trailing)
+            {
+                parentNode.AddNode(node);
+            }
+        }
+        /// <summary>
+        /// Save a config node. Optionally include the node name in the saved file (defaults true). Returns true if save was successful
+        /// </summary>
+        /// <param name="node"></param>
+        /// <param name="path"></param>
+        /// <param name="createParent"></param>
+        /// <returns></returns>
+        public static bool SaveConfigNode(ConfigNode node, string path, bool createParent = true)
+        {
+            ConfigNode nodeToSave = node;
+            if (createParent)
+            {
+                string nodeName = node.name;
+                ConfigNode parentNode = new ConfigNode(nodeName);
+                parentNode.AddNode(node);
+                nodeToSave = parentNode;
+            }
+            return nodeToSave.Save(path);
+        }
         public static void InitializeGlobalSettings(UrlDir.UrlConfig config)
         {
             ConfigNode terrainSettingsNode = config.config.GetNode("TerrainShaderSettings");
             parallaxGlobalSettings.terrainGlobalSettings.maxTessellation = float.Parse(terrainSettingsNode.GetValue("maxTessellation"));
             parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength = float.Parse(terrainSettingsNode.GetValue("tessellationEdgeLength"));
             parallaxGlobalSettings.terrainGlobalSettings.maxTessellationRange = float.Parse(terrainSettingsNode.GetValue("maxTessellationRange"));
+
+            ConfigNode scatterSettingsNode = config.config.GetNode("ScatterSystemSettings");
+            parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier = float.Parse(scatterSettingsNode.GetValue("densityMultiplier"));
+            parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier = float.Parse(scatterSettingsNode.GetValue("rangeMultiplier"));
+            parallaxGlobalSettings.scatterGlobalSettings.fadeOutStartRange = float.Parse(scatterSettingsNode.GetValue("fadeOutStartRange"));
 
             ConfigNode debugSettingsNode = config.config.GetNode("DebugSettings");
             parallaxGlobalSettings.debugGlobalSettings.wireframeTerrain = bool.Parse(debugSettingsNode.GetValue("wireframeTerrain"));
@@ -501,6 +588,7 @@ namespace Parallax
                 lod.materialOverride.shader = baseMaterial.shader;
                 lod.materialOverride.shaderProperties = baseMaterial.shaderProperties.Clone() as ShaderProperties;
                 lod.materialOverride.shaderKeywords = baseMaterial.shaderKeywords;
+                lod.inheritsMaterial = true;
 
                 // Now work out what has been replaced
 
@@ -573,6 +661,7 @@ namespace Parallax
             if (materialNode != null)
             {
                 lod.materialOverride = GetMaterialParams(planetName, materialNode);
+                lod.inheritsMaterial = false;
             }
 
             return lod;

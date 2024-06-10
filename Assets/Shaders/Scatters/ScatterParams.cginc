@@ -69,6 +69,9 @@ float _CullLimit;
 // Range before cutting off entirely
 float _MaxRange;
 
+// Range before scatters begin to cut off
+float _RangeFadeStart;
+
 float4x4 _ObjectToWorldMatrix;
 
 // Lod splits - normalised

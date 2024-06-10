@@ -63,6 +63,8 @@ public class TerrainScatters : MonoBehaviour
     [Range(1, 100)] public int _PopulationMultiplier = 1;
     [Range(0.001f, 1.0f)] public float _SpawnChance = 1;
     [Range(0.0f, 1.0f)] public float _MaxNormalDeviation;
+    public Vector3 _MinScale = Vector3.one;
+    public Vector3 _MaxScale = Vector3.one;
 
     // Distribution params that don't require a full reinitialization
     public bool requiresFullRestart = false;
@@ -154,9 +156,9 @@ public class TerrainScatters : MonoBehaviour
         scatterShader.SetFloat("_MaxAltitude", 100);
         scatterShader.SetFloat("_AltitudeFadeRange", 1);
         scatterShader.SetFloat("_NoiseCutoffThreshold", 0.5f);
-        scatterShader.SetVector("_MinScale", Vector3.one * 0.05f);
-        scatterShader.SetVector("_MaxScale", Vector3.one * 0.05f);
-
+        scatterShader.SetVector("_MinScale", _MinScale);
+        scatterShader.SetVector("_MaxScale", _MaxScale);
+        scatterShader.SetFloat("_RangeFadeStart", 1);
 
         // Create biome texture
         Texture2D biomeTex = new Texture2D(1, 1, TextureFormat.ARGB32, false);

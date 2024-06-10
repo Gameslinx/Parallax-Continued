@@ -24,7 +24,7 @@ namespace Parallax.Tools
                 string basePath = KSPUtil.ApplicationRootPath + "GameData/Parallax/Exports/Models/";
                 foreach (ParallaxScatterBody body in ConfigLoader.parallaxScatterBodies.Values)
                 {
-                    foreach (Scatter scatter in body.fastScatters)
+                    foreach (Scatter scatter in body.scatters.Values)
                     {
                         string lod0Path = scatter.modelPath;
                         string lod1Path = scatter.distributionParams.lod1.modelPathOverride;

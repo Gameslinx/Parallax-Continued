@@ -137,7 +137,7 @@ namespace Parallax
         void Initialize()
         {
             // Create output buffers - Evaluate() function on quads will will these
-            int arbitraryMaxCount = 250000;
+            int arbitraryMaxCount = 7500;
             if (!scatter.isShared) 
             {
                 outputLOD0 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
@@ -216,6 +216,11 @@ namespace Parallax
             ComputeBuffer.CopyCount(outputLOD0, indirectArgsLOD0, 4);
             ComputeBuffer.CopyCount(outputLOD1, indirectArgsLOD1, 4);
             ComputeBuffer.CopyCount(outputLOD2, indirectArgsLOD2, 4);
+
+            // Set required vars - Make these global
+            instancedMaterialLOD0.SetVector("_PlanetOrigin", RuntimeOperations.currentPlanetOrigin);
+            instancedMaterialLOD1.SetVector("_PlanetOrigin", RuntimeOperations.currentPlanetOrigin);
+            instancedMaterialLOD2.SetVector("_PlanetOrigin", RuntimeOperations.currentPlanetOrigin);
 
             // Render instanced data
             Graphics.DrawMeshInstancedIndirect(meshLOD0, 0, instancedMaterialLOD0, rendererBounds, indirectArgsLOD0, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, Camera.main);

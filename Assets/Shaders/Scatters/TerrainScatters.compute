@@ -193,12 +193,19 @@ void Evaluate(uint3 id : SV_DispatchThreadID)
     
 	// Get distance from camera to object
     float lodDist = distance(_WorldSpaceCameraPosition, worldPos) / _MaxRange; //Percentage to max range
-
+    
+    
     if (lodDist > 1)
     {
         return;
     }
     if (!(all(cd0 >= 0) && all(cd1 >= 0)))
+    {
+        return;
+    }
+    
+    bool fadeRangeCull = IsOutOfRangeEarly(lodDist, pos.localPos);
+    if (fadeRangeCull)
     {
         return;
     }
