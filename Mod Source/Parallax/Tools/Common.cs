@@ -489,12 +489,23 @@ namespace Parallax
             ConfigNode materialNode = scatterNode.AddNode("Material");
             ConfigNode distributionNode = scatterNode.AddNode("Distribution");
 
+            PopulateUnused();
+
             PopulateScatterNode(scatterNode);
             PopulateOptimizationNode(optimizationNode);
             PopulateMaterialNode(materialNode, materialParams);
             PopulateDistributionNode(distributionNode);
 
             return scatterNode;
+        }
+        void PopulateUnused()
+        {
+            this.distributionParams.lod1.range = parent.distributionParams.lod1.range;
+            this.distributionParams.lod2.range = parent.distributionParams.lod2.range;
+
+            this.optimizationParams.frustumCullingSafetyMargin = parent.optimizationParams.frustumCullingSafetyMargin;
+            this.optimizationParams.frustumCullingIgnoreRadius = parent.optimizationParams.frustumCullingIgnoreRadius;
+            this.optimizationParams.maxRenderableObjects = parent.optimizationParams.maxRenderableObjects;
         }
         protected override void PopulateDistributionNode(ConfigNode node)
         {

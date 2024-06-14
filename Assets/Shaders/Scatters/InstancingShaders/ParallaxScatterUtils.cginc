@@ -98,6 +98,14 @@ float3 GetUnalignedVectorComponents(float3 a, float3 b)
     #define GET_SPECULAR(resultColor, uv)
 #endif
 
+#if defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
+    #define GET_THICKNESS(uv)               float normalisedThickness = tex2D(_ThicknessMap, uv).r;
+    #define THICKNESS                       normalisedThickness
+#else
+    #define GET_THICKNESS(uv)
+    #define THICKNESS                       0
+#endif
+
 // Billboard
 void Billboard(inout float4 vertex, inout float3 normal, inout float4 tangent, float4x4 mat)
 {
@@ -123,7 +131,7 @@ void Billboard(inout float4 vertex, inout float3 normal, inout float4 tangent, f
     // Output local space position
 }
 
-#if defined (BILLBOARD)
+#if defined (BILLBOARD) || defined (BILLBOARD_USE_MESH_NORMALS)
     #define BILLBOARD_IF_ENABLED(vertex, normal, tangent, objectToWorldMatrix)    Billboard(vertex, normal, tangent, objectToWorldMatrix);
 #else
     #define BILLBOARD_IF_ENABLED(vertex, normal, tangent, objectToWorldMatrix)
@@ -144,10 +152,14 @@ void Billboard(inout float4 vertex, inout float3 normal, inout float4 tangent, f
 //
 
 // ADDITIONAL_LIGHTING_PARAMS must include every possible param that can be passed in, but only needs to pass in the required ones for this effect
-#if defined (SUBSURFACE_SCATTERING)
+#if defined (SUBSURFACE_SCATTERING) || defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
     // Only subsurface scattering defined
-    #define ADDITIONAL_LIGHTING_PARAMS(worldPos) , worldPos
+    #if defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
+        #define ADDITIONAL_LIGHTING_PARAMS(worldPos, thickness) , worldPos, thickness
+    #else
+        #define ADDITIONAL_LIGHTING_PARAMS(worldPos, thickness) , worldPos, 0
+    #endif
+    
 #else
-    #define ADDITIONAL_LIGHTING_PARAMS(worldPos)
+    #define ADDITIONAL_LIGHTING_PARAMS(worldPos, thickness)
 #endif
-

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
 using UnityEngine;
+using static Targeting;
 
 //
 // Config upgrade notes:
@@ -83,7 +84,7 @@ namespace Parallax
         public static UrlDir.UrlConfig GetPlanetNode(string planetName)
         {
             UrlDir.UrlConfig[] baseConfig = GetConfigsByName("ParallaxScatters");
-            return baseConfig.Where((x) => x.config.GetValue("body") == planetName).FirstOrDefault();
+            return baseConfig.FirstOrDefault(x => x.config.GetValue("body") == planetName);
         }
         public static ConfigNode GetScatterConfigNode(string planetName, string scatterName, bool isShared = false)
         {
@@ -95,11 +96,11 @@ namespace Parallax
             if (!isShared)
             {
                 // Gets the scatter node
-                return baseConfig.config.GetNodes("Scatter").Where((x) => (planetName + "-" + x.GetValue("name")) == scatterName).FirstOrDefault();
+                return baseConfig.config.GetNodes("Scatter").FirstOrDefault(x => (planetName + "-" + x.GetValue("name")) == scatterName);
             }
             else
             {
-                return baseConfig.config.GetNodes("SharedScatter").Where((x) => (planetName + "-" + x.GetValue("name")) == scatterName).FirstOrDefault();
+                return baseConfig.config.GetNodes("SharedScatter").FirstOrDefault(x => (planetName + "-" + x.GetValue("name")) == scatterName);
             }
         }
         // Used to preserve a scatter's position in the config
@@ -107,9 +108,8 @@ namespace Parallax
         {
             bool isPreceding = true;
             ConfigNode[] nodes = parent.GetNodes();
-            for (int i = 0; i < nodes.Length; i++)
+            foreach (ConfigNode searchNode in nodes)
             {
-                ConfigNode searchNode = nodes[i];
                 if (searchNode == node)
                 {
                     isPreceding = false;
@@ -152,15 +152,14 @@ namespace Parallax
         /// <returns></returns>
         public static bool SaveConfigNode(ConfigNode node, string path, bool createParent = true)
         {
-            ConfigNode nodeToSave = node;
-            if (createParent)
+            if (!createParent)
             {
-                string nodeName = node.name;
-                ConfigNode parentNode = new ConfigNode(nodeName);
-                parentNode.AddNode(node);
-                nodeToSave = parentNode;
+                return node.Save(path);
             }
-            return nodeToSave.Save(path);
+            string nodeName = node.name;
+            ConfigNode parentNode = new ConfigNode(nodeName);
+            parentNode.AddNode(node);
+            return parentNode.Save(path);
         }
         public static void InitializeGlobalSettings(UrlDir.UrlConfig config)
         {
@@ -183,17 +182,15 @@ namespace Parallax
         public static void InitializeObjectPools(ParallaxSettings settings)
         {
             ComputeShader templateComputeShader = Instantiate(AssetBundleLoader.parallaxComputeShaders["TerrainScatters"]);
-            long mem = GC.GetTotalMemory(true);
             computeShaderPool = new ObjectPool<ComputeShader>(templateComputeShader, settings.objectPoolSettings.cachedComputeShaderCount);
-            long diff = GC.GetTotalMemory(true) - mem;
-            
-            Debug.Log("Memory used by compute shaders estimate: " + diff.ToString());
         }
+        // Looks up a shader in the shader bank
         public static ShaderProperties LookupTemplateConfig(UrlDir.UrlConfig config, string shaderName, List<string> keywords)
         {
             // Config starts at 'ParallaxScatterShaderProperties'
             // 'ParallaxShader'
             ShaderProperties shaderProperties = new ShaderProperties();
+            List<string> keywordsToRemove = new List<string>();
 
             ConfigNode[] allShaders = config.config.GetNodes("ParallaxShader");
             foreach (ConfigNode node in allShaders)
@@ -207,9 +204,11 @@ namespace Parallax
                     ConfigNode globalPropertiesNode = node.GetNode("GlobalProperties");
                     InitializeTemplateConfig(globalPropertiesNode, shaderProperties);
 
+                    // "Keywords"
                     ConfigNode keywordsNode = node.GetNode("Keywords");
                     foreach (string keyword in keywords)
                     {
+                        // The keywords node 
                         ConfigNode keywordNode = keywordsNode.GetNode(keyword);
 
                         if (keywordNode == null) 
@@ -218,11 +217,27 @@ namespace Parallax
                             continue;
                         }
 
+                        string supersededBy = keywordNode.GetValue("supersededBy");
+                        if (supersededBy != null)
+                        {
+                            // This keyword is overridden by another keyword. Now check if that keyword is enabled on the shader (linear search)
+                            if (keywords.Contains(supersededBy))
+                            {
+                                ParallaxDebug.Log("This keyword is superseded by " + supersededBy + ", skipping!");
+                                keywordsToRemove.Add(keyword);
+                                continue;
+                            }
+                        }
+
                         // Initialize the properties this keyword adds
                         InitializeTemplateConfig(keywordNode, shaderProperties);
                     }
                 }
             }
+
+            // Now remove the keywords that got overridden from the keywords list
+            keywords.RemoveAll(item => keywordsToRemove.Contains(item));
+
             return shaderProperties;
         }
         // Template configs tell Parallax what variable names and type are supported by the shader
@@ -309,8 +324,7 @@ namespace Parallax
             foreach (string propertyName in floatProperties)
             {
                 string configValue = bodyNode.GetValue(propertyName);
-                object result = 0;
-                ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(float), out result);
+                ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(float), out object result);
                 ParallaxDebug.Log("Parsing float name: " + configValue);
                 ParallaxDebug.Log("Property name: " + propertyName);
                 body.terrainShaderProperties.shaderFloats[propertyName] = (float)result;
@@ -318,8 +332,7 @@ namespace Parallax
             foreach (string propertyName in vectorProperties)
             {
                 string configValue = bodyNode.GetValue(propertyName);
-                object result = Vector3.zero;
-                ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(Vector3), out result);
+                ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(Vector3), out object result);
                 ParallaxDebug.Log("Parsing vector name: " + configValue);
                 ParallaxDebug.Log("Property name: " + propertyName);
                 body.terrainShaderProperties.shaderVectors[propertyName] = (Vector3)result;
@@ -327,8 +340,7 @@ namespace Parallax
             foreach (string propertyName in colorProperties)
             {
                 string configValue = bodyNode.GetValue(propertyName);
-                object result = Color.black;
-                ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(Color), out result);
+                ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(Color), out object result);
                 ParallaxDebug.Log("Parsing color name: " + configValue);
                 ParallaxDebug.Log("Property name: " + propertyName);
                 body.terrainShaderProperties.shaderColors[propertyName] = (Color)result;
@@ -336,8 +348,7 @@ namespace Parallax
             foreach (string propertyName in intProperties)
             {
                 string configValue = bodyNode.GetValue(propertyName);
-                object result = 0;
-                ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(int), out result);
+                ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(int), out object result);
                 ParallaxDebug.Log("Parsing float name: " + configValue);
                 ParallaxDebug.Log("Property name: " + propertyName);
                 body.terrainShaderProperties.shaderFloats[propertyName] = (int)result;
@@ -468,11 +479,13 @@ namespace Parallax
 
             subdivisionParams.subdivisionMode = (SubdivisionMode)Enum.Parse(typeof(SubdivisionMode), subdivisionRangeMode);
 
-            if (subdivisionParams.subdivisionMode != SubdivisionMode.noSubdivision)
+            if (subdivisionParams.subdivisionMode == SubdivisionMode.noSubdivision)
             {
-                string subdivisionLevel = ConfigUtils.TryGetConfigValue(node, "subdivisionLevel");
-                subdivisionParams.maxSubdivisionLevel = (int)ConfigUtils.TryParse(planetName, "subdivisionLevel", subdivisionLevel, typeof(int));
+                return subdivisionParams;
             }
+            
+            string subdivisionLevel = ConfigUtils.TryGetConfigValue(node, "subdivisionLevel");
+            subdivisionParams.maxSubdivisionLevel = (int)ConfigUtils.TryParse(planetName, "subdivisionLevel", subdivisionLevel, typeof(int));
 
             return subdivisionParams;
         }
@@ -550,9 +563,11 @@ namespace Parallax
         }
         public static BiomeBlacklistParams GetBiomeBlacklistParams(string planetName, ConfigNode node)
         {
-            BiomeBlacklistParams blacklist = new BiomeBlacklistParams();
-            blacklist.blacklistedBiomes = new List<string>();
-            blacklist.fastBlacklistedBiomes = new HashSet<string>();
+            BiomeBlacklistParams blacklist = new BiomeBlacklistParams
+            {
+                blacklistedBiomes = new List<string>(),
+                fastBlacklistedBiomes = new HashSet<string>()
+            };
 
             ConfigNode blacklistNode = node.GetNode("BiomeBlacklist");
             if (blacklistNode == null)
@@ -587,16 +602,15 @@ namespace Parallax
                 lod.materialOverride = new MaterialParams();
                 lod.materialOverride.shader = baseMaterial.shader;
                 lod.materialOverride.shaderProperties = baseMaterial.shaderProperties.Clone() as ShaderProperties;
-                lod.materialOverride.shaderKeywords = baseMaterial.shaderKeywords;
+                lod.materialOverride.shaderKeywords = new List<string>(baseMaterial.shaderKeywords);
                 lod.inheritsMaterial = true;
 
                 // Now work out what has been replaced
 
                 // Textures
                 string[] textureKeys = lod.materialOverride.shaderProperties.shaderTextures.Keys.ToArray();
-                for (int i = 0; i < textureKeys.Length; i++)
+                foreach (string key in textureKeys)
                 {
-                    string key = textureKeys[i];
                     string configValue = overrideNode.GetValue(key);
                     if (configValue != null)
                     {
@@ -606,9 +620,8 @@ namespace Parallax
 
                 // Floats
                 string[] floatKeys = lod.materialOverride.shaderProperties.shaderFloats.Keys.ToArray();
-                for (int i = 0; i < floatKeys.Length; i++)
+                foreach (string key in floatKeys)
                 {
-                    string key = floatKeys[i];
                     string configValue = overrideNode.GetValue(key);
                     if (configValue != null)
                     {
@@ -618,9 +631,8 @@ namespace Parallax
 
                 // Vectors
                 string[] vectorKeys = lod.materialOverride.shaderProperties.shaderVectors.Keys.ToArray();
-                for (int i = 0; i < vectorKeys.Length; i++)
+                foreach (string key in vectorKeys)
                 {
-                    string key = vectorKeys[i];
                     string configValue = overrideNode.GetValue(key);
                     if (configValue != null)
                     {
@@ -630,9 +642,8 @@ namespace Parallax
 
                 // Colors
                 string[] colorKeys = lod.materialOverride.shaderProperties.shaderColors.Keys.ToArray();
-                for (int i = 0; i < colorKeys.Length; i++)
+                foreach (string key in colorKeys)
                 {
-                    string key = colorKeys[i];
                     string configValue = overrideNode.GetValue(key);
                     if (configValue != null)
                     {
@@ -642,9 +653,8 @@ namespace Parallax
 
                 // Ints
                 string[] intKeys = lod.materialOverride.shaderProperties.shaderInts.Keys.ToArray();
-                for (int i = 0; i < intKeys.Length; i++)
+                foreach (string key in intKeys)
                 {
-                    string key = intKeys[i];
                     string configValue = overrideNode.GetValue(key);
                     if (configValue != null)
                     {
@@ -690,45 +700,40 @@ namespace Parallax
 
             // Textures
             string[] textureKeys = materialParams.shaderProperties.shaderTextures.Keys.ToArray();
-            for (int i = 0; i < textureKeys.Length; i++)
+            foreach (string key in textureKeys)
             {
-                string key = textureKeys[i];
                 string configValue = ConfigUtils.TryGetConfigValue(node, key);
                 materialParams.shaderProperties.shaderTextures[key] = (string)ConfigUtils.TryParse(planetName, key, configValue, typeof(string));
             }
 
             // Floats
             string[] floatKeys = materialParams.shaderProperties.shaderFloats.Keys.ToArray();
-            for (int i = 0; i < floatKeys.Length; i++)
+            foreach (string key in floatKeys)
             {
-                string key = floatKeys[i];
                 string configValue = ConfigUtils.TryGetConfigValue(node, key);
                 materialParams.shaderProperties.shaderFloats[key] = (float)ConfigUtils.TryParse(planetName, key, configValue, typeof(float));
             }
 
             // Vectors
             string[] vectorKeys = materialParams.shaderProperties.shaderVectors.Keys.ToArray();
-            for (int i = 0; i < vectorKeys.Length; i++)
+            foreach (string key in vectorKeys)
             {
-                string key = vectorKeys[i];
                 string configValue = ConfigUtils.TryGetConfigValue(node, key);
                 materialParams.shaderProperties.shaderVectors[key] = (Vector3)ConfigUtils.TryParse(planetName, key, configValue, typeof(Vector3));
             }
 
             // Colors
             string[] colorKeys = materialParams.shaderProperties.shaderColors.Keys.ToArray();
-            for (int i = 0; i < colorKeys.Length; i++)
+            foreach (string key in colorKeys)
             {
-                string key = colorKeys[i];
                 string configValue = ConfigUtils.TryGetConfigValue(node, key);
                 materialParams.shaderProperties.shaderColors[key] = (Color)ConfigUtils.TryParse(planetName, key, configValue, typeof(Color));
             }
 
             // Ints
             string[] intKeys = materialParams.shaderProperties.shaderInts.Keys.ToArray();
-            for (int i = 0; i < intKeys.Length; i++)
+            foreach (string key in intKeys)
             {
-                string key = intKeys[i];
                 string configValue = ConfigUtils.TryGetConfigValue(node, key);
                 materialParams.shaderProperties.shaderInts[key] = (int)ConfigUtils.TryParse(planetName, key, configValue, typeof(int));
             }

@@ -45,6 +45,8 @@ int _NumberOfBiomes;
 //  Noise params
 //
 
+int _InvertNoise;
+
 float _NoiseFrequency;
 int _NoiseSeed;
 float _NoiseLacunarity;

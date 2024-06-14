@@ -63,6 +63,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _ThicknessMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _WindMap:
         m_Texture: {fileID: 2800000, guid: c2eae859038353842b576359166f53bf, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -89,6 +93,8 @@ Material:
     - _SpecularPower: 3
     - _SrcBlend: 1
     - _SubsurfaceIntensity: 1
+    - _SubsurfaceMax: 1
+    - _SubsurfaceMin: 0
     - _SubsurfaceNormalInfluence: 0.5
     - _SubsurfacePower: 2
     - _Transmission: 0.5

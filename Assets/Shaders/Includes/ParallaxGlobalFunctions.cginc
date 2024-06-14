@@ -69,7 +69,7 @@ float FresnelEffect(float3 worldNormal, float3 viewDir, float power)
     #endif
 #endif
 
-#if defined (SUBSURFACE_SCATTERING)
+#if defined (SUBSURFACE_SCATTERING) || defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
 float3 SubsurfaceScattering(float3 worldPos, float3 worldNormal, float3 viewDir, float3 lightDir)
 {
     float3 NplusL = -normalize(worldNormal * _SubsurfaceNormalInfluence + lightDir);
@@ -84,8 +84,8 @@ float3 SubsurfaceScattering(float3 worldPos, float3 worldNormal, float3 viewDir,
 #endif
 
 // The terrain shader will never use subsurface scattering. This is reserved for the scatter shader
-#if defined (SUBSURFACE_SCATTERING)
-    #define LIGHTING_INPUT  float4 col, float3 worldNormal, float3 viewDir, float shadow, float3 lightDir, float3 worldPos
+#if defined (SUBSURFACE_SCATTERING) || defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
+    #define LIGHTING_INPUT  float4 col, float3 worldNormal, float3 viewDir, float shadow, float3 lightDir, float3 worldPos, float thickness
 #else
     #define LIGHTING_INPUT  float4 col, float3 worldNormal, float3 viewDir, float shadow, float3 lightDir
 #endif
@@ -111,8 +111,11 @@ float3 CalculateLighting(LIGHTING_INPUT)
     reflection *= shadow + UNITY_LIGHTMODEL_AMBIENT;
     float3 scattering = 0;
     
-    #if defined (SUBSURFACE_SCATTERING)
-    scattering = SubsurfaceScattering(worldPos, worldNormal, viewDir, lightDir);
+    #if defined (SUBSURFACE_SCATTERING) || defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
+        scattering = SubsurfaceScattering(worldPos, worldNormal, viewDir, lightDir);
+        #if defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
+            scattering *= lerp(_SubsurfaceMax, _SubsurfaceMin, thickness);
+        #endif
     #endif
     
     return diffuse + ambient + specular + reflection + scattering;

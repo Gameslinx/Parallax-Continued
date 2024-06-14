@@ -46,7 +46,7 @@ namespace Parallax
 
         void Start()
         {
-            window = new Rect(0, 0, 450, 100);
+            window = new Rect(Screen.width / 2 - 450 / 2, Screen.height / 2 - 50, 450, 100);
 
             activeButton = new GUIStyle(HighLogic.Skin.button);
             activeButton.normal.textColor = HighLogic.Skin.label.normal.textColor;
@@ -405,12 +405,14 @@ namespace Parallax
                                 RemoveKeywordValues(scatter.distributionParams.lod1.materialOverride.shaderProperties, node);
                                 scatter.distributionParams.lod1.materialOverride.shaderKeywords.Remove(keywordName);
                                 renderer.instancedMaterialLOD1.DisableKeyword(keywordName);
+                                renderer.SetLOD1MaterialParams();
                             }
                             if (isBaseMaterial && scatter.distributionParams.lod2.inheritsMaterial)
                             {
                                 RemoveKeywordValues(scatter.distributionParams.lod2.materialOverride.shaderProperties, node);
                                 scatter.distributionParams.lod2.materialOverride.shaderKeywords.Remove(keywordName);
                                 renderer.instancedMaterialLOD2.DisableKeyword(keywordName);
+                                renderer.SetLOD2MaterialParams();
                             }
                         }
                         if (enabled)
@@ -425,23 +427,20 @@ namespace Parallax
                                 scatter.distributionParams.lod1.materialOverride.shaderKeywords.Add(keywordName);
                                 ConfigLoader.InitializeTemplateConfig(node, scatter.distributionParams.lod1.materialOverride.shaderProperties);
                                 renderer.instancedMaterialLOD1.EnableKeyword(keywordName);
+                                renderer.SetLOD1MaterialParams();
                             }
                             if (isBaseMaterial && scatter.distributionParams.lod2.inheritsMaterial)
                             {
                                 scatter.distributionParams.lod2.materialOverride.shaderKeywords.Add(keywordName);
                                 ConfigLoader.InitializeTemplateConfig(node, scatter.distributionParams.lod2.materialOverride.shaderProperties);
                                 renderer.instancedMaterialLOD2.EnableKeyword(keywordName);
+                                renderer.SetLOD2MaterialParams();
                             }
                         }
                         callback();
                     }
                 }
             }
-        }
-        // If the main material undergoes a keyword change, we need to determine if this 
-        static void UpdateLOD1Material(Scatter scatter, MaterialParams materialParams, string keywordName, bool enabled)
-        {
-
         }
         static void ProcessSaveButton(Scatter scatter)
         {

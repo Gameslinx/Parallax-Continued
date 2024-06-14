@@ -2,7 +2,13 @@
 sampler2D _BumpMap;
 
 // If altnerative specular texture is defined
+#if defined (ALTERNATE_SPECULAR_TEXTURE)
 sampler2D _SpecularTexture;
+#endif
+
+#if defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
+sampler2D _ThicknessMap;
+#endif
 
 float2 _MainTex_ST;
 float2 _BumpMap_ST;
@@ -27,3 +33,5 @@ float _SubsurfaceNormalInfluence;
 float _SubsurfacePower;
 float _SubsurfaceIntensity;
 float3 _SubsurfaceColor;
+float _SubsurfaceMax;
+float _SubsurfaceMin;

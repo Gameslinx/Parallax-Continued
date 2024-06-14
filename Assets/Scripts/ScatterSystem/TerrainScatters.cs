@@ -159,6 +159,7 @@ public class TerrainScatters : MonoBehaviour
         scatterShader.SetVector("_MinScale", _MinScale);
         scatterShader.SetVector("_MaxScale", _MaxScale);
         scatterShader.SetFloat("_RangeFadeStart", 1);
+        scatterShader.SetInt("_InvertNoise", 0);
 
         // Create biome texture
         Texture2D biomeTex = new Texture2D(1, 1, TextureFormat.ARGB32, false);

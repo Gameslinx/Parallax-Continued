@@ -29,7 +29,7 @@ namespace Parallax
     // Config loader try-parse vars
     // Would be nicer if it was neater but it does the job
     // I'm not a huge fan of writing extensive config loaders
-    public class ConfigUtils
+    public static class ConfigUtils
     {
         public static void TryParse(string planetName, string name, string value, Type type, out object result)
         {

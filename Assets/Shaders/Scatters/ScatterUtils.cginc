@@ -246,14 +246,7 @@ float LerpStep(float a, float b, float t)
 //  Get noise values
 //
 
-#if defined (NOISEMODE_PERLIN)
-
-float GetNoiseValue(float3 worldPos)
-{
-    return SimplexPerlin3D(worldPos) * 1.5f;
-}
-
-#elif defined (NOISEMODE_CELLULAR)
+#if defined (NOISEMODE_CELLULAR)
 
 float GetNoiseValue(float3 worldPos)
 {
@@ -269,9 +262,10 @@ float GetNoiseValue(float3 worldPos)
     
 #else
 
+// Default to Perlin noise
 float GetNoiseValue(float3 worldPos)
 {
-    return 1;
+    return SimplexPerlin3D(worldPos) * 1.5f;
 }
 
 #endif
@@ -298,11 +292,14 @@ float Noise(float3 dirFromCenter)
         noiseValue += GetNoiseValue(dirFromCenter * frequency) * amplitude;
     }
     
-    #if defined (INVERT_NOISE)
-    noiseValue = 1 - abs(noiseValue);
-    #else
-    noiseValue = noiseValue * 0.5f + 0.5f;
-    #endif
+    if (_InvertNoise == 1)
+    {
+        noiseValue = 1 - abs(noiseValue);
+    }
+    else
+    {
+        noiseValue = noiseValue * 0.5f + 0.5f;
+    }
     
     return noiseValue;
 }

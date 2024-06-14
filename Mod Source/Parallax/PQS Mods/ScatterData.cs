@@ -96,6 +96,9 @@ namespace Parallax
 
             SetDistributionVars();
         }
+        //
+        //  NOTE: PARITY MUST BE MAINTAINED WITH TerrainScatters.compute KERNEL DEFINITIONS
+        //
         public int GetDistributeKernel()
         {
             int kernel = 0;
@@ -105,24 +108,24 @@ namespace Parallax
             {
                 case NoiseType.simplexPerlin:
                 {
-                    kernel = 1;
+                    kernel = 0;
                     break;
                 }
                 case NoiseType.simplexCellular:
                 {
-                    kernel = 2;
+                    kernel = 1;
                     break;
                 }
                 case NoiseType.simplexPolkaDot:
                 {
-                    kernel = 3;
+                    kernel = 2;
                     break;
                 }
             }
             if (scatter.noiseParams.inverted)
             {
                 // Use the kernels with inverted noise
-                kernel += 3;
+                kernel = 3;
             }
             return kernel;
         }
@@ -139,6 +142,7 @@ namespace Parallax
             scatterShader.SetVector("_MaxScale", scatter.distributionParams.maxScale);
             scatterShader.SetFloat("_ScaleRandomness", scatter.distributionParams.scaleRandomness);
 
+            scatterShader.SetInt("_InvertNoise", scatter.noiseParams.inverted ? 1 : 0);
             scatterShader.SetInt("_NoiseOctaves", scatter.noiseParams.octaves);
             scatterShader.SetFloat("_NoiseFrequency", scatter.noiseParams.frequency);
             scatterShader.SetFloat("_NoiseLacunarity", scatter.noiseParams.lacunarity);

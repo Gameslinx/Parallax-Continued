@@ -13,6 +13,7 @@ Shader "Custom/ParallaxInstancedSolid"
         _MainTex("Main Tex", 2D) = "white" {}
         _BumpMap("Bump Map", 2D) = "bump" {}
         _SpecularTexture("Alt Specular Map", 2D) = "black" {}
+        _ThicknessMap("Subsurface Thickness Map", 2D) = "black" {}
 
         // Wind params
         [Space(10)]
@@ -46,6 +47,8 @@ Shader "Custom/ParallaxInstancedSolid"
         _SubsurfacePower("Subsurface Power", Range(0.001, 6)) = 2
         _SubsurfaceIntensity("Subsurface Intensity", Range(0, 3)) = 1
         _SubsurfaceColor("Subsurface Color", COLOR) = (1, 1, 1)
+        _SubsurfaceMax("Subsurface Max", Range(0, 1)) = 1
+        _SubsurfaceMin("Subsurface Min", Range(0, 1)) = 0
 
         // Other params
         [Space(10)]
@@ -69,34 +72,58 @@ Shader "Custom/ParallaxInstancedSolid"
             Tags { "LightMode" = "ForwardBase" }
             CGPROGRAM
 
-            #pragma multi_compile _ TWO_SIDED
-            #pragma multi_compile _ WIND
-            #pragma multi_compile _ ALPHA_CUTOFF
-            #pragma multi_compile _ ALTERNATE_SPECULAR_TEXTURE
-            #pragma multi_compile _ BILLBOARD
-            #pragma multi_compile _ BILLBOARD_USE_MESH_NORMALS
-            #pragma multi_compile _ DEBUG_FACE_ORIENTATION
-            #pragma multi_compile _ SUBSURFACE_SCATTERING
+            // Shader variants
 
+            #pragma multi_compile_fragment      _ TWO_SIDED
+            #pragma multi_compile_vertex        _ WIND
+            #pragma multi_compile_fragment      _ ALPHA_CUTOFF
+            #pragma multi_compile_fragment      _ ALTERNATE_SPECULAR_TEXTURE
+            #pragma multi_compile_vertex        _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
+            #pragma multi_compile_fragment      _ DEBUG_FACE_ORIENTATION
+            #pragma multi_compile_fragment      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
+
+            //
+            // Dependent macros
+            // I would like to ideally turn these into macros for defining dependent macros, but sadly unity doesn't support it
+            //
+
+            // Use subsurface thickness texture if subsurface scattering is enabled
+            //#ifdef SUBSURFACE_SCATTERING
+            //    #pragma multi_compile _ SUBSURFACE_USE_THICKNESS_TEXTURE
+            //#endif
+
+            // Expose billboard mesh normals option if billboard is enabled
+            //#ifdef BILLBOARD
+            //    #pragma multi_compile _ BILLBOARD_USE_MESH_NORMALS
+            //#endif
+
+            // Shader stages
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_fwdbase
 
+            // Unity includes
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
 
+            // Parallax includes
             #include "ParallaxScatterStructs.cginc"
             #include "ParallaxScatterParams.cginc"
             #include "../ScatterStructs.cginc"
             #include "../../Includes/ParallaxGlobalFunctions.cginc"
             #include "ParallaxScatterUtils.cginc"
 
+            // The necessary structs
             DECLARE_INSTANCING_DATA
 
             PARALLAX_FORWARDBASE_STRUCT_APPDATA
             PARALLAX_FORWARDBASE_STRUCT_V2F
           
+            //
+            // Vertex Shader 
+            //
+
             v2f vert(appdata i, uint instanceID : SV_InstanceID) 
             {
                 v2f o;
@@ -124,6 +151,10 @@ Shader "Custom/ParallaxInstancedSolid"
                 return o;
             }
 
+            //
+            //  Fragment Shader
+            //
+
             fixed4 frag(PIXEL_SHADER_INPUT(v2f)) : SV_Target
             {   
                 // Do as little work as possible, clip immediately
@@ -133,7 +164,11 @@ Shader "Custom/ParallaxInstancedSolid"
                 
                 mainTex.rgb *= _Color;
                 
+                // Get specular from MainTex or, if ALTERNATE_SPECULAR_TEXTURE is defined, use the specular texture
                 GET_SPECULAR(mainTex, i.uv * _MainTex_ST);
+
+                // Get thickness for subsurface scattering if defined
+                GET_THICKNESS(i.uv * _MainTex_ST);
                 
                 i.worldNormal = normalize(i.worldNormal);
                 i.worldTangent = normalize(i.worldTangent);
@@ -154,7 +189,10 @@ Shader "Custom/ParallaxInstancedSolid"
                 float3 worldNormal = normalize(mul(TBN, normal));
 
                 // Calculate lighting from core params, plus potential additional params (worldpos required for subsurface scattering)
-                float3 result = CalculateLighting(mainTex, worldNormal, viewDir, GET_SHADOW, lightDir ADDITIONAL_LIGHTING_PARAMS(i.worldPos));
+                float3 result = CalculateLighting(
+                                mainTex, worldNormal, viewDir, GET_SHADOW, lightDir
+                                ADDITIONAL_LIGHTING_PARAMS(i.worldPos, THICKNESS)
+                );
 
                 // Process any debug options are enabled that affect the output colour
                 DEBUG_IF_ENABLED

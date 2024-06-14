@@ -437,7 +437,7 @@ MonoBehaviour:
     type: 2}
   instancedMaterialLOD2: {fileID: 2100000, guid: 770925c81d6f0b145acd07d67aa953ac,
     type: 2}
-  meshLOD0: {fileID: -2432090755550338912, guid: adcc8910cb2776b4fb37f2799c39f55c,
+  meshLOD0: {fileID: -2432090755550338912, guid: 94a0fc833c6b3474aa5bd950e1936fbd,
     type: 3}
   meshLOD1: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   meshLOD2: {fileID: -2432090755550338912, guid: fece3629352e9414ba8f38c14e9aa537,
@@ -458,9 +458,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   scatterShader: {fileID: 7200000, guid: 7c479f5cd11a7184894f6dbf0ab96a0d, type: 3}
-  _PopulationMultiplier: 2
-  _SpawnChance: 1
+  _PopulationMultiplier: 1
+  _SpawnChance: 0.025
   _MaxNormalDeviation: 0
+  _MinScale: {x: 1, y: 1, z: 1}
+  _MaxScale: {x: 1, y: 1, z: 1}
   requiresFullRestart: 0
   noiseScale: 2
   _PlanetOrigin: {x: 5, y: -10000, z: -5}

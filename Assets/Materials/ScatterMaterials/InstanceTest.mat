@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: InstanceTest
   m_Shader: {fileID: 4800000, guid: c26be5ad2dbe5714e9df106a69036cfa, type: 3}
-  m_ShaderKeywords: TWO_SIDED
+  m_ShaderKeywords: ALPHA_CUTOFF SUBSURFACE_THICKNESS_TEXTURE SUBSURFACE_USE_THICKNESS_TEXTURE
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -20,7 +20,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BumpMap:
-        m_Texture: {fileID: 2800000, guid: 430054b3e6b5f30408ef0b9de56e0e16, type: 3}
+        m_Texture: {fileID: 2800000, guid: d68ac236add0c114085cef5cc709cef7, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _CubeMap:
@@ -44,7 +44,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 95f5fa3b0b2e8be41b451b0453cb4906, type: 3}
+        m_Texture: {fileID: 2800000, guid: 65f55299f1412514ca715993eb93bd8d, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -63,14 +63,18 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _ThicknessMap:
+        m_Texture: {fileID: 2800000, guid: 2e5c1804994b1e543b6bd450a4f6d478, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _WindMap:
         m_Texture: {fileID: 2800000, guid: c2eae859038353842b576359166f53bf, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
-    - _BumpScale: 0
+    - _BumpScale: 1.11
     - _CullMode: 0
-    - _Cutoff: 0
+    - _Cutoff: 0.4
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _EnvironmentMapFactor: 0.21
@@ -82,15 +86,17 @@ Material:
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _RefractionIntensity: 0.04
+    - _RefractionIntensity: 0.21
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
-    - _SpecularIntensity: 0.7
-    - _SpecularPower: 35
+    - _SpecularIntensity: 0.28
+    - _SpecularPower: 63
     - _SrcBlend: 1
-    - _SubsurfaceIntensity: 1.84
-    - _SubsurfaceNormalInfluence: 0
-    - _SubsurfacePower: 2
+    - _SubsurfaceIntensity: 1.57
+    - _SubsurfaceMax: 1
+    - _SubsurfaceMin: 0.381
+    - _SubsurfaceNormalInfluence: 0.383
+    - _SubsurfacePower: 6
     - _Transmission: 0.5
     - _UVSec: 0
     - _WindHeightFactor: 2
@@ -103,4 +109,4 @@ Material:
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _FresnelColor: {r: 0.5248413, g: 0.6421588, b: 0.77800006, a: 1}
     - _PlanetOrigin: {r: 5, g: -10000, b: -5, a: 0}
-    - _SubsurfaceColor: {r: 0.6417675, g: 0.6792453, b: 0.2979708, a: 1}
+    - _SubsurfaceColor: {r: 0.4906138, g: 0.5283019, b: 0.12210752, a: 1}

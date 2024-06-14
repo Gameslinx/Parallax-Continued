@@ -1,17 +1,10 @@
-﻿// Vanilla shader     - Kernel 0
+﻿// Noise modes        - Kernels 0, 1, 2
+// Base kernel defaults to perlin
 #pragma kernel Distribute
-
-// Noise modes        - Kernels 1, 2, 3
-#pragma kernel Distribute NOISEMODE_PERLIN
 #pragma kernel Distribute NOISEMODE_CELLULAR
 #pragma kernel Distribute NOISEMODE_POLKADOT
 
-// Ridged noise modes - Kernels 4, 5, 6
-#pragma kernel Distribute NOISEMODE_PERLIN INVERT_NOISE
-#pragma kernel Distribute NOISEMODE_CELLULAR INVERT_NOISE
-#pragma kernel Distribute NOISEMODE_POLKADOT INVERT_NOISE
-
-// Render             - Kernel 7
+// Render             - Kernel 3
 #pragma kernel Evaluate
 
 #include "ScatterStructs.cginc"
@@ -199,7 +192,7 @@ void Evaluate(uint3 id : SV_DispatchThreadID)
     {
         return;
     }
-    if (!(all(cd0 >= 0) && all(cd1 >= 0)))
+    if (!(all(cd0 >= _CullLimit) && all(cd1 >= _CullLimit)) && lodDist > _CullRadius)
     {
         return;
     }

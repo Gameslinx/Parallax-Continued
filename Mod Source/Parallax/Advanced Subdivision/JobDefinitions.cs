@@ -121,6 +121,7 @@ namespace Parallax
             for (int i = 0; i < 6; i++)
             {
                 ParallaxPlane plane = cameraFrustumPlanes[i];
+                // 75 is arbitrary - merely, if the triangle center dist is less than 75m 
                 if (centerDist < 75 || plane.GetSide(worldSpaceV1.xyz) || plane.GetSide(worldSpaceV2.xyz) || plane.GetSide(worldSpaceV3.xyz))
                 {
                     numInside++;
@@ -145,21 +146,6 @@ namespace Parallax
             float dy = d2.y - d1.y;
             float dz = d2.z - d1.z;
             return Mathf.Sqrt(dx * dx + dy * dy + dz * dz);
-        }
-        float Clamp01(in float value)
-        {
-            if (value > 1)
-            {
-                return 1;
-            }
-            else if (value < 0)
-            {
-                return 0;
-            }
-            else
-            {
-                return value;
-            }
         }
     }
 
