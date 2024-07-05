@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using static Parallax.PQSStartPatch;
 
 namespace Parallax
 {
@@ -14,7 +15,7 @@ namespace Parallax
 
     // This avoids loading everything for every planet at the main menu, which defeats the purpose of on demand
     [HarmonyPatch(typeof(PQS))]
-    [HarmonyPatch("StartSphere")]
+    [HarmonyPatch("UpdateQuadsInit")]
     public class PQSStartPatch
     {
         public static string currentLoadedBody = "ParallaxFirstRunDoNotCallAPlanetThis";
@@ -24,36 +25,25 @@ namespace Parallax
 
         /// <summary>
         /// Called when the planet currently loading is just about to start building terrain. Use this for functions you need to run before the quads are built.
-        /// NOT called again if the same planet was requested for build. NOT called if a non-parallax body was loading/unloading
+        /// NOT called if a non-parallax body was loading/unloading. NOT called if the body did not change, but the scene did (quicksave, quickload for ex)
         /// </summary>
         public static event PQSStart onPQSStart;
         public static event PQSUnload onPQSUnload;
-        static bool Prefix(PQS __instance, bool force)
+        static bool Prefix(PQS __instance)
         {
-            // Steps - Was the sphere already loaded? -> return
-            //       - Is force true? -> continue
-            //       - Is the sphere name a parallax body? (avoids double activation on KerbinOcean, for example) -> continue
-
-            Debug.Log("Name: " + __instance.name);
-
-            if (force)
+            Debug.Log("Update Quads Init: " + __instance.name);
+            if (ConfigLoader.parallaxScatterBodies.ContainsKey(__instance.name))
             {
-                Debug.Log(" - Force: True");
-                if (currentLoadedBody != __instance.name && ConfigLoader.parallaxScatterBodies.ContainsKey(__instance.name))
+                Debug.Log(" - Invoking events for: " + __instance.name);
+                if (currentLoadedBody == __instance.name)
                 {
-                    Debug.Log(" - New body");
-
-                    onPQSUnload?.Invoke(currentLoadedBody);
-                    onPQSStart?.Invoke(__instance.name);
-
-                    Debug.Log("Unloaded " + currentLoadedBody + ", loaded " + __instance.name);
-
-                    currentLoadedBody = __instance.name;
+                    return true;
                 }
+                onPQSUnload?.Invoke(currentLoadedBody);
+                onPQSStart?.Invoke(__instance.name);
+                currentLoadedBody = __instance.name;
             }
-
             return true;
-            
         }
     }
 }

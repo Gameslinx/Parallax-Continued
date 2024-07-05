@@ -75,7 +75,12 @@ float _MaxRange;
 float _RangeFadeStart;
 
 float4x4 _ObjectToWorldMatrix;
+float4x4 _WorldToObjectMatrix;
 
 // Lod splits - normalised
 float _Lod01Split;
 float _Lod12Split;
+
+// Misc params
+int _DistributeFixedAltitude;
+float _FixedAltitude;

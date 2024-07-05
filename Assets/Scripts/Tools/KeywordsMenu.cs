@@ -14,7 +14,7 @@ public class KeywordsMenu : EditorWindow
     static MethodInfo keywordMethodInfo;
     string[] allKeywordNames;
     string[] ignoredKeywords = {"DIRECTIONAL", "DIRECTIONAL_COOKIE", "DIRLIGHTMAP_COMBINED", "DYNAMICLIGHTMAP_ON", "LIGHTMAP_ON", "LIGHTMAP_SHADOW_MIXING", "LIGHTPROBE_SH", "POINT", "POINT_COOKIE",
-                                "SHADOWS_CUBE", "SHADOWS_DEPTH", "SHADOWS_SCREEN", "SHADOWS_SHADOWMASK", "SHADOWS_SOFT", "SPOT", "STEREO_CUBEMAP_RENDER_ON", "STEREO_INSTANCING_ON", "STEREO_MULTIVIEW_ON",
+                                "SHADOWS_CUBE", "SHADOWS_DEPTH", "SHADOWS_SCREEN", "SHADOWS_SOFT", "SPOT", "STEREO_CUBEMAP_RENDER_ON", "STEREO_INSTANCING_ON", "STEREO_MULTIVIEW_ON",
                                 "UNITY_SINGLE_PASS_STEREO", "VERTEXLIGHT_ON" };
     Dictionary<string, bool> shaderKeywords = new Dictionary<string, bool>();
 
@@ -54,6 +54,7 @@ public class KeywordsMenu : EditorWindow
         string[] keys = shaderKeywords.Keys.ToArray();
         for (int i = 0; i < numKeywords; i++)
         {
+
             EditorGUIUtility.labelWidth = 300;
             shaderKeywords[keys[i]] = EditorGUILayout.Toggle(keys[i] + "", shaderKeywords[keys[i]]);
 

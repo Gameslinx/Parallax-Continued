@@ -200,10 +200,8 @@ float GetPercentageBetween(float t, float lowerLimit, float upperLimit)
 }
 
 // Get altitude fade range strength
-float GetAltitudeScalar(float3 worldPosition)
+float GetAltitudeScalar(float altitude, float3 worldPosition)
 {
-    float altitude = length(worldPosition - _PlanetOrigin) - _PlanetRadius;
-    
     float minAltitudeFadeStart = _MinAltitude + _AltitudeFadeRange * 0.5f;
     float minAltitudeFadeEnd = _MinAltitude - _AltitudeFadeRange * 0.5f;
     
@@ -216,11 +214,11 @@ float GetAltitudeScalar(float3 worldPosition)
     // 0 at fadeStart, 1 at fadeEnd
     float rangeFadeMax = GetPercentageBetween(altitude, maxAltitudeFadeStart, maxAltitudeFadeEnd);
     
-    float midpoint = altitude / (maxAltitudeFadeStart + minAltitudeFadeEnd);
+    float midpoint = (maxAltitudeFadeStart + minAltitudeFadeEnd) * 0.5f;
     
     // 0 when outside the altitude range, lerps to 1 when inside the altitude range
     
-    return rangeFadeMin * (midpoint < 0.5) + rangeFadeMax * (midpoint > 0.5);
+    return rangeFadeMin * (altitude < midpoint) + rangeFadeMax * (altitude > midpoint);
 }
 
 // Get random chance to cull before max range

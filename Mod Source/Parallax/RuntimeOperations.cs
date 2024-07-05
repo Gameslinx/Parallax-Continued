@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Profiling;
+using UnityEngine.Rendering;
 
 namespace Parallax
 {
@@ -26,6 +28,11 @@ namespace Parallax
         public static float[] floatCameraFrustumPlanes = new float[24];
         public static float3 cameraPos = float3.zero;
         public static Vector3 vectorCameraPos = Vector3.zero;
+
+        int planetOpacityID = Shader.PropertyToID("_PlanetOpacity");
+        int planetOriginID = Shader.PropertyToID("_PlanetOrigin");
+        int shaderOffsetID = Shader.PropertyToID("_ShaderOffset");
+        int planetRadiusID = Shader.PropertyToID("_PlanetRadius");
 
         // Used in most shaders
         /// <summary>
@@ -46,9 +53,14 @@ namespace Parallax
         public void Update()
         {
             // Determine a celestial body change
+            Profiler.BeginSample("Parallax Runtime Op Main");
             if (EventHandler.currentParallaxBody != null && FlightGlobals.currentMainBody != null)
             {
-                SetParallaxMaterialVars(EventHandler.currentParallaxBody.parallaxMaterials);
+                // Required global params
+                Shader.SetGlobalVector(planetOriginID, FlightGlobals.currentMainBody.transform.position);
+                Shader.SetGlobalVector(shaderOffsetID, (Vector3)FloatingOrigin.TerrainShaderOffset);
+                Shader.SetGlobalFloat(planetRadiusID, (float)FlightGlobals.currentMainBody.Radius);
+                Shader.SetGlobalFloat(planetOpacityID, FlightGlobals.currentMainBody.pqsController.surfaceMaterial.GetFloat(planetOpacityID));
             }
             if (FlightGlobals.currentMainBody != null)
             {
@@ -60,20 +72,34 @@ namespace Parallax
             }
 
             // Get the camera position and frustum planes
-            Camera cam = Camera.allCameras.FirstOrDefault(_cam => _cam.name == "Camera 00");
+            Camera cam = FlightCamera.fetch?.mainCamera;
             if (cam != null)
             {
                 cameraPos = cam.gameObject.transform.position;
                 vectorCameraPos = cam.gameObject.transform.position;
                 SetCameraFrustumPlanes(cam);
             }
-
-            // Update quad-camera distances
-            Dictionary<PQ, ScatterSystemQuadData>.ValueCollection quadData = ScatterComponent.scatterQuadData.Values;
-            foreach (ScatterSystemQuadData data in quadData)
+            else
             {
-                data.UpdateQuadCameraDistance();
+                vectorCameraPos = Vector3.zero;
+                cameraPos = float3.zero;
             }
+            Profiler.EndSample();
+            // Update quad-camera distances
+            //Profiler.BeginSample("Parallax Runtime Op Distances");
+            //Dictionary<PQ, ScatterSystemQuadData>.ValueCollection quadData = ScatterComponent.scatterQuadData.Values;
+            Profiler.BeginSample("Actually calculate distances");
+
+            foreach (var data in ScatterComponent.scatterQuadData)
+            {
+                if (data.Value.quad.isVisible)
+                {
+                    data.Value.UpdateQuadCameraDistance(ref vectorCameraPos);
+                }
+            }
+
+            //Profiler.EndSample();
+            Profiler.EndSample();
         }
 
         void SetCameraFrustumPlanes(Camera cam)
@@ -94,48 +120,6 @@ namespace Parallax
                 floatCameraFrustumPlanes[i * 4 + 2] = planes[i].normal.z;
                 floatCameraFrustumPlanes[i * 4 + 3] = planes[i].distance;
             }
-        }
-
-        Vector3 terrainShaderOffset;
-        Vector3 bodyPosition;
-        float bodyRadius;
-        float planetOpacity;
-        public void SetParallaxMaterialVars(ParallaxMaterials materialSet)
-        {
-            terrainShaderOffset = FloatingOrigin.TerrainShaderOffset;
-            bodyPosition = FlightGlobals.currentMainBody.gameObject.transform.position;
-            bodyRadius = (float)FlightGlobals.currentMainBody.Radius;
-            planetOpacity = FlightGlobals.currentMainBody.pqsController.surfaceMaterial.GetFloat("_PlanetOpacity");
-
-            materialSet.parallaxLow.SetVector("_PlanetOrigin", bodyPosition);
-            materialSet.parallaxLow.SetVector("_ShaderOffset", terrainShaderOffset);
-            materialSet.parallaxLow.SetFloat("_PlanetRadius", bodyRadius);
-            materialSet.parallaxLow.SetFloat("_PlanetOpacity", planetOpacity);
-
-            materialSet.parallaxMid.SetVector("_PlanetOrigin", bodyPosition);
-            materialSet.parallaxMid.SetVector("_ShaderOffset", terrainShaderOffset);
-            materialSet.parallaxMid.SetFloat("_PlanetRadius", bodyRadius);
-            materialSet.parallaxMid.SetFloat("_PlanetOpacity", planetOpacity);
-
-            materialSet.parallaxHigh.SetVector("_PlanetOrigin", bodyPosition);
-            materialSet.parallaxHigh.SetVector("_ShaderOffset", terrainShaderOffset);
-            materialSet.parallaxHigh.SetFloat("_PlanetRadius", bodyRadius);
-            materialSet.parallaxHigh.SetFloat("_PlanetOpacity", planetOpacity);
-
-            materialSet.parallaxLowMid.SetVector("_PlanetOrigin", bodyPosition);
-            materialSet.parallaxLowMid.SetVector("_ShaderOffset", terrainShaderOffset);
-            materialSet.parallaxLowMid.SetFloat("_PlanetRadius", bodyRadius);
-            materialSet.parallaxLowMid.SetFloat("_PlanetOpacity", planetOpacity);
-
-            materialSet.parallaxMidHigh.SetVector("_PlanetOrigin", bodyPosition);
-            materialSet.parallaxMidHigh.SetVector("_ShaderOffset", terrainShaderOffset);
-            materialSet.parallaxMidHigh.SetFloat("_PlanetRadius", bodyRadius);
-            materialSet.parallaxMidHigh.SetFloat("_PlanetOpacity", planetOpacity);
-
-            materialSet.parallaxFull.SetVector("_PlanetOrigin", bodyPosition);
-            materialSet.parallaxFull.SetVector("_ShaderOffset", terrainShaderOffset);
-            materialSet.parallaxFull.SetFloat("_PlanetRadius", bodyRadius);
-            materialSet.parallaxFull.SetFloat("_PlanetOpacity", planetOpacity);
         }
     }
 }

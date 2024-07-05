@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine.Rendering;
 using UnityEngine;
+using static Parallax.Legacy.LegacyConfigLoader;
 
 namespace Parallax
 {
@@ -76,7 +77,9 @@ namespace Parallax
             scatterShader.SetVector("_LocalPlanetNormal", parent.localPlanetNormal);
             scatterShader.SetVector("_PlanetOrigin", parent.planetOrigin);
 
+
             scatterShader.SetMatrix("_ObjectToWorldMatrix", parent.quad.gameObject.transform.localToWorldMatrix);
+            scatterShader.SetMatrix("_WorldToObjectMatrix", parent.quad.gameObject.transform.worldToLocalMatrix);
 
             distributeKernel = GetDistributeKernel();
             evaluateKernel = scatterShader.FindKernel("Evaluate");
@@ -122,11 +125,6 @@ namespace Parallax
                     break;
                 }
             }
-            if (scatter.noiseParams.inverted)
-            {
-                // Use the kernels with inverted noise
-                kernel = 3;
-            }
             return kernel;
         }
         public void SetDistributionVars()
@@ -158,6 +156,13 @@ namespace Parallax
             scatterShader.SetFloat("_AltitudeFadeRange", scatter.distributionParams.altitudeFadeRange);
 
             scatterShader.SetFloat("_RangeFadeStart", ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.fadeOutStartRange);
+
+            // If we're distributing to a fixed altitude
+            if (scatter.distributionParams.fixedAltitude)
+            {
+                scatterShader.SetInt("_DistributeFixedAltitude", 1);
+                scatterShader.SetFloat("_FixedAltitude", scatter.distributionParams.placementAltitude);
+            }
         }
         public void Distribute()
         {
@@ -213,20 +218,22 @@ namespace Parallax
             scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD1", scatterRenderer.outputLOD1);
             scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD2", scatterRenderer.outputLOD2);
 
-            scatterShader.SetFloat("_CullRange", scatter.optimizationParams.frustumCullingIgnoreRadius);
+            scatterShader.SetFloat("_CullRadius", scatter.optimizationParams.frustumCullingIgnoreRadius);
             scatterShader.SetFloat("_CullLimit", scatter.optimizationParams.frustumCullingSafetyMargin);
 
             scatterShader.SetFloat("_MaxRange", scatter.distributionParams.range);
             scatterShader.SetFloat("_Lod01Split", scatter.distributionParams.lod1.range);
             scatterShader.SetFloat("_Lod12Split", scatter.distributionParams.lod2.range);
+
+            
         }
         public void Evaluate()
         {
             // Is it even worth evaluating this scatter?
             // Quad is not in the view frustum
-            if (!parent.quad.meshRenderer.isVisible || !parent.quad.isVisible) { return; }
+            if (!parent.quad.meshRenderer.isVisible) { return; }
             // Quad is out of range
-            if (parent.cameraDistance > scatter.distributionParams.range + Mathf.Sqrt(parent.sqrQuadWidth)) { return; }
+            if (parent.cameraDistance > scatter.distributionParams.range * scatter.distributionParams.range + parent.sqrQuadWidth) { return; }
             if (!eventAdded) { return; }
 
             // Update runtime shader vars

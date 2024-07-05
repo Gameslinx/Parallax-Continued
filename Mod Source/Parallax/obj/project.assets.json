@@ -1,11 +1,47 @@
 {
   "version": 3,
   "targets": {
-    ".NETFramework,Version=v4.8": {}
+    ".NETFramework,Version=v4.8": {
+      "Krafs.Publicizer/2.2.1": {
+        "type": "package",
+        "contentFiles": {
+          "contentfiles/cs/any/Publicizer/IgnoresAccessChecksToAttribute.cs": {
+            "buildAction": "Compile",
+            "codeLanguage": "cs",
+            "copyToOutput": false
+          }
+        },
+        "build": {
+          "build/Krafs.Publicizer.props": {},
+          "build/Krafs.Publicizer.targets": {}
+        }
+      }
+    }
   },
-  "libraries": {},
+  "libraries": {
+    "Krafs.Publicizer/2.2.1": {
+      "sha512": "QGI4nMGQbKsuFUUboixVHu4mv3lHB5RejIa7toIlzTmwLkuCYYEpUBJjmy3OpXYyj5dVSZAXVbr4oeMSloE67Q==",
+      "type": "package",
+      "path": "krafs.publicizer/2.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README.md",
+        "build/Krafs.Publicizer.props",
+        "build/Krafs.Publicizer.targets",
+        "build/net472/Publicizer.dll",
+        "build/net472/dnlib.dll",
+        "contentfiles/cs/any/Publicizer/IgnoresAccessChecksToAttribute.cs",
+        "icon.png",
+        "krafs.publicizer.2.2.1.nupkg.sha512",
+        "krafs.publicizer.nuspec"
+      ]
+    }
+  },
   "projectFileDependencyGroups": {
-    ".NETFramework,Version=v4.8": []
+    ".NETFramework,Version=v4.8": [
+      "Krafs.Publicizer >= 2.2.1"
+    ]
   },
   "packageFolders": {
     "C:\\Users\\tuvee\\.nuget\\packages\\": {}
@@ -45,6 +81,14 @@
     "frameworks": {
       "net48": {
         "targetAlias": "net48",
+        "dependencies": {
+          "Krafs.Publicizer": {
+            "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+            "suppressParent": "All",
+            "target": "Package",
+            "version": "[2.2.1, )"
+          }
+        },
         "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.304\\RuntimeIdentifierGraph.json"
       }
     }

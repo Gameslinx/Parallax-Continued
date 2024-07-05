@@ -257,8 +257,12 @@ namespace Parallax.Legacy
                 foreach (string texture in properties.scatterMaterial.Textures.Keys)
                 {
                     string texValue = properties.scatterMaterial.Textures[texture];
-
-                    node.AddValue(texture, texValue);
+                    string modifiedValue = texValue;
+                    if (texValue == "_EdgeBumpMap")
+                    {
+                        modifiedValue = "_BumpMap";
+                    }
+                    node.AddValue(modifiedValue, texValue);
                 }
                 foreach (string floatValue in properties.scatterMaterial.Floats.Keys)
                 {
@@ -289,11 +293,16 @@ namespace Parallax.Legacy
                     node.AddValue("_WindHeightStart", 0.05f);
                     node.AddValue("_WindHeightFactor", 2);
                     node.AddValue("_WindSpeed", 0.0f);
+                    node.AddValue("_WindIntensity", 0.0f);
                 }
                 foreach (string colorValue in properties.scatterMaterial.Colors.Keys)
                 {
                     string modifiedValue = colorValue;
                     if (colorValue == "_MainColor" || colorValue == "_SubColor")
+                    {
+                        continue;
+                    }
+                    if (colorValue == "_EmissiveColor" || colorValue == "_EmissionColor")
                     {
                         continue;
                     }
@@ -500,8 +509,8 @@ namespace Parallax.Legacy
                 // Now convert them all
                 foreach (KeyValuePair<string, ScatterBody> body in ScatterBodies.scatterBodies)
                 {
-                    ConfigNode baseNode = new ConfigNode("ParallaxScatters");
-                    ConfigNode result = baseNode.AddNode("ParallaxScatters");
+                    ConfigNode baseNode = new ConfigNode("ParallaxScatters-UPGRADED");
+                    ConfigNode result = baseNode.AddNode("ParallaxScatters-UPGRADED");
 
                     result.AddValue("body", body.Key);
                     result.AddValue("minimumSubdivision", body.Value.minimumSubdivision);

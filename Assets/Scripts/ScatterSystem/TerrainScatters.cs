@@ -75,6 +75,11 @@ public class TerrainScatters : MonoBehaviour
     [Range(1, 8)] public int octaves;
     [Range(0, 10)] public int seed;
 
+    [Range(0.0f, -10.0f)]
+    public float frustumLimit = 0;
+    [Range(0.0f, 100.0f)]
+    public float frustumRange = 0;
+
     public bool alignToTerrainNormal = false;
 
     public Texture2D biomeMap;
@@ -152,14 +157,20 @@ public class TerrainScatters : MonoBehaviour
         scatterShader.SetInt("_MaxCount", outputSize);
         scatterShader.SetInt("_NumberOfBiomes", 1);
         scatterShader.SetFloat("_MaxNormalDeviation", _MaxNormalDeviation * _MaxNormalDeviation * _MaxNormalDeviation);
-        scatterShader.SetFloat("_MinAltitude", -100);
-        scatterShader.SetFloat("_MaxAltitude", 100);
+        scatterShader.SetFloat("_MinAltitude", -1000);
+        scatterShader.SetFloat("_MaxAltitude", 1000);
+        scatterShader.SetFloat("_SteepPower", 0.0001f);
+        scatterShader.SetFloat("_SteepContrast", 0);
+        scatterShader.SetFloat("_SteepMidpoint", 1);
         scatterShader.SetFloat("_AltitudeFadeRange", 1);
         scatterShader.SetFloat("_NoiseCutoffThreshold", 0.5f);
         scatterShader.SetVector("_MinScale", _MinScale);
         scatterShader.SetVector("_MaxScale", _MaxScale);
         scatterShader.SetFloat("_RangeFadeStart", 1);
         scatterShader.SetInt("_InvertNoise", 0);
+        scatterShader.SetVector("_LocalPlanetNormal", Vector3.up);
+
+        scatterShader.SetFloat("_NoiseCutoffThreshold", 0);
 
         // Create biome texture
         Texture2D biomeTex = new Texture2D(1, 1, TextureFormat.ARGB32, false);
@@ -253,8 +264,8 @@ public class TerrainScatters : MonoBehaviour
         scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD1", scatterRenderer.outputLOD1);
         scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD2", scatterRenderer.outputLOD2);
 
-        scatterShader.SetFloat("_Lod01Split", 0.2f);
-        scatterShader.SetFloat("_Lod12Split", 0.5f);
+        scatterShader.SetFloat("_Lod01Split", 0.9f);
+        scatterShader.SetFloat("_Lod12Split", 0.99f);
     }
     public void Evaluate()
     {
@@ -267,8 +278,8 @@ public class TerrainScatters : MonoBehaviour
         scatterShader.SetVector("_WorldSpaceCameraPosition", Camera.main.transform.position);
         
         scatterShader.SetFloats("_CameraFrustumPlanes", CameraUtils.scatterPlaneNormals);
-        scatterShader.SetFloat("_CullRadius", 0.05f);
-        scatterShader.SetFloat("_CullLimit", 0);
+        scatterShader.SetFloat("_CullRadius", frustumRange);
+        scatterShader.SetFloat("_CullLimit", frustumLimit);
         scatterShader.SetFloat("_MaxRange", 35);
 
         scatterShader.DispatchIndirect(evaluateKernel, dispatchArgs, 0);

@@ -1,4 +1,5 @@
-﻿// Noise modes        - Kernels 0, 1, 2
+﻿
+// Noise modes        - Kernels 0, 1, 2
 // Base kernel defaults to perlin
 #pragma kernel Distribute
 #pragma kernel Distribute NOISEMODE_CELLULAR
@@ -89,6 +90,10 @@ void Distribute (uint3 id : SV_DispatchThreadID)
     
     // Don't place scatters on ineligible gradients, such as mountains
     float slope = CalculateSlope(averageNormal);
+    if (slope < 0.025)
+    {
+        slope = 0;
+    }
     
     // If the mesh is too curved, we can end up with scatters floating/overhanging the terrain (depending on scatter mesh and size)
     // So skip this triangle entirely
@@ -125,6 +130,7 @@ void Distribute (uint3 id : SV_DispatchThreadID)
         float randomY = random2;
         float3 localPos = RandomPoint(v1, v2, v3, randomX, randomY);
         float3 localCenterDir = RandomPoint(dfc1, dfc2, dfc3, randomX, randomY);
+        float3 localNormal = RandomPoint(dfc1, dfc2, dfc3, randomX, randomY);
         
         float noise = Noise(localCenterDir);
         
@@ -136,13 +142,27 @@ void Distribute (uint3 id : SV_DispatchThreadID)
         float3 scale = lerp(_MinScale, _MaxScale, scaleInterpolant);
         
         float3 worldPos = mul(_ObjectToWorldMatrix, float4(localPos, 1)).xyz;
-        float altitudeScalar = GetAltitudeScalar(worldPos);
+        
+        // Altitude based calculations
+        float altitude = length(worldPos - _PlanetOrigin) - _PlanetRadius;
+        float altitudeScalar = GetAltitudeScalar(altitude, worldPos);
+        
+        // If we're placing all scatters at the same altitude
+        // For anything altitude related we need to be working in world space, so we introduce a slight inefficiency
+        // by requiring a conversion back into local space for the final position
+        if (_DistributeFixedAltitude == 1)
+        {
+            float altitudeDiff = altitude - _FixedAltitude;
+            worldPos -= (_PlanetNormal * altitudeDiff);
+            localPos = mul(_WorldToObjectMatrix, float4(worldPos, 1)).xyz;
+        }
         
         // Cannot spawn if:
         // 1. Failed spawn chance probability check
         // 2. Is out of altitude range (close to altitude range, lower the spawn chance)
-        // 3. Noise is past cutoff threshold
-        bool canSpawn = (random4 < _SpawnChance * altitudeScalar) && (noise > _NoiseCutoffThreshold);
+        // 3. Is on a slope (higher gradient, lower spawn chance)
+        // 4. Noise is past cutoff threshold
+        bool canSpawn = (random4 < _SpawnChance * altitudeScalar * slope) && (noise > _NoiseCutoffThreshold);
         
         newObject.localPos = localPos;
         newObject.localScale = scale;

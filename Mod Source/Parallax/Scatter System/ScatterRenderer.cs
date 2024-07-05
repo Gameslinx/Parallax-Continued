@@ -34,6 +34,7 @@ namespace Parallax
         public event EvaluateScatters onEvaluateScatters;
         void OnEnable()
         {
+            Debug.Log("[Renderer] OnEnable");
             Prerequisites();
             Initialize();
             FirstTimeArgs();
@@ -136,13 +137,21 @@ namespace Parallax
 
         void Initialize()
         {
-            // Create output buffers - Evaluate() function on quads will will these
-            int arbitraryMaxCount = 7500;
-            if (!scatter.isShared) 
+            Debug.Log("Scatter: " + scatter.scatterName);
+            // Create output buffers - Evaluate() function on quads will fill these
+            if (!scatter.isShared)
             {
-                outputLOD0 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
-                outputLOD1 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
-                outputLOD2 = new ComputeBuffer(arbitraryMaxCount, TransformData.Size(), ComputeBufferType.Append);
+                int lod0Count = EstimatePerLODMaxCount(scatter.optimizationParams.maxRenderableObjects, scatter.distributionParams.range, scatter.distributionParams.lod1.range * scatter.distributionParams.range);
+                int lod1Count = EstimatePerLODMaxCount(scatter.optimizationParams.maxRenderableObjects, scatter.distributionParams.range, scatter.distributionParams.lod2.range * scatter.distributionParams.range);
+                int lod2Count = scatter.optimizationParams.maxRenderableObjects;
+
+                Debug.Log(" - LOD0 Count: " + lod0Count);
+                Debug.Log(" - LOD1 Count: " + lod1Count);
+                Debug.Log(" - LOD2 Count: " + lod2Count);
+
+                outputLOD0 = new ComputeBuffer(lod0Count, TransformData.Size(), ComputeBufferType.Append);
+                outputLOD1 = new ComputeBuffer(lod1Count, TransformData.Size(), ComputeBufferType.Append);
+                outputLOD2 = new ComputeBuffer(lod2Count, TransformData.Size(), ComputeBufferType.Append);
             }
             else
             {
@@ -165,23 +174,47 @@ namespace Parallax
 
             rendererBounds = new Bounds(Vector3.zero, Vector3.one * 25000.0f);
         }
+        /// <summary>
+        /// Estimates the number of objects as a portion of maxObjects that will be visible at one time.
+        /// Computed using simple differences in areas
+        /// </summary>
+        /// <param name="actualMaxCount"></param>
+        /// <param name="range"></param>
+        /// <param name="maxRange"></param>
+        /// <returns></returns>
+        int EstimatePerLODMaxCount(int actualMaxCount, float maxRange, float lodRange)
+        {
+            // This function needs to be generous - Find the minimum count that can be visible given the maximum area
+
+            float maxArea = Mathf.PI * maxRange * maxRange;
+
+            // We can be dealing with pretty low numbers that can make things unreliable
+            // Triple the radius, which should account for distribution noise differences
+            float thisArea = Mathf.PI * (lodRange * 3) * (lodRange * 3);
+            float fraction = thisArea / maxArea;
+
+            float estimation = Mathf.CeilToInt(actualMaxCount * fraction);
+
+            
+            return (int)Mathf.Min(actualMaxCount, estimation);
+        }
         void FirstTimeArgs()
         {
             uint[] argumentsLod0 = new uint[5] { 0, 0, 0, 0, 0 };
             argumentsLod0[0] = (uint)meshLOD0.GetIndexCount(0);
-            argumentsLod0[1] = 0; // Number of meshes to instance, we will this in Update() through CopyCount
+            argumentsLod0[1] = 0; // Number of meshes to instance, we will set this in Render() through CopyCount
             argumentsLod0[2] = (uint)meshLOD0.GetIndexStart(0);
             argumentsLod0[3] = (uint)meshLOD0.GetBaseVertex(0);
 
             uint[] argumentsLod1 = new uint[5] { 0, 0, 0, 0, 0 };
             argumentsLod1[0] = (uint)meshLOD1.GetIndexCount(0);
-            argumentsLod1[1] = 0; // Number of meshes to instance, we will this in Update() through CopyCount
+            argumentsLod1[1] = 0; // Number of meshes to instance, we will set this in Render() through CopyCount
             argumentsLod1[2] = (uint)meshLOD1.GetIndexStart(0);
             argumentsLod1[3] = (uint)meshLOD1.GetBaseVertex(0);
 
             uint[] argumentsLod2 = new uint[5] { 0, 0, 0, 0, 0 };
             argumentsLod2[0] = (uint)meshLOD2.GetIndexCount(0);
-            argumentsLod2[1] = 0; // Number of meshes to instance, we will this in Update() through CopyCount
+            argumentsLod2[1] = 0; // Number of meshes to instance, we will set this in Render() through CopyCount
             argumentsLod2[2] = (uint)meshLOD2.GetIndexStart(0);
             argumentsLod2[3] = (uint)meshLOD2.GetBaseVertex(0);
 
@@ -216,11 +249,6 @@ namespace Parallax
             ComputeBuffer.CopyCount(outputLOD0, indirectArgsLOD0, 4);
             ComputeBuffer.CopyCount(outputLOD1, indirectArgsLOD1, 4);
             ComputeBuffer.CopyCount(outputLOD2, indirectArgsLOD2, 4);
-
-            // Set required vars - Make these global
-            instancedMaterialLOD0.SetVector("_PlanetOrigin", RuntimeOperations.currentPlanetOrigin);
-            instancedMaterialLOD1.SetVector("_PlanetOrigin", RuntimeOperations.currentPlanetOrigin);
-            instancedMaterialLOD2.SetVector("_PlanetOrigin", RuntimeOperations.currentPlanetOrigin);
 
             // Render instanced data
             Graphics.DrawMeshInstancedIndirect(meshLOD0, 0, instancedMaterialLOD0, rendererBounds, indirectArgsLOD0, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, Camera.main);

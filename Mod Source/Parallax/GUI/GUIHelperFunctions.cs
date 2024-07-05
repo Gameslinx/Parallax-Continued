@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -37,6 +38,10 @@ namespace Parallax
         private static int activeEnumField = -1;
         private static NoiseType activeEnumFieldLastValue = NoiseType.simplexPerlin;
         private static string activeEnumFieldString = "";
+
+        private static int activeStringField = -1;
+        private static string activeStringFieldLastValue = "";
+        private static string activeStringFieldString = "";
 
         /// <summary>
         /// Float Field for ingame purposes. Behaves exactly like UnityEditor.EditorGUILayout.FloatField.
@@ -139,6 +144,25 @@ namespace Parallax
             if (!float.TryParse(str, out value))
                 Debug.LogError("Could not parse " + str);
             return value;
+        }
+
+        // Only used for texture paths
+        public static string StringField(string value, out bool valueWasChanged)
+        {
+            valueWasChanged = false;
+            string newValue = GUILayout.TextArea(value, HighLogic.Skin.textArea, GUILayout.Width(150));
+            char[] invalidChars = Path.GetInvalidFileNameChars();
+
+            // If we have illegal chars in the string
+            if (newValue.Any(c => invalidChars.Contains(c)))
+            {
+                return value;
+            }
+            else
+            {
+                valueWasChanged = true;
+                return newValue;
+            }
         }
 
         // Int Field

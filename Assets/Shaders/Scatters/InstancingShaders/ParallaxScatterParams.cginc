@@ -20,10 +20,12 @@ float3 _Color;
 
 // Wind
 sampler2D _WindMap;
+float4 _WindMap_TexelSize;
 float _WindScale;
 float _WindHeightStart;
 float _WindHeightFactor;
 float _WindSpeed;
+float _WindIntensity;
 
 // AlphaCutoff
 float _Cutoff;

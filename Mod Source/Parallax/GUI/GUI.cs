@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using static Parallax.Legacy.LegacyConfigLoader;
 
 namespace Parallax
 {
@@ -101,11 +102,110 @@ namespace Parallax
                 window = GUILayout.Window(GetInstanceID(), window, DrawWindow, "Parallax GUI", HighLogic.Skin.window);
             }
         }
+        static bool editorIsScatter = true;
         static void DrawWindow(int windowID)
         {
             GUILayout.BeginVertical();
             ///////////////////////////
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Terrain Edit Mode", HighLogic.Skin.button))
+            {
+                editorIsScatter = false;
+            }
+            //GUILayout.Space(350);
+            GUILayout.FlexibleSpace();
+            GUILayout.Label("Editing " + (editorIsScatter ? "Scatters" : "Terrain"), HighLogic.Skin.label);
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("Scatter Edit Mode", HighLogic.Skin.button))
+            {
+                editorIsScatter = true;
+            }
+            GUILayout.EndHorizontal();
 
+            if (!editorIsScatter)
+            {
+                TerrainMenu();
+            }
+            else
+            {
+                ScatterMenu();
+            }
+
+            ///////////////////////////
+            GUILayout.EndVertical();
+
+            // Must be last or buttons wont work
+            UnityEngine.GUI.DragWindow();
+        }
+        static void TerrainMenu()
+        {
+            ParallaxTerrainBody body = ConfigLoader.parallaxTerrainBodies[FlightGlobals.currentMainBody.name];
+            ShaderProperties props = body.terrainShaderProperties;
+            ParamCreator.ChangeMethod callback = body.SetMaterialValues;
+            ParamCreator.ChangeMethod texCallback = body.Reload;
+            // Parse shader properties
+
+            GUILayout.Label("Textures: ", HighLogic.Skin.label);
+            List<string> textureKeys = new List<string>(props.shaderTextures.Keys);
+            foreach (string key in textureKeys)
+            {
+                // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
+                string value = props.shaderTextures[key];
+                bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.StringField);
+                if (valueChanged)
+                {
+                    props.shaderTextures[key] = value;
+                    texCallback();
+                }
+            }
+
+            // Process floats
+            GUILayout.Label("Floats: ", HighLogic.Skin.label);
+            List<string> floatKeys = new List<string>(props.shaderFloats.Keys);
+            foreach (string key in floatKeys)
+            {
+                // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
+                float value = props.shaderFloats[key];
+                bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.FloatField);
+                if (valueChanged)
+                {
+                    props.shaderFloats[key] = value;
+                    callback();
+                }
+            }
+
+            // Process vectors
+            GUILayout.Label("Vectors: ", HighLogic.Skin.label);
+            List<string> vectorKeys = new List<string>(props.shaderVectors.Keys);
+            foreach (string key in vectorKeys)
+            {
+                // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
+                Vector3 value = props.shaderVectors[key];
+                bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.Vector3Field);
+                if (valueChanged)
+                {
+                    props.shaderVectors[key] = value;
+                    callback();
+                }
+            }
+
+            // Process colors
+            GUILayout.Label("Colors: ", HighLogic.Skin.label);
+            List<string> colorKeys = new List<string>(props.shaderColors.Keys);
+            foreach (string key in colorKeys)
+            {
+                // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
+                Color value = props.shaderColors[key];
+                bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.ColorField);
+                if (valueChanged)
+                {
+                    props.shaderColors[key] = value;
+                    callback();
+                }
+            }
+        }
+        static void ScatterMenu()
+        {
             // Reset window size
             if (!showDistribution && !showMaterial && !showDistributionNoise && !showExporter && !showDebug)
             {
@@ -128,12 +228,6 @@ namespace Parallax
 
             ProcessDebug(scatter);
             ProcessSaveButton(scatter);
-
-            ///////////////////////////
-            GUILayout.EndVertical();
-
-            // Must be last or buttons wont work
-            UnityEngine.GUI.DragWindow();
         }
         static Scatter GetScatter()
         {

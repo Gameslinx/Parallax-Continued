@@ -25,6 +25,7 @@ Shader "Custom/ParallaxInstancedSolid"
         _WindHeightStart("Wind Height Start", Range(0, 5)) = 0.05
         _WindHeightFactor("Wind Height Factor", Range(0.00001, 5)) = 0.05
         _WindSpeed("Wind Speed", Range(0, 15)) = 0.05
+        _WindIntensity("Wind Intensity", Range(0, 1)) = 0.05
 
         // Lighting params
         [Space(10)]
@@ -38,6 +39,7 @@ Shader "Custom/ParallaxInstancedSolid"
         _FresnelColor("Fresnel Color", COLOR) = (0, 0, 0)
         _EnvironmentMapFactor("Environment Map Factor", Range(0.0, 2.0)) = 1
         _RefractionIntensity("Refraction Intensity", Range(0, 2)) = 1
+        _Hapke("Hapke", Range(0.001, 2)) = 1
 
         // Subsurface
         [Space(10)]
@@ -55,7 +57,6 @@ Shader "Custom/ParallaxInstancedSolid"
         [Header(Other Parameters)]
         [Space(10)]
         _Cutoff("Alpha Cutoff", Range(0, 1)) = 0
-        _PlanetOrigin("Planet Origin", vector) = (0, 0, 0)
 
         // 0 = cull off
         // 1 = cull frontfaces
@@ -75,27 +76,18 @@ Shader "Custom/ParallaxInstancedSolid"
             // Shader variants
 
             #pragma multi_compile_fragment      _ TWO_SIDED
-            #pragma multi_compile_vertex        _ WIND
+            
             #pragma multi_compile_fragment      _ ALPHA_CUTOFF
             #pragma multi_compile_fragment      _ ALTERNATE_SPECULAR_TEXTURE
-            #pragma multi_compile_vertex        _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
-            #pragma multi_compile_fragment      _ DEBUG_FACE_ORIENTATION
+            #pragma multi_compile               _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
+            #pragma multi_compile_fragment      _ DEBUG_FACE_ORIENTATION            DEBUG_SHOW_WIND_TEXTURE
             #pragma multi_compile_fragment      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
 
-            //
-            // Dependent macros
-            // I would like to ideally turn these into macros for defining dependent macros, but sadly unity doesn't support it
-            //
-
-            // Use subsurface thickness texture if subsurface scattering is enabled
-            //#ifdef SUBSURFACE_SCATTERING
-            //    #pragma multi_compile _ SUBSURFACE_USE_THICKNESS_TEXTURE
-            //#endif
-
-            // Expose billboard mesh normals option if billboard is enabled
-            //#ifdef BILLBOARD
-            //    #pragma multi_compile _ BILLBOARD_USE_MESH_NORMALS
-            //#endif
+            #if defined (DEBUG_SHOW_WIND_TEXTURE)
+                #pragma multi_compile        _ WIND
+            #else
+                #pragma multi_compile_vertex        _ WIND
+            #endif
 
             // Shader stages
             #pragma vertex vert
@@ -131,16 +123,15 @@ Shader "Custom/ParallaxInstancedSolid"
                 float4x4 objectToWorld = INSTANCE_DATA.objectToWorld;
                 BILLBOARD_IF_ENABLED(i.vertex, i.normal, i.tangent, objectToWorld);
 
-                float3 worldPos = mul(objectToWorld, i.vertex);
-
                 o.worldNormal = mul(objectToWorld, float4(i.normal, 0)).xyz;
                 o.worldTangent = mul(objectToWorld, float4(i.tangent.xyz, 0));
                 o.worldBinormal = cross(o.worldTangent, o.worldNormal) * i.tangent.w;
 
-                PROCESS_WIND(worldPos, o.worldNormal);
-                
-                o.worldPos = mul(objectToWorld, i.vertex);
+                float3 worldPos = mul(objectToWorld, i.vertex);
+                float3 planetNormal = normalize(worldPos - _PlanetOrigin);
+                PROCESS_WIND
 
+                o.worldPos = worldPos;
                 o.uv = i.uv;
 
                 o.viewDir = _WorldSpaceCameraPos - worldPos;
@@ -206,61 +197,59 @@ Shader "Custom/ParallaxInstancedSolid"
         {
             Tags { "LightMode" = "ShadowCaster" }
             CGPROGRAM
-
+        
             #pragma multi_compile _ TWO_SIDED
             #pragma multi_compile _ WIND
             #pragma multi_compile _ ALPHA_CUTOFF
             #pragma multi_compile _ ALTERNATE_SPECULAR_TEXTURE
             #pragma multi_compile _ BILLBOARD
-
+        
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_fwdbase
-
+        
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
-
+        
             #include "ParallaxScatterStructs.cginc"
             #include "ParallaxScatterParams.cginc"
             #include "../ScatterStructs.cginc"
             #include "../../Includes/ParallaxGlobalFunctions.cginc"
             #include "ParallaxScatterUtils.cginc"
-
+        
             DECLARE_INSTANCING_DATA
-
+        
             PARALLAX_FORWARDBASE_STRUCT_APPDATA
             PARALLAX_FORWARDBASE_STRUCT_V2F
           
-            v2f vert(appdata i, uint instanceID : SV_InstanceID) 
+            v2f vert(appdata i, uint instanceID : SV_InstanceID)
             {
                 v2f o;
-
+        
                 float4x4 objectToWorld = INSTANCE_DATA.objectToWorld;
-                float4 binormal = 0;
-
+        
                 BILLBOARD_IF_ENABLED(i.vertex, i.normal, i.tangent, objectToWorld);
-
-                float3 worldPos = mul(objectToWorld, i.vertex);
-
+        
                 o.worldNormal = mul(objectToWorld, float4(i.normal, 0)).xyz;
                 o.worldTangent = mul(objectToWorld, float4(i.tangent.xyz, 0));
                 o.worldBinormal = cross(o.worldTangent, o.worldNormal) * i.tangent.w;
-
-                PROCESS_WIND(worldPos, o.worldNormal);
                 
-                o.worldPos = mul(objectToWorld, i.vertex);
+                float3 worldPos = mul(objectToWorld, i.vertex);
+                float3 planetNormal = normalize(worldPos - _PlanetOrigin);
+                PROCESS_WIND
 
+                o.worldPos = worldPos;
                 o.uv = i.uv;
-
+        
                 o.viewDir = _WorldSpaceCameraPos - worldPos;
                 o.pos = UnityWorldToClipPos(worldPos);
-
+        
                 o.pos = UnityApplyLinearShadowBias(o.pos);
-
+        
                 return o;
             }
-
+        
             void frag(PIXEL_SHADER_INPUT(v2f))
             {   
                 // Remove this from build
@@ -269,7 +258,7 @@ Shader "Custom/ParallaxInstancedSolid"
                 float mainTex = tex2D(_MainTex, i.uv * _MainTex_ST).a;
                 ALPHA_CLIP(mainTex);
             }
-
+        
             ENDCG
         }
     }

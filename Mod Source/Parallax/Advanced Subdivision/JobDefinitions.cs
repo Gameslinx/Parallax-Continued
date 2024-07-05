@@ -66,6 +66,7 @@ namespace Parallax
         {
             // We can't really guard against this from happening, so we'll return a unique identifier of 0 and let the jobs clash
             // While KSP won't crash, the meshes will completely scramble
+            // Edit: Crashes KSP
             // This error should typically never happen
 
             if (uniqueQuadIdentifiers.Count - 1 == 0)

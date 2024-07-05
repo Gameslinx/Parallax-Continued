@@ -92,6 +92,39 @@ namespace Parallax
 
             parallaxMaterials.parallaxFull = UnityEngine.Object.Instantiate(baseMaterial);
         }
+        /// <summary>
+        /// Used by the GUI to set values at runtime
+        /// </summary>
+        public void SetMaterialValues()
+        {
+            foreach (KeyValuePair<string, float> floatPair in terrainShaderProperties.shaderFloats)
+            {
+                parallaxMaterials.parallaxLow.SetFloat(floatPair.Key, floatPair.Value);
+                parallaxMaterials.parallaxMid.SetFloat(floatPair.Key, floatPair.Value);
+                parallaxMaterials.parallaxHigh.SetFloat(floatPair.Key, floatPair.Value);
+                parallaxMaterials.parallaxLowMid.SetFloat(floatPair.Key, floatPair.Value);
+                parallaxMaterials.parallaxMidHigh.SetFloat(floatPair.Key, floatPair.Value);
+                parallaxMaterials.parallaxFull.SetFloat(floatPair.Key, floatPair.Value);
+            }
+            foreach (KeyValuePair<string, Vector3> vectorPair in terrainShaderProperties.shaderVectors)
+            {
+                parallaxMaterials.parallaxLow.SetVector(vectorPair.Key, vectorPair.Value);
+                parallaxMaterials.parallaxMid.SetVector(vectorPair.Key, vectorPair.Value);
+                parallaxMaterials.parallaxHigh.SetVector(vectorPair.Key, vectorPair.Value);
+                parallaxMaterials.parallaxLowMid.SetVector(vectorPair.Key, vectorPair.Value);
+                parallaxMaterials.parallaxMidHigh.SetVector(vectorPair.Key, vectorPair.Value);
+                parallaxMaterials.parallaxFull.SetVector(vectorPair.Key, vectorPair.Value);
+            }
+            foreach (KeyValuePair<string, Color> colorPair in terrainShaderProperties.shaderColors)
+            {
+                parallaxMaterials.parallaxLow.SetColor(colorPair.Key, colorPair.Value);
+                parallaxMaterials.parallaxMid.SetColor(colorPair.Key, colorPair.Value);
+                parallaxMaterials.parallaxHigh.SetColor(colorPair.Key, colorPair.Value);
+                parallaxMaterials.parallaxLowMid.SetColor(colorPair.Key, colorPair.Value);
+                parallaxMaterials.parallaxMidHigh.SetColor(colorPair.Key, colorPair.Value);
+                parallaxMaterials.parallaxFull.SetColor(colorPair.Key, colorPair.Value);
+            }
+        }
         public void Load(bool loadTextures)
         {
             if (loadTextures)
@@ -126,11 +159,19 @@ namespace Parallax
 
                     parallaxMaterials.parallaxFull.SetTexture(textureValue.Key, tex);
 
-                    loadedTextures.Add(textureValue.Key, tex);
                     // Add to active textures
+                    loadedTextures.Add(textureValue.Key, tex);
                 }
             }
             loaded = true;
+        }
+        /// <summary>
+        /// Used by the GUI to load textures on texture changes
+        /// </summary>
+        public void Reload()
+        {
+            Unload();
+            Load(true);
         }
         public void Unload()
         {
@@ -217,6 +258,8 @@ namespace Parallax
         public float minAltitude;
         public float maxAltitude;
         public float altitudeFadeRange;
+        public bool fixedAltitude;
+        public float placementAltitude;
         public int alignToTerrainNormal;
         public LOD lod1;
         public LOD lod2;

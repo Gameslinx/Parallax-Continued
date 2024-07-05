@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: InstanceTest
   m_Shader: {fileID: 4800000, guid: c26be5ad2dbe5714e9df106a69036cfa, type: 3}
-  m_ShaderKeywords: ALPHA_CUTOFF SUBSURFACE_THICKNESS_TEXTURE SUBSURFACE_USE_THICKNESS_TEXTURE
+  m_ShaderKeywords: SUBSURFACE_THICKNESS_TEXTURE WIND
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -20,7 +20,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BumpMap:
-        m_Texture: {fileID: 2800000, guid: d68ac236add0c114085cef5cc709cef7, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _CubeMap:
@@ -44,7 +44,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 65f55299f1412514ca715993eb93bd8d, type: 3}
+        m_Texture: {fileID: 2800000, guid: 95f5fa3b0b2e8be41b451b0453cb4906, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -74,7 +74,7 @@ Material:
     m_Floats:
     - _BumpScale: 1.11
     - _CullMode: 0
-    - _Cutoff: 0.4
+    - _Cutoff: 0.315
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _EnvironmentMapFactor: 0.21
@@ -82,6 +82,7 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
+    - _Hapke: 1
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1
@@ -99,10 +100,11 @@ Material:
     - _SubsurfacePower: 6
     - _Transmission: 0.5
     - _UVSec: 0
-    - _WindHeightFactor: 2
-    - _WindHeightStart: 0.05
-    - _WindScale: 0.0082
-    - _WindSpeed: 2.38
+    - _WindHeightFactor: 1.62
+    - _WindHeightStart: 2.14
+    - _WindIntensity: 0.015
+    - _WindScale: 0.0298
+    - _WindSpeed: 2.78
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}

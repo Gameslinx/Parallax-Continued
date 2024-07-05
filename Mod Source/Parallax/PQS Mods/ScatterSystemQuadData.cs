@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Profiling;
 using static KSP.UI.Screens.RDNode;
 
 namespace Parallax
@@ -42,6 +43,9 @@ namespace Parallax
         int[] triangles;
         Vector2[] uvs;
 
+        // Density multiplier based on the quad's position on the sphere
+        public float sphereRelativeDensityMult = 1.0f;
+
         string[] cornerBiomes = new string[4];
 
         public int numMeshTriangles = 0;
@@ -68,6 +72,7 @@ namespace Parallax
         /// </summary>
         public void Initialize()
         {
+            Profiler.BeginSample("Parallax Scatter System Initialize");
             sqrQuadWidth = (float)((2f * Mathf.PI * quad.sphereRoot.radius / 4f) / (Mathf.Pow(2f, quad.sphereRoot.maxLevel)));
             sqrQuadWidth *= sqrQuadWidth;
 
@@ -96,7 +101,7 @@ namespace Parallax
 
             numMeshTriangles = triangles.Length / 3;
 
-            planetNormal = Vector3.Normalize(quad.transform.position - quad.quadRoot.transform.position);
+            planetNormal = Vector3.Normalize(quad.transform.position - quad.sphereRoot.transform.position);
             localPlanetNormal = quad.gameObject.transform.InverseTransformDirection(planetNormal);
 
             CelestialBody body = FlightGlobals.GetBodyByName(quad.sphereRoot.name);
@@ -105,13 +110,14 @@ namespace Parallax
 
             GetCornerBiomes(body);
             DetermineScatters();
+            Profiler.EndSample();
         }
         /// <summary>
         /// Reinitialize the prerequisite data on this quad that must be refreshed. It does NOT reinitialize all scatters. Use this if regenerating scatters.
         /// </summary>
         public void Reinitialize()
         {
-            planetNormal = Vector3.Normalize(quad.transform.position - quad.quadRoot.transform.position);
+            planetNormal = Vector3.Normalize(quad.transform.position - quad.sphereRoot.transform.position);
             localPlanetNormal = quad.gameObject.transform.InverseTransformDirection(planetNormal);
 
             CelestialBody body = FlightGlobals.GetBodyByName(quad.sphereRoot.name);
@@ -149,9 +155,9 @@ namespace Parallax
             }
         }
         // Get the square distance from the quad to the camera
-        public void UpdateQuadCameraDistance()
+        public void UpdateQuadCameraDistance(ref Vector3 cameraPos)
         {
-            cameraDistance = (quad.gameObject.transform.position - RuntimeOperations.vectorCameraPos).magnitude;
+            cameraDistance = ((Vector3)quad.PrecisePosition - cameraPos).sqrMagnitude;
 
             // Warning - bugged - Especially on GUI refreshes
 
@@ -267,6 +273,15 @@ namespace Parallax
             }
 
             return directions;
+        }
+        /// <summary>
+        /// PQS is a subdivided cube-sphere. At the corners, the vertices are much closer together. This function accounts for that by approximating an appropriate reduction in density
+        /// </summary>
+        /// <param name="directionFromCenter"></param>
+        /// <returns></returns>
+        public float GetSphereRelativeDensityMult(Vector3 directionFromCenter)
+        {
+
         }
         /// <summary>
         /// Releases all memory consumed by this quad. Called when a quad is unloaded, or has a subdivision level below this.

@@ -183,10 +183,10 @@ namespace Parallax
             }
             return result;
         }
-        public static string TryGetConfigValue(ConfigNode node, string name)
+        public static string TryGetConfigValue(ConfigNode node, string name, bool logIfNull = true)
         {
             string result = node.GetValue(name);
-            if (result == null)
+            if (result == null && logIfNull)
             {
                 ParallaxDebug.LogError("Error parsing config - Unable to get property '" + name + "'. Fix this!");
             }

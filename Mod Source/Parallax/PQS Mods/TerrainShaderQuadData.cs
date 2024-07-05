@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace Parallax
 {
@@ -47,6 +48,7 @@ namespace Parallax
         // Get all required properties on the planet
         public void Initialize()
         {
+            Profiler.BeginSample("Parallax Terrain Initialize");
             body = ConfigLoader.parallaxTerrainBodies[quad.sphereRoot.name];
 
             blendLowMidStart = body.terrainShaderProperties.shaderFloats["_LowMidBlendStart"];
@@ -60,7 +62,9 @@ namespace Parallax
             if (isMaxLevel)
             {
                 // Sadly a requirement or quad meshes become corrupt
+                Profiler.BeginSample("Parallax Instantiate");
                 mesh = UnityEngine.Object.Instantiate(quad.mesh);
+                Profiler.EndSample();
                 
                 quadWidth = (float)((2f * Mathf.PI * quad.sphereRoot.radius / 4f) / (Mathf.Pow(2f, quad.sphereRoot.maxLevel)));
                 quadWidth *= quadWidth;
@@ -82,15 +86,15 @@ namespace Parallax
             {
                 RuntimeOperations.onFlightReflectionProbeReady += SetReflectionProbeAnchor;
             }
+            Profiler.EndSample();
         }
         // Params to avoid garbage gen
         Vector3 worldOrigin = Vector3.zero;
-        Vector3 localOrigin = Vector3.zero;
         float dist = 0;
         public void RangeCheck()
         {
-            worldOrigin = Camera.main == null ? Vector3.zero : Camera.main.transform.position; //FlightGlobals.ActiveVessel == null ? Vector3.zero : FlightGlobals.ActiveVessel.transform.position;
-            localOrigin = quad.transform.InverseTransformPoint(worldOrigin);
+            Profiler.BeginSample("Parallax Terrain RangeCheck");
+            worldOrigin = RuntimeOperations.vectorCameraPos;
             dist = (worldOrigin - quad.gameObject.transform.position).sqrMagnitude;
             // We're within range
             if (dist < quadWidth)
@@ -99,8 +103,8 @@ namespace Parallax
                 {
                     CreateFakeQuad();
                     subdivisionComponent = newQuad.AddComponent<JobifiedSubdivision>();
-                    subdivisionComponent.maxSubdivisionLevel = 7;
-                    subdivisionComponent.subdivisionRange = 700;
+                    subdivisionComponent.maxSubdivisionLevel = subdivisionLevel;
+                    subdivisionComponent.subdivisionRange = subdivisionRadius;
                     subdivisionComponent.mesh = newQuad.GetComponent<MeshFilter>().sharedMesh;
 
                     materialCreated = false;
@@ -119,6 +123,7 @@ namespace Parallax
                 SwapMaterial(false);
                 materialCreated = true;
             }
+            Profiler.EndSample();
         }
         // We can't edit the meshrenderer or meshfilter on the quad, or everything will disintigrate spectacularly
         // So we need to make a fake visual quad and hide the real one

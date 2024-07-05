@@ -531,6 +531,7 @@ namespace Parallax
                 string maxAltitude = ConfigUtils.TryGetConfigValue(node, "maxAltitude");
                 string altitudeFadeRange = ConfigUtils.TryGetConfigValue(node, "altitudeFadeRange");
                 string alignToTerrainNormal = ConfigUtils.TryGetConfigValue(node, "alignToTerrainNormal");
+                string placementAltitude = ConfigUtils.TryGetConfigValue(node, "placementAltitude", false);
 
                 distributionParams.seed = (float)ConfigUtils.TryParse(planetName, "seed", seed, typeof(float));
                 distributionParams.spawnChance = (float)ConfigUtils.TryParse(planetName, "spawnChance", spawnChance, typeof(float));
@@ -548,6 +549,17 @@ namespace Parallax
                 distributionParams.maxAltitude = (float)ConfigUtils.TryParse(planetName, "maxAltitude", maxAltitude, typeof(float));
                 distributionParams.altitudeFadeRange = (float)ConfigUtils.TryParse(planetName, "altitudeFadeRange", altitudeFadeRange, typeof(float));
                 distributionParams.alignToTerrainNormal = (bool)(ConfigUtils.TryParse(planetName, "alignToTerrainNormal", alignToTerrainNormal, typeof(bool))) ? 1 : 0;
+
+                // If distributing to a fixed altitude
+                if (placementAltitude != null)
+                {
+                    distributionParams.placementAltitude = (float)ConfigUtils.TryParse(planetName, "placementAltitude", placementAltitude, typeof(float));
+                    distributionParams.fixedAltitude = true;
+                }
+                else
+                {
+                    distributionParams.fixedAltitude = false;
+                }
             }
 
             ConfigNode lods = node.GetNode("LODs");

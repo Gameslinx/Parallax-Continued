@@ -8,6 +8,7 @@ float _SpecularPower;
 float _SpecularIntensity;
 float _EnvironmentMapFactor;
 float _RefractionIntensity;
+float _Hapke;
 
 //
 //  Utility Functions
@@ -33,7 +34,11 @@ float3 CombineNormals(float3 n1, float3 n2)
 //
 
 #define eta 0.7519
-#define GET_SHADOW LIGHT_ATTENUATION(i)
+#if !defined (BILLBOARD) && !defined (BILLBOARD_USE_MESH_NORMALS)
+    #define GET_SHADOW LIGHT_ATTENUATION(i)
+#else
+    #define GET_SHADOW 1
+#endif
 
 float FresnelEffect(float3 worldNormal, float3 viewDir, float power)
 {
@@ -93,7 +98,8 @@ float3 SubsurfaceScattering(float3 worldPos, float3 worldNormal, float3 viewDir,
 float3 CalculateLighting(LIGHTING_INPUT)
 {
 	// Main light
-    float NdotL = max(0, dot(worldNormal, lightDir)) * shadow;
+    float NdotL = saturate(dot(worldNormal, lightDir)) * shadow;
+    NdotL = pow(NdotL, _Hapke);
     float3 H = normalize(lightDir + viewDir);
     float NdotH = saturate(dot(worldNormal, H));
     

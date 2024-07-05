@@ -56,6 +56,7 @@ namespace Parallax
         }
         void DominantBodyLoaded(string bodyName)
         {
+            Debug.Log("[Scatter Manager] body loading " + bodyName);
             if (ConfigLoader.parallaxScatterBodies.ContainsKey(bodyName))
             {
                 currentBiomeMap = FlightGlobals.GetBodyByName(bodyName).BiomeMap.CompileToTexture();
@@ -66,12 +67,14 @@ namespace Parallax
                 if (renderer.planetName == bodyName)
                 {
                     renderer.gameObject.SetActive(true);
+                    Debug.Log("Renderer set active");
                     activeScatterRenderers.Add(renderer);
                 }
             }
         }
         void DominantBodyUnloaded(string bodyName)
         {
+            Debug.Log("[Scatter Manager] body unloading " + bodyName);
             foreach (ScatterRenderer renderer in activeScatterRenderers)
             {
                 // Renderer body is not the new one - disable it

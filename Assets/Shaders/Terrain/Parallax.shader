@@ -66,14 +66,7 @@ Shader "Custom/Parallax"
         _FresnelPower("Fresnel Power", Range(0.001, 20)) = 1
         _EnvironmentMapFactor("Environment Map Factor", Range(0.0, 2.0)) = 1
         _RefractionIntensity("Refraction Intensity", Range(0, 2)) = 1
-
-        [Space(10)]
-        [Header(Other Params)]
-        [Space(10)]
-        _TerrainShaderOffset("Terrain Shader Offset", vector) = (0, 0, 0)
-        _PlanetOrigin("Planet Origin", vector) = (0, 0, 0)
-        _PlanetRadius("Planet Radius", Range(0.01, 5000)) = 5
-        _PlanetOpacity("Planet Opacity", Range(0, 1)) = 1
+        _Hapke("Hapke", Range(0.001, 2)) = 1
     }
     SubShader
     {
@@ -97,8 +90,8 @@ Shader "Custom/Parallax"
 
             // For anyone wondering, the _ after multi_compile tells unity the keyword is a toggle, and avoids creating variants "_ON" and "_OFF"
             // I would move this to ParallaxStructs.cginc but as we're on unity 2019 you can't have preprocessor directives in cgincludes. Sigh
-            #pragma multi_compile PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
-            #pragma multi_compile _ INFLUENCE_MAPPING
+            #pragma multi_compile           PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
+            #pragma multi_compile_fragment _ INFLUENCE_MAPPING
             #pragma multi_compile_fog
 
             #include "UnityCG.cginc"
@@ -264,7 +257,6 @@ Shader "Custom/Parallax"
             CGPROGRAM
         
             #pragma multi_compile PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
-            #pragma multi_compile INFLUENCE_MAPPING
             #pragma multi_compile_fog
 
             #define PARALLAX_SHADOW_CASTER_PASS
@@ -378,8 +370,8 @@ Shader "Custom/Parallax"
             BlendOp Add
             CGPROGRAM
         
-            #pragma multi_compile PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
-            #pragma multi_compile INFLUENCE_MAPPING
+            #pragma multi_compile           PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
+            #pragma multi_compile_fragment  INFLUENCE_MAPPING
             #pragma multi_compile_fog
             #pragma multi_compile_fwdadd_fullshadows
         
