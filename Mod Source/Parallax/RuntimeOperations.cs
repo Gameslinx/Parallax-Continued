@@ -31,7 +31,7 @@ namespace Parallax
 
         int planetOpacityID = Shader.PropertyToID("_PlanetOpacity");
         int planetOriginID = Shader.PropertyToID("_PlanetOrigin");
-        int shaderOffsetID = Shader.PropertyToID("_ShaderOffset");
+        int shaderOffsetID = Shader.PropertyToID("_TerrainShaderOffset");
         int planetRadiusID = Shader.PropertyToID("_PlanetRadius");
 
         // Used in most shaders
@@ -53,7 +53,6 @@ namespace Parallax
         public void Update()
         {
             // Determine a celestial body change
-            Profiler.BeginSample("Parallax Runtime Op Main");
             if (EventHandler.currentParallaxBody != null && FlightGlobals.currentMainBody != null)
             {
                 // Required global params
@@ -84,22 +83,15 @@ namespace Parallax
                 vectorCameraPos = Vector3.zero;
                 cameraPos = float3.zero;
             }
-            Profiler.EndSample();
-            // Update quad-camera distances
-            //Profiler.BeginSample("Parallax Runtime Op Distances");
-            //Dictionary<PQ, ScatterSystemQuadData>.ValueCollection quadData = ScatterComponent.scatterQuadData.Values;
-            Profiler.BeginSample("Actually calculate distances");
 
+            // Update quad-camera distances
             foreach (var data in ScatterComponent.scatterQuadData)
             {
-                if (data.Value.quad.isVisible)
+                if (data.Value.quad.isVisible && data.Value.quad.meshRenderer.isVisible)
                 {
                     data.Value.UpdateQuadCameraDistance(ref vectorCameraPos);
                 }
             }
-
-            //Profiler.EndSample();
-            Profiler.EndSample();
         }
 
         void SetCameraFrustumPlanes(Camera cam)

@@ -54,9 +54,45 @@ namespace Parallax
 
         public ShaderProperties terrainShaderProperties;
         public bool loaded = false;
+        public bool emissive = false;
         public ParallaxTerrainBody(string planetName)
         {
             this.planetName = planetName;
+        }
+        public ConfigNode ToConfigNode()
+        {
+            ConfigNode node = new ConfigNode("Body");
+            node.AddValue("name", planetName);
+            node.AddValue("emissive", emissive);
+
+            ConfigNode materialNode = node.AddNode("ShaderProperties");
+
+            foreach (KeyValuePair<string, string> texturePair in terrainShaderProperties.shaderTextures)
+            {
+                materialNode.AddValue(texturePair.Key, texturePair.Value);
+            }
+
+            foreach (KeyValuePair<string, float> floatPair in terrainShaderProperties.shaderFloats)
+            {
+                materialNode.AddValue(floatPair.Key, floatPair.Value);
+            }
+
+            foreach (KeyValuePair<string, Vector3> vectorPair in terrainShaderProperties.shaderVectors)
+            {
+                materialNode.AddValue(vectorPair.Key, vectorPair.Value);
+            }
+
+            foreach (KeyValuePair<string, Color> colorPair in terrainShaderProperties.shaderColors)
+            {
+                materialNode.AddValue(colorPair.Key, colorPair.Value);
+            }
+
+            foreach (KeyValuePair<string, int> intPair in terrainShaderProperties.shaderInts)
+            {
+                materialNode.AddValue(intPair.Key, intPair.Value);
+            }
+
+            return node;
         }
         // Create materials and set most properties, except the textures which use load on demand
         public void LoadInitial()

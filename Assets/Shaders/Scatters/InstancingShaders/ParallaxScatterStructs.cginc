@@ -40,5 +40,6 @@
         float2 uv : TEXCOORD0;                  \
         float3 worldPos : TEXCOORD1;            \
         float3 viewDir : TEXCOORD2;             \
+        float3 planetNormal : TEXCOORD3;        \
         LIGHTING_COORDS(3,4)                    \
     };

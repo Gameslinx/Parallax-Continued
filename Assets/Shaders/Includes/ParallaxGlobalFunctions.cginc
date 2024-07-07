@@ -95,6 +95,12 @@ float3 SubsurfaceScattering(float3 worldPos, float3 worldNormal, float3 viewDir,
     #define LIGHTING_INPUT  float4 col, float3 worldNormal, float3 viewDir, float shadow, float3 lightDir
 #endif
 
+#if defined (EMISSION) && defined (DIRECTIONAL)
+    #define APPLY_EMISSION  result.rgb = result.rgb += _EmissionColor * (1 - finalNormal.a);
+#else
+    #define APPLY_EMISSION
+#endif
+
 float3 CalculateLighting(LIGHTING_INPUT)
 {
 	// Main light

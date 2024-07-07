@@ -67,6 +67,8 @@ Shader "Custom/Parallax"
         _EnvironmentMapFactor("Environment Map Factor", Range(0.0, 2.0)) = 1
         _RefractionIntensity("Refraction Intensity", Range(0, 2)) = 1
         _Hapke("Hapke", Range(0.001, 2)) = 1
+        _BumpScale("Bump Scale", Range(0.001, 2)) = 1
+        _EmissionColor("Emission Color", COLOR) = (0,0,0)
     }
     SubShader
     {
@@ -92,6 +94,7 @@ Shader "Custom/Parallax"
             // I would move this to ParallaxStructs.cginc but as we're on unity 2019 you can't have preprocessor directives in cgincludes. Sigh
             #pragma multi_compile           PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
             #pragma multi_compile_fragment _ INFLUENCE_MAPPING
+            #pragma multi_compile_fragment _ EMISSION
             #pragma multi_compile_fog
 
             #include "UnityCG.cginc"
@@ -146,9 +149,10 @@ Shader "Custom/Parallax"
                 if (ShouldClipPatch(patch[0].pos, patch[1].pos, patch[2].pos, patch[0].worldNormal, patch[1].worldNormal, patch[2].worldNormal, patch[0].worldPos, patch[1].worldPos, patch[2].worldPos))
                 {
                     // Cull the patch - This should be set to 1 in the shadow caster
-                    f.edge[0] = f.edge[1] = f.edge[2] = f.inside = 0;
+                    // Also set to 1 in the pixel shader, because smooth normals can mess with this
+                    f.edge[0] = f.edge[1] = f.edge[2] = f.inside = 1;
                 } 
-                else 
+                else
                 {
                     float tessFactor0 =  EdgeTessellationFactor(_TessellationEdgeLength.x, 0, patch[1].worldPos, patch[1].pos, patch[2].worldPos, patch[2].pos);
                     float tessFactor1 =  EdgeTessellationFactor(_TessellationEdgeLength.x, 0, patch[2].worldPos, patch[2].pos, patch[0].worldPos, patch[0].pos);
@@ -235,13 +239,14 @@ Shader "Custom/Parallax"
                 DECLARE_STEEP_TEXTURE_SET(steepDiffuse, steepNormal, _MainTexSteep, _BumpMapSteep)
 
                 fixed4 altitudeDiffuse = BLEND_TEXTURES(landMask, lowDiffuse, midDiffuse, highDiffuse);
-                float3 altitudeNormal = BLEND_TEXTURES(landMask, lowNormal, midNormal, highNormal);
+                NORMAL_FLOAT altitudeNormal = BLEND_TEXTURES(landMask, lowNormal, midNormal, highNormal);
 
                 fixed4 finalDiffuse = lerp(altitudeDiffuse, steepDiffuse, landMask.b);
-                float3 finalNormal = lerp(altitudeNormal, steepNormal, landMask.b); 
+                NORMAL_FLOAT finalNormal = lerp(altitudeNormal, steepNormal, landMask.b); 
 
-                float3 result = CalculateLighting(finalDiffuse, finalNormal, viewDir, GET_SHADOW, _WorldSpaceLightPos0);
+                float3 result = CalculateLighting(finalDiffuse, finalNormal.xyz, viewDir, GET_SHADOW, _WorldSpaceLightPos0);
                 UNITY_APPLY_FOG(i.fogCoord, result);
+                APPLY_EMISSION
                 return float4(result, 1 - _PlanetOpacity);
             }
             ENDCG

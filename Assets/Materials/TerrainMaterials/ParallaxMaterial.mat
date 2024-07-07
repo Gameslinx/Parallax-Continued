@@ -24,7 +24,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMapHigh:
-        m_Texture: {fileID: 2800000, guid: 3d28fd73c3d7e0d4c831e0fcb7909c75, type: 3}
+        m_Texture: {fileID: 2800000, guid: e4064af15cd4c87418f4a055d2747398, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMapLow:
@@ -162,7 +162,7 @@ Material:
     - _SrcBlend: 1
     - _SteepContrast: 2.62
     - _SteepMidpoint: 0.81
-    - _SteepPower: 7.18
+    - _SteepPower: 0.001
     - _Strength: 4
     - _TessellationEdgeLength: 5
     - _TessellationFactor: 1
@@ -176,7 +176,7 @@ Material:
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _Debug: {r: 1, g: 1, b: 1, a: 1}
-    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _EmissionColor: {r: 0.19651122, g: 0.569835, b: 0.6037736, a: 1}
     - _FresnelColor: {r: 0, g: 0, b: 0, a: 1}
     - _LightPos: {r: 0, g: 0, b: 0, a: 1}
     - _MetallicTint: {r: 0, g: 0, b: 0, a: 1}

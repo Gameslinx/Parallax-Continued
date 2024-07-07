@@ -38,8 +38,6 @@ namespace Parallax
         {
             if (pool.Count == 0)
             {
-                ParallaxDebug.LogError("Warning: Object pool with type " + typeof(T).Name + " is empty! Consider initialising with a larger number of items, or fix what's using so many");
-                ParallaxDebug.LogError(" - Initial count was " + capacity);
                 return InitSingle();
             }
             return pool.Dequeue();

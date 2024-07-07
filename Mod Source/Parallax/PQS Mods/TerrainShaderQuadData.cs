@@ -57,6 +57,11 @@ namespace Parallax
             blendMidHighEnd = body.terrainShaderProperties.shaderFloats["_MidHighBlendEnd"];
 
             quadMaterial = DetermineMaterial();
+            if (body.emissive)
+            {
+                quadMaterial.EnableKeyword("EMISSION");
+            }
+
             quadMeshRenderer = quad.gameObject.GetComponent<MeshRenderer>();
 
             if (isMaxLevel)
@@ -95,7 +100,7 @@ namespace Parallax
         {
             Profiler.BeginSample("Parallax Terrain RangeCheck");
             worldOrigin = RuntimeOperations.vectorCameraPos;
-            dist = (worldOrigin - quad.gameObject.transform.position).sqrMagnitude;
+            dist = (worldOrigin - (Vector3)quad.PrecisePosition).sqrMagnitude;
             // We're within range
             if (dist < quadWidth)
             {

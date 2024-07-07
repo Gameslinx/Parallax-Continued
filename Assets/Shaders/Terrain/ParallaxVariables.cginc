@@ -22,6 +22,8 @@ float _Tiling;
 float _DisplacementScale;
 float _DisplacementOffset;
 
+float _BumpScale;
+
 // Slope params
 float _SteepPower;
 float _SteepContrast;
@@ -31,6 +33,9 @@ float _SteepMidpoint;
 float _MaxTessellation;
 float _TessellationEdgeLength;
 float _MaxTessellationRange;
+
+// Emission
+float3 _EmissionColor;
 
 //
 // Other / game params

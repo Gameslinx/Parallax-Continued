@@ -42,6 +42,12 @@ namespace Parallax
         int[] count = new int[] { 0, 0, 0 };
         uint[] indirectArgs = { 1, 1, 1 };
 
+        // Frequently set prop IDs
+        int objectToWorldMatrixPropID = 0;
+        int planetNormalPropID = 0;
+        int cameraFrustumPlanesPropID = 0;
+        int worldSpaceCameraPositionPropID = 0;
+
         bool eventAdded = false;
         public bool cleaned = false;
 
@@ -62,7 +68,7 @@ namespace Parallax
             cleaned = false;
             scatterRenderer = ScatterManager.Instance.fastScatterRenderers[scatter.scatterName];
             numTriangles = parent.numMeshTriangles;
-            outputSize = scatter.distributionParams.populationMultiplier * numTriangles;
+            outputSize = scatter.distributionParams.populationMultiplier * numTriangles * (int)Mathf.Pow(2, parent.quad.sphereRoot.maxLevel - parent.quad.subdivision);
         }
         void InitializeDistribute()
         {
@@ -78,8 +84,8 @@ namespace Parallax
             scatterShader.SetVector("_PlanetOrigin", parent.planetOrigin);
 
 
-            scatterShader.SetMatrix("_ObjectToWorldMatrix", parent.quad.gameObject.transform.localToWorldMatrix);
-            scatterShader.SetMatrix("_WorldToObjectMatrix", parent.quad.gameObject.transform.worldToLocalMatrix);
+            scatterShader.SetMatrix("_ObjectToWorldMatrix", parent.quad.meshRenderer.localToWorldMatrix);
+            scatterShader.SetMatrix("_WorldToObjectMatrix", parent.quad.meshRenderer.worldToLocalMatrix);
 
             distributeKernel = GetDistributeKernel();
             evaluateKernel = scatterShader.FindKernel("Evaluate");
@@ -130,8 +136,8 @@ namespace Parallax
         public void SetDistributionVars()
         {
             // Values from config
-            scatterShader.SetInt("_PopulationMultiplier", scatter.distributionParams.populationMultiplier);
-            scatterShader.SetFloat("_SpawnChance", scatter.distributionParams.spawnChance);
+            scatterShader.SetInt("_PopulationMultiplier", scatter.distributionParams.populationMultiplier * (int)Mathf.Pow(2, parent.quad.sphereRoot.maxLevel - parent.quad.subdivision));
+            scatterShader.SetFloat("_SpawnChance", scatter.distributionParams.spawnChance * parent.sphereRelativeDensityMult);
             scatterShader.SetInt("_AlignToTerrainNormal", scatter.distributionParams.alignToTerrainNormal);
             scatterShader.SetFloat("_MaxNormalDeviance", scatter.distributionParams.maxNormalDeviance);
             scatterShader.SetFloat("_Seed", scatter.distributionParams.seed);
@@ -225,23 +231,29 @@ namespace Parallax
             scatterShader.SetFloat("_Lod01Split", scatter.distributionParams.lod1.range);
             scatterShader.SetFloat("_Lod12Split", scatter.distributionParams.lod2.range);
 
-            
+            // Init property IDs
+            objectToWorldMatrixPropID = Shader.PropertyToID("_ObjectToWorldMatrix");
+            planetNormalPropID = Shader.PropertyToID("_PlanetNormal");
+            cameraFrustumPlanesPropID = Shader.PropertyToID("_CameraFrustumPlanes");
+            worldSpaceCameraPositionPropID = Shader.PropertyToID("_WorldSpaceCameraPosition");
         }
         public void Evaluate()
         {
-            // Is it even worth evaluating this scatter?
-            // Quad is not in the view frustum
+            // Quad is not in the view frustum or used for shadow rendering
             if (!parent.quad.meshRenderer.isVisible) { return; }
+
             // Quad is out of range
             if (parent.cameraDistance > scatter.distributionParams.range * scatter.distributionParams.range + parent.sqrQuadWidth) { return; }
+
+            // Not finished distributing yet
             if (!eventAdded) { return; }
 
             // Update runtime shader vars
             // We need to know the size of the distribution before continuing with this
-            scatterShader.SetMatrix("_ObjectToWorldMatrix", parent.quad.gameObject.transform.localToWorldMatrix);
-            scatterShader.SetVector("_PlanetNormal", Vector3.Normalize(parent.quad.gameObject.transform.position - parent.quad.sphereRoot.gameObject.transform.position));
-            scatterShader.SetFloats("_CameraFrustumPlanes", RuntimeOperations.floatCameraFrustumPlanes);
-            scatterShader.SetVector("_WorldSpaceCameraPosition", RuntimeOperations.vectorCameraPos);
+            scatterShader.SetMatrix(objectToWorldMatrixPropID, parent.quad.meshRenderer.localToWorldMatrix);
+            scatterShader.SetVector(planetNormalPropID, Vector3.Normalize(parent.quad.PrecisePosition - parent.quad.sphereRoot.PrecisePosition));
+            scatterShader.SetFloats(cameraFrustumPlanesPropID, RuntimeOperations.floatCameraFrustumPlanes);
+            scatterShader.SetVector(worldSpaceCameraPositionPropID, RuntimeOperations.vectorCameraPos);
 
             scatterShader.DispatchIndirect(evaluateKernel, dispatchArgs, 0);
         }

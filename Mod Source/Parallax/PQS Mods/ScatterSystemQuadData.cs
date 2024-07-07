@@ -73,13 +73,16 @@ namespace Parallax
         public void Initialize()
         {
             Profiler.BeginSample("Parallax Scatter System Initialize");
-            sqrQuadWidth = (float)((2f * Mathf.PI * quad.sphereRoot.radius / 4f) / (Mathf.Pow(2f, quad.sphereRoot.maxLevel)));
-            sqrQuadWidth *= sqrQuadWidth;
 
             mesh = quad.mesh;
             vertices = mesh.vertices;
             normals = mesh.normals;
             triangles = mesh.triangles;
+
+            // We can estimate this using (float)((2f * Mathf.PI * quad.sphereRoot.radius / 4f) / (Mathf.Pow(2f, quad.subdivision)));
+            // But quads do vary in size because of the cube sphere transformation, making this unreliable
+            sqrQuadWidth = Vector3.Distance(quad.transform.TransformPoint(vertices[0]), quad.transform.TransformPoint(vertices[vertices.Length - 1])) * 2; 
+            sqrQuadWidth *= sqrQuadWidth;
 
             // Quad has UVs but they're not the right ones - we want planet UVs so we fetch them from here
             uvs = PQSMod_Parallax.quadPlanetUVs[quad];
@@ -108,8 +111,15 @@ namespace Parallax
             planetOrigin = body.transform.position;
             planetRadius = (float)body.Radius;
 
+            sphereRelativeDensityMult = GetSphereRelativeDensityMult(body);
+
             GetCornerBiomes(body);
+
+            // Get the camera distance now, or we wait an additional frame
+            UpdateQuadCameraDistance(ref RuntimeOperations.vectorCameraPos);
+            Profiler.BeginSample("Determine scatters (and generate)");
             DetermineScatters();
+            Profiler.EndSample();
             Profiler.EndSample();
         }
         /// <summary>
@@ -125,6 +135,8 @@ namespace Parallax
 
             directionsFromCenter = GetDirectionsFromCenter(vertices, quad.sphereRoot.gameObject.transform.position);
             sourceDirsFromCenterBuffer.SetData(directionsFromCenter);
+
+            sphereRelativeDensityMult = GetSphereRelativeDensityMult(body);
         }
         /// <summary>
         /// Reinitializes an amount of scatters. Refreshes prerequisite data and regenerates the scatters specified.
@@ -157,7 +169,7 @@ namespace Parallax
         // Get the square distance from the quad to the camera
         public void UpdateQuadCameraDistance(ref Vector3 cameraPos)
         {
-            cameraDistance = ((Vector3)quad.PrecisePosition - cameraPos).sqrMagnitude;
+            cameraDistance = ((Vector3)quad.meshRenderer.localToWorldMatrix.GetColumn(3) - cameraPos).sqrMagnitude;
 
             // Warning - bugged - Especially on GUI refreshes
 
@@ -279,9 +291,27 @@ namespace Parallax
         /// </summary>
         /// <param name="directionFromCenter"></param>
         /// <returns></returns>
-        public float GetSphereRelativeDensityMult(Vector3 directionFromCenter)
+        public float GetSphereRelativeDensityMult(CelestialBody body)
         {
+            // This calculation is wrong, but it surprisingly works much better for KSP
+            UnityEngine.Vector2d latlon = LatLon.GetLatitudeAndLongitude(body.BodyFrame, body.transform.position, quad.PrecisePosition);
 
+            //From -22.5 to 22.5 where 0 we want the highest density and -22.5 we want 1/3 density
+            double lat = Math.Abs(latlon.x) % 45.0 - 22.5;
+            double lon = Math.Abs(latlon.y) % 45.0 - 22.5;   
+
+            //Now from -1 to 1, with 0 being where we want most density and -1 where we want 1/3
+            lat /= 22.5;
+            lon /= 22.5;    
+
+            //Now from 0 to 1. 1 when at a corner
+            lat = Math.Abs(lat);
+            lon = Math.Abs(lon);    
+
+            double factor = (lat + lon) / 2;
+            float multiplier = Mathf.Clamp01(Mathf.Lerp(1.0f, 0.333333f, Mathf.Pow((float)factor, 2)));
+
+            return multiplier;
         }
         /// <summary>
         /// Releases all memory consumed by this quad. Called when a quad is unloaded, or has a subdivision level below this.

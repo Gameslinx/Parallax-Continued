@@ -29,8 +29,7 @@
                 float4 vertex : SV_POSITION;
             };
 
-            Texture2D _MainTex;
-            SamplerState point_clamp_sampler;
+            sampler2D _MainTex;
             
             float4 _MainTex_ST;
             
@@ -44,7 +43,7 @@
             
             fixed4 frag (v2f i) : SV_Target
             {
-                fixed4 col = _MainTex.Sample(point_clamp_sampler, i.uv);
+                fixed4 col = tex2D(_MainTex, i.uv);
                 return col;
             }
             ENDCG

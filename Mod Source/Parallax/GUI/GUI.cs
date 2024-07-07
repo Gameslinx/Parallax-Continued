@@ -32,7 +32,8 @@ namespace Parallax
         static bool showLOD1Keywords = false;
         static bool showLOD2Keywords = false;
 
-        static bool showExporter = false;
+        static bool showScatterExporter = false;
+        static bool showTerrainExporter = false;
         static bool overwriteOnExport = false;
 
         static bool showDebug = false;
@@ -41,7 +42,8 @@ namespace Parallax
         static int currentScatterIndex = 0;
 
         public static Scatter[] scatters;
-        bool currentBodyHasScatters = false;
+        static bool currentBodyHasScatters = false;
+        static bool currentBodyHasTerrain = false;
 
         static GUIStyle activeButton;
 
@@ -67,16 +69,21 @@ namespace Parallax
             {
                 // Includes shared scatters
                 scatters = ConfigLoader.parallaxScatterBodies[bodyName].scatters.Values.ToArray();
-                foreach (Scatter scatter in scatters)
-                {
-                    Debug.Log("Scatter name: " + scatter.scatterName + " is shared = " + scatter.isShared);
-                }
                 currentBodyHasScatters = true;
                 currentScatterIndex = 0;
             }
             else
             {
                 currentBodyHasScatters = false;
+            }
+
+            if (ConfigLoader.parallaxTerrainBodies.ContainsKey(bodyName))
+            {
+                currentBodyHasTerrain = true;
+            }
+            else
+            {
+                currentBodyHasTerrain = false;
             }
         }
         void Update()
@@ -85,9 +92,9 @@ namespace Parallax
             bool toggleDisplayGUI = (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.P));
             if (toggleDisplayGUI)
             {
-                if (!currentBodyHasScatters)
+                if (!currentBodyHasScatters && !currentBodyHasTerrain)
                 {
-                    ScreenMessages.PostScreenMessage("This body is not configured for Parallax Scatters");
+                    ScreenMessages.PostScreenMessage("This body is not configured for Parallax");
                     showGUI = false;
                     return;
                 }
@@ -122,6 +129,16 @@ namespace Parallax
             }
             GUILayout.EndHorizontal();
 
+            // Force an editor if only one is configured
+            if (currentBodyHasTerrain && !currentBodyHasScatters)
+            {
+                editorIsScatter = false;
+            }
+            if (currentBodyHasScatters && !currentBodyHasTerrain)
+            {
+                editorIsScatter = true;
+            }
+
             if (!editorIsScatter)
             {
                 TerrainMenu();
@@ -145,20 +162,13 @@ namespace Parallax
             ParamCreator.ChangeMethod texCallback = body.Reload;
             // Parse shader properties
 
-            GUILayout.Label("Textures: ", HighLogic.Skin.label);
-            List<string> textureKeys = new List<string>(props.shaderTextures.Keys);
-            foreach (string key in textureKeys)
-            {
-                // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
-                string value = props.shaderTextures[key];
-                bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.StringField);
-                if (valueChanged)
-                {
-                    props.shaderTextures[key] = value;
-                    texCallback();
-                }
-            }
+            //GUILayout.Label("Planet Subdivision Properties: ", HighLogic.Skin.label);
+            //ParamCreator.ChangeMethod pqsCallback = body.UpdateSubdivision;
+            //PQSMod_Parallax pqsMod = FlightGlobals.currentMainBody.pqsController.GetComponentsInChildren<PQSMod>().Where(x => x.GetType() == typeof(PQSMod_Parallax)).FirstOrDefault() as PQSMod_Parallax;
+            //ParamCreator.CreateParam("Subdivision Radius", ref pqsMod.subdivisionRadius, GUIHelperFunctions.IntField, );
 
+            GUILayout.Label("Terrain Shader Properties: ", HighLogic.Skin.label);
+            GUILayout.Space(15);
             // Process floats
             GUILayout.Label("Floats: ", HighLogic.Skin.label);
             List<string> floatKeys = new List<string>(props.shaderFloats.Keys);
@@ -203,11 +213,71 @@ namespace Parallax
                     callback();
                 }
             }
+
+            GUILayout.Space(15);
+            GUILayout.Label("Exporter Options");
+            if (GUILayout.Button("Exporter", HighLogic.Skin.button))
+            {
+                showTerrainExporter = !showTerrainExporter;
+            }
+            if (showTerrainExporter)
+            {
+                if (overwriteOnExport)
+                {
+                    GUILayout.Label("Existing config will be backed up to GameData/Parallax/Exports/Backups");
+                }
+                else
+                {
+                    GUILayout.Label("Configs will be exported to GameData/Parallax/Exports/Configs");
+                    GUILayout.Label("To apply them, you must copy the contents of the .cfg to the active .cfg");
+                }
+                ParamCreator.CreateParam("Overwrite Existing Configs", ref overwriteOnExport, GUIHelperFunctions.BoolField);
+                if (GUILayout.Button("Save Current Terrain", HighLogic.Skin.button))
+                {
+                    if (overwriteOnExport)
+                    {
+                        // Backup current planet
+                        ConfigNode currentNode = ConfigLoader.GetPlanetTerrainNode(FlightGlobals.currentMainBody.name);
+                        if (currentNode != null)
+                        {
+                            bool saved = ConfigLoader.SaveConfigNode(currentNode, KSPUtil.ApplicationRootPath + "GameData/Parallax/Exports/Backups/ParallaxTerrain-" + FlightGlobals.currentMainBody.name + ".cfg");
+                            // Backup created, now overwrite
+                            if (saved)
+                            {
+                                // Used just for file path, really
+                                UrlDir.UrlConfig rootPlanetNode = ConfigLoader.GetBaseParallaxNode(FlightGlobals.currentMainBody.name);
+                                ConfigNode rootPlanetNodeConfig = rootPlanetNode.config;
+
+                                ConfigNode originalTerrainNode = ConfigLoader.GetPlanetTerrainNode(FlightGlobals.currentMainBody.name);
+
+                                List<ConfigNode> precedingNodes = new List<ConfigNode>();
+                                List<ConfigNode> trailingNodes = new List<ConfigNode>();
+
+                                // Get our new config node
+                                ConfigNode newTerrainNode = ConfigLoader.parallaxTerrainBodies[FlightGlobals.currentMainBody.name].ToConfigNode();
+
+                                // Populates lists preceding and trailing so we can preserve the terrain node position in the config instead of forcing it to the bottom
+                                ConfigLoader.DeterminePrecedingAndTrailingNodes(rootPlanetNodeConfig, originalTerrainNode, precedingNodes, trailingNodes);
+
+                                // Remove original node, add preceding nodes, add new node, add trailing nodes
+                                ConfigLoader.OverwriteConfigNode(rootPlanetNodeConfig, newTerrainNode, precedingNodes, trailingNodes, "Body");
+
+                                string path = "GameData/" + rootPlanetNode.url.Replace("/ParallaxTerrain", string.Empty) + ".cfg";
+                                ConfigLoader.SaveConfigNode(rootPlanetNodeConfig, path);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        
+                    }
+                }
+            }
         }
         static void ScatterMenu()
         {
             // Reset window size
-            if (!showDistribution && !showMaterial && !showDistributionNoise && !showExporter && !showDebug)
+            if (!showDistribution && !showMaterial && !showDistributionNoise && !showScatterExporter && !showDebug)
             {
                 window.height = windowDefault.height;
             }
@@ -540,11 +610,11 @@ namespace Parallax
         {
             GUILayout.Space(15);
             GUILayout.Label("Exporter Options", HighLogic.Skin.label);
-            if (GUILayout.Button("Exporter", GetButtonColor(showExporter)))
+            if (GUILayout.Button("Exporter", GetButtonColor(showScatterExporter)))
             {
-                showExporter = !showExporter;
+                showScatterExporter = !showScatterExporter;
             }
-            if (showExporter)
+            if (showScatterExporter)
             {
                 if (overwriteOnExport)
                 {
@@ -568,7 +638,7 @@ namespace Parallax
                     if (saved)
                     {
                         // Used just for file path, really
-                        UrlDir.UrlConfig rootPlanetNode = ConfigLoader.GetPlanetNode(FlightGlobals.currentMainBody.name);
+                        UrlDir.UrlConfig rootPlanetNode = ConfigLoader.GetPlanetScatterNode(FlightGlobals.currentMainBody.name);
                         ConfigNode rootPlanetNodeConfig = rootPlanetNode.config;
 
                         ConfigNode originalScatterNode = ConfigLoader.GetScatterConfigNode(FlightGlobals.currentMainBody.name, scatter.scatterName, rootPlanetNode, scatter.isShared);
@@ -583,7 +653,7 @@ namespace Parallax
                         ConfigLoader.DeterminePrecedingAndTrailingNodes(rootPlanetNodeConfig, originalScatterNode, precedingNodes, trailingNodes);
 
                         // Remove original node, add preceding nodes, add new node, add trailing nodes
-                        ConfigLoader.OverwriteConfigNode(rootPlanetNodeConfig, newScatterNode, precedingNodes, trailingNodes);
+                        ConfigLoader.OverwriteConfigNode(rootPlanetNodeConfig, newScatterNode, precedingNodes, trailingNodes, "Scatter", "SharedScatter");
 
                         string path = "GameData/" + rootPlanetNode.url.Replace("/ParallaxScatters", string.Empty) + ".cfg";
                         ConfigLoader.SaveConfigNode(rootPlanetNodeConfig, path);

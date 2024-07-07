@@ -79,15 +79,10 @@ Shader "Custom/ParallaxInstancedSolid"
             
             #pragma multi_compile_fragment      _ ALPHA_CUTOFF
             #pragma multi_compile_fragment      _ ALTERNATE_SPECULAR_TEXTURE
-            #pragma multi_compile               _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
+            #pragma multi_compile_vertex        _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
             #pragma multi_compile_fragment      _ DEBUG_FACE_ORIENTATION            DEBUG_SHOW_WIND_TEXTURE
             #pragma multi_compile_fragment      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
-
-            #if defined (DEBUG_SHOW_WIND_TEXTURE)
-                #pragma multi_compile        _ WIND
-            #else
-                #pragma multi_compile_vertex        _ WIND
-            #endif
+            #pragma multi_compile        _ WIND
 
             // Shader stages
             #pragma vertex vert
@@ -134,6 +129,7 @@ Shader "Custom/ParallaxInstancedSolid"
                 o.worldPos = worldPos;
                 o.uv = i.uv;
 
+                o.planetNormal = planetNormal;
                 o.viewDir = _WorldSpaceCameraPos - worldPos;
                 o.pos = UnityWorldToClipPos(worldPos);
 
@@ -185,7 +181,7 @@ Shader "Custom/ParallaxInstancedSolid"
                                 ADDITIONAL_LIGHTING_PARAMS(i.worldPos, THICKNESS)
                 );
 
-                // Process any debug options are enabled that affect the output colour
+                // Process any enabled debug options that affect the output colour
                 DEBUG_IF_ENABLED
                 return float4(result, 1);
             }
@@ -242,9 +238,10 @@ Shader "Custom/ParallaxInstancedSolid"
                 o.worldPos = worldPos;
                 o.uv = i.uv;
         
+                o.planetNormal = planetNormal;
                 o.viewDir = _WorldSpaceCameraPos - worldPos;
+
                 o.pos = UnityWorldToClipPos(worldPos);
-        
                 o.pos = UnityApplyLinearShadowBias(o.pos);
         
                 return o;

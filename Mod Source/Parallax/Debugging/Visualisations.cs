@@ -15,6 +15,7 @@ namespace Parallax
         bool showingNoise = false;
         bool showingDistance = false;
         bool showingBiomes = false;
+        bool showingDensity = false;
         void Update()
         {
             bool noiseToggle = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha1);
@@ -38,7 +39,19 @@ namespace Parallax
                 if (showingBiomes) { QuadBiomeDisplay.ShowQuadBiomes(); }
                 if (!showingBiomes) { QuadBiomeDisplay.Cleanup(); }
             }
-
+            bool densityToggle = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha5);
+            if (densityToggle)
+            {
+                showingDensity = !showingDensity;
+                if (showingDensity)
+                {
+                    QuadDensityDisplay.ShowQuadDensities();
+                }
+                if (!showingDensity)
+                {
+                    QuadDensityDisplay.Cleanup();
+                }
+            }
 
 
             bool logVRAMStats = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha4);
@@ -160,6 +173,35 @@ namespace Parallax
                 }
             }
 
+            public static void Cleanup()
+            {
+                foreach (GameObject go in objectDisplays)
+                {
+                    UnityEngine.Object.Destroy(go);
+                }
+            }
+        }
+
+        public class QuadDensityDisplay
+        {
+            public static List<GameObject> objectDisplays = new List<GameObject>();
+            public static void ShowQuadDensities()
+            {
+                foreach (KeyValuePair<PQ, ScatterSystemQuadData> quadData in ScatterComponent.scatterQuadData)
+                {
+                    PQ quad = quadData.Key;
+                    GameObject go = CreateQuadGameObject(quad, out MeshRenderer meshRenderer, out MeshFilter meshFilter);
+
+                    Mesh mesh = UnityEngine.Object.Instantiate(quad.gameObject.GetComponent<MeshFilter>().sharedMesh);
+                    meshFilter.mesh = mesh;
+                    meshRenderer.sharedMaterial = new Material(Shader.Find("Standard"));
+
+                    float density = quadData.Value.GetSphereRelativeDensityMult(FlightGlobals.currentMainBody);
+                    meshRenderer.sharedMaterial.SetColor("_Color", Color.white * density);
+
+                    objectDisplays.Add(go);
+                }
+            }
             public static void Cleanup()
             {
                 foreach (GameObject go in objectDisplays)

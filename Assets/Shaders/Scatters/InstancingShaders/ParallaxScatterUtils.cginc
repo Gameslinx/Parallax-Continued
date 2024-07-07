@@ -116,7 +116,7 @@ float3 Wind(float3 localPos, float3 worldPos, float3 planetNormal, float4x4 obje
 // For grass/trees with mostly upward-facing normals, this is useful
 #if defined (TWO_SIDED)
     #define CORRECT_TWOSIDED_WORLDNORMAL                                                                       \
-        float3 unaligned = GetUnalignedVectorComponents(normalize(i.worldNormal), planetNormal);               \
+        float3 unaligned = GetUnalignedVectorComponents(normalize(i.worldNormal), i.planetNormal);             \
         i.worldNormal = normalize(i.worldNormal - unaligned * 2.0f * (facing < 0));
 #else
     #define CORRECT_TWOSIDED_WORLDNORMAL
@@ -185,17 +185,12 @@ void Billboard(inout float4 vertex, inout float3 normal, inout float4 tangent, f
     #define BILLBOARD_IF_ENABLED(vertex, normal, tangent, objectToWorldMatrix)
 #endif
 
-#if defined (DEBUG_FACE_ORIENTATION) || (defined (WIND) && defined (DEBUG_SHOW_WIND_TEXTURE))
-    #if defined (DEBUG_FACE_ORIENTATION)
-        #define DEBUG_IF_ENABLED                                                 \
-            float3 frontFaceColor = float3(0.345, 0.345, 0.898);                 \
-            float3 backFaceColor = float3(0.898, 0.345, 0.345);                  \
-            float3 faceColor = lerp(frontFaceColor, backFaceColor, -facing);     \
-            result.rgb = faceColor; 
-    #endif
-    #if defined (WIND) && defined (DEBUG_SHOW_WIND_TEXTURE)
-        #define DEBUG_IF_ENABLED result.xyz = GetWindMap(i.worldPos, GetTriplanarBlendWeights(worldNormal));
-    #endif
+#if defined (DEBUG_FACE_ORIENTATION)
+    #define DEBUG_IF_ENABLED                                                 \
+        float3 frontFaceColor = float3(0.345, 0.345, 0.898);                 \
+        float3 backFaceColor = float3(0.898, 0.345, 0.345);                  \
+        float3 faceColor = lerp(frontFaceColor, backFaceColor, -facing);     \
+        result.rgb = faceColor; 
 #else
     #define DEBUG_IF_ENABLED
 #endif

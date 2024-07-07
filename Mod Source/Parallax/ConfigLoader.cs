@@ -63,7 +63,7 @@ namespace Parallax
             shaderPropertiesTemplate = new ShaderProperties();
             InitializeTemplateConfig(GetConfigByName("ParallaxShaderProperties").config, shaderPropertiesTemplate);
 
-            LoadTerrainConfigs(GetConfigsByName("Parallax"));
+            LoadTerrainConfigs(GetConfigsByName("ParallaxTerrain"));
             LoadScatterConfigs(GetConfigsByName("ParallaxScatters"));
             LoadSharedScatterConfigs(GetConfigsByName("ParallaxScatters"));
             InitializeObjectPools(parallaxGlobalSettings);
@@ -81,14 +81,46 @@ namespace Parallax
         {
             return GameDatabase.Instance.GetConfigs(name)[0];
         }
-        public static UrlDir.UrlConfig GetPlanetNode(string planetName)
+        public static UrlDir.UrlConfig GetBaseParallaxNode(string planetName)
+        {
+            UrlDir.UrlConfig[] baseConfig = GetConfigsByName("ParallaxTerrain");
+            foreach (UrlDir.UrlConfig config in baseConfig)
+            {
+                ConfigNode[] bodyNode = config.config.GetNodes("Body");
+                foreach (ConfigNode body in bodyNode)
+                {
+                    if (body.GetValue("name") == planetName)
+                    {
+                        return config;
+                    }
+                }
+            }
+            return null;
+        }
+        public static ConfigNode GetPlanetTerrainNode(string planetName)
+        {
+            UrlDir.UrlConfig[] baseConfig = GetConfigsByName("ParallaxTerrain");
+            foreach (UrlDir.UrlConfig config in baseConfig)
+            {
+                ConfigNode[] bodyNode = config.config.GetNodes("Body");
+                foreach (ConfigNode body in bodyNode)
+                {
+                    if (body.GetValue("name") == planetName)
+                    {
+                        return body;
+                    }
+                }
+            }
+            return null;
+        }
+        public static UrlDir.UrlConfig GetPlanetScatterNode(string planetName)
         {
             UrlDir.UrlConfig[] baseConfig = GetConfigsByName("ParallaxScatters");
             return baseConfig.FirstOrDefault(x => x.config.GetValue("body") == planetName);
         }
         public static ConfigNode GetScatterConfigNode(string planetName, string scatterName, bool isShared = false)
         {
-            return GetScatterConfigNode(planetName, scatterName, GetPlanetNode(planetName), isShared);
+            return GetScatterConfigNode(planetName, scatterName, GetPlanetScatterNode(planetName), isShared);
         }
         public static ConfigNode GetScatterConfigNode(string planetName, string scatterName, UrlDir.UrlConfig baseConfig, bool isShared = false)
         {
@@ -126,10 +158,12 @@ namespace Parallax
             }
         }
         // Preserve order
-        public static void OverwriteConfigNode(ConfigNode parentNode, ConfigNode newNode, List<ConfigNode> preceding, List<ConfigNode> trailing)
+        public static void OverwriteConfigNode(ConfigNode parentNode, ConfigNode newNode, List<ConfigNode> preceding, List<ConfigNode> trailing, params string[] removeNodeNames)
         {
-            parentNode.RemoveNodes("Scatter");
-            parentNode.RemoveNodes("SharedScatter");
+            foreach (string nodeName in removeNodeNames)
+            {
+                parentNode.RemoveNodes(nodeName);
+            }
             
             foreach (ConfigNode node in preceding)
             {
@@ -282,7 +316,7 @@ namespace Parallax
         }
         public static void LoadTerrainConfigs(UrlDir.UrlConfig[] allRootNodes)
         {
-            // "Parallax"
+            // "ParallaxTerrain"
             foreach (UrlDir.UrlConfig rootNode in allRootNodes)
             {
                 // "Body"
@@ -290,9 +324,11 @@ namespace Parallax
                 foreach (ConfigNode planetNode in nodes)
                 {
                     string planetName = planetNode.GetValue("name");
-
-                    // TODO: Add emissive support here
+                    string emissive = planetNode.GetValue("emissive");
+                    bool isEmissive = emissive == null ? false : (bool.Parse(emissive) == true ? true : false);
+                    
                     ParallaxTerrainBody body = new ParallaxTerrainBody(planetName);
+                    body.emissive = isEmissive;
 
                     ParseNewBody(body, planetNode.GetNode("ShaderProperties"));
                     body.LoadInitial();

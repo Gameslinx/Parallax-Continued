@@ -23,6 +23,12 @@
 #define TERRAIN_TEX_BLEND_FREQUENCY 0.2
 #define TERRAIN_TEX_BLEND_OFFSET    0.4
 
+#if defined (EMISSION) && defined (DIRECTIONAL)
+    #define NORMAL_FLOAT float4
+#else
+    #define NORMAL_FLOAT float3
+#endif
+
 // True if point is outside bounds defined by lower and higher
 bool IsOutOfBounds(float3 p, float3 lower, float3 higher)
 {
@@ -178,8 +184,8 @@ struct PixelBiplanarParams
     float exponent = pow(2, floorLogDistance);                                                                                          \
     float texScale0 = exponent * 0.5;                                                                                                   \
     float texScale1 = exponent;                                                                                                         \
-    float3 worldUVsLevel0 = (worldPos - _TerrainShaderOffset) * _Tiling / texScale0;                                                    \
-    float3 worldUVsLevel1 = (worldPos - _TerrainShaderOffset) * _Tiling / texScale1;                                                    \
+    float3 worldUVsLevel0 = (worldPos + _TerrainShaderOffset) * _Tiling / texScale0;                                                    \
+    float3 worldUVsLevel1 = (worldPos + _TerrainShaderOffset) * _Tiling / texScale1;                                                    \
     float texLevelBlend = saturate((logDistance - floorLogDistance) * 1);
 
 float GetMipLevel(float3 texCoord, float3 dpdx, float3 dpdy)
@@ -236,27 +242,43 @@ float4 SampleBiplanarTextureLOD(sampler2D tex, VertexBiplanarParams params, floa
     return (x * w.x + y * w.y) / (w.x + w.y);
 }
 
-float3 SampleBiplanarNormal(sampler2D tex, PixelBiplanarParams params, float3 worldPos0, float3 worldPos1, float3 worldNormal, float blend)
+NORMAL_FLOAT ParallaxUnpackNormalEmission(float4 normalTexture)
+{
+    // Normal in XYZ, emission in A
+    #if defined (EMISSION) && defined (DIRECTIONAL)
+        return float4(UnpackNormal(float4(normalTexture.xyz, 1)), normalTexture.a);
+    #else
+        return UnpackNormal(normalTexture);
+    #endif
+}
+
+NORMAL_FLOAT SampleBiplanarNormal(sampler2D tex, PixelBiplanarParams params, float3 worldPos0, float3 worldPos1, float3 worldNormal, float blend)
 {
     // Sample zoom level 0
-    float3 x0 = UnpackNormal(tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL0(params.ma, params, worldPos0)));
-    float3 y0 = UnpackNormal(tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL0(params.me, params, worldPos0)));
+    float4 texLevel0x = tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL0(params.ma, params, worldPos0));
+    float4 texLevel0y = tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL0(params.me, params, worldPos0));
     
-    // Sample zoom level 1 
-    float3 x1 = UnpackNormal(tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL1(params.ma, params, worldPos1)));
-    float3 y1 = UnpackNormal(tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL1(params.me, params, worldPos1)));
+    // Sample zoom level 1
+    float4 texLevel1x = tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL1(params.ma, params, worldPos1));
+    float4 texLevel1y = tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL1(params.me, params, worldPos1));
+
+    // Unpack normals
+    NORMAL_FLOAT x0 = ParallaxUnpackNormalEmission(texLevel0x);
+    NORMAL_FLOAT y0 = ParallaxUnpackNormalEmission(texLevel0y);
+    NORMAL_FLOAT x1 = ParallaxUnpackNormalEmission(texLevel1x);
+    NORMAL_FLOAT y1 = ParallaxUnpackNormalEmission(texLevel1y);
     
     // Blend zoom levels
-    float3 x = lerp(x0, x1, blend) * 2;
-    float3 y = lerp(y0, y1, blend) * 2;
+    NORMAL_FLOAT x = lerp(x0, x1, blend) * _BumpScale;
+    NORMAL_FLOAT y = lerp(y0, y1, blend) * _BumpScale;
     
     // Swizzle axes depending on plane
-    x = normalize(float3(x.y + worldNormal[params.ma.z], x.x + worldNormal[params.ma.y], worldNormal[params.ma.x]));
-    y = normalize(float3(y.y + worldNormal[params.me.z], y.x + worldNormal[params.me.y], worldNormal[params.me.x]));
+    x.xyz = normalize(float3(x.y + worldNormal[params.ma.z], x.x + worldNormal[params.ma.y], worldNormal[params.ma.x]));
+    y.xyz = normalize(float3(y.y + worldNormal[params.me.z], y.x + worldNormal[params.me.y], worldNormal[params.me.x]));
     
     // Swizzle back to world space
-    x = float3(x[params.ma.z], x[params.ma.y], x[params.ma.x]);
-    y = float3(y[params.me.z], y[params.me.y], y[params.me.x]);
+    x.xyz = float3(x[params.ma.z], x[params.ma.y], x[params.ma.x]);
+    y.xyz = float3(y[params.me.z], y[params.me.y], y[params.me.x]);
     
     // Compute blend weights
     float2 w = float2(params.absWorldNormal[params.ma.x], params.absWorldNormal[params.me.x]);
@@ -265,7 +287,7 @@ float3 SampleBiplanarNormal(sampler2D tex, PixelBiplanarParams params, float3 wo
     w = saturate(w * 2.365744f - 1.365744f);
     w = pow(w, params.blend * 0.125f);
     
-    float3 result = (x * w.x + y * w.y) / (w.x + w.y);
+    NORMAL_FLOAT result = (x * w.x + y * w.y) / (w.x + w.y);
     
     return result;
 }
@@ -317,7 +339,7 @@ float4 GetLandMask(float3 worldPos, float3 worldNormal)
 #define BLEND_ALL_TEXTURES(landMask, lowTex, midTex, highTex)                                                           \
     lerp(lowTex, midTex, landMask.r) * (landMask.a < 0.5) + lerp(midTex, highTex, landMask.g) * (landMask.a >= 0.5);
 
-#define BLEND_TWO_TEXTURES(blend, tex1, tex2)                                                                    \
+#define BLEND_TWO_TEXTURES(blend, tex1, tex2)                                                                           \
     lerp(tex1, tex2, blend);
 
 //
@@ -327,13 +349,13 @@ float4 GetLandMask(float3 worldPos, float3 worldNormal)
 #if defined (INFLUENCE_MAPPING)
     #define BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)                                                                                                        \
         fixed4 diffuseName = SampleBiplanarTexture(diffuseSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);                                                       \
-        float3 normalName = SampleBiplanarNormal(normalSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);                                                          \
+        NORMAL_FLOAT normalName = SampleBiplanarNormal(normalSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);                                                          \
         float diffuseName##Lum = (diffuseName.r * 0.21f + diffuseName.g * 0.72f + diffuseName.b * 0.07f) + 0.5f;                                                                                \
         diffuseName.rgb = lerp(vertexColor * diffuseName##Lum, diffuseName.rgb, diffuseName##InfluenceValue);
 #else
     #define BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)                                                                                                        \
         fixed4 diffuseName = SampleBiplanarTexture(diffuseSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);                                                       \
-        float3 normalName = SampleBiplanarNormal(normalSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+        NORMAL_FLOAT normalName = SampleBiplanarNormal(normalSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
 #endif
 
 
