@@ -66,8 +66,9 @@ namespace Parallax
                 // Renderer body is the new one - enable it
                 if (renderer.planetName == bodyName)
                 {
-                    renderer.gameObject.SetActive(true);
-                    Debug.Log("Renderer set active");
+                    //renderer.gameObject.SetActive(true);
+                    renderer.Enable();
+                    Debug.Log("Renderer set active: " + renderer.scatter.scatterName);
                     activeScatterRenderers.Add(renderer);
                 }
             }
@@ -78,10 +79,12 @@ namespace Parallax
             foreach (ScatterRenderer renderer in activeScatterRenderers)
             {
                 // Renderer body is not the new one - disable it
-                if (renderer.planetName != bodyName)
-                {
-                    renderer.gameObject.SetActive(false);
-                }
+                //if (renderer.planetName != bodyName)
+                //{
+                //renderer.gameObject.SetActive(false);
+                Debug.Log("Renderer set inactive: " + renderer.scatter.scatterName);
+                renderer.Disable();
+                //}
             }
             activeScatterRenderers.Clear();
 

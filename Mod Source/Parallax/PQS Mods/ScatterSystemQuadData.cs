@@ -27,6 +27,7 @@ namespace Parallax
 
         // Direction from planet to quad in world and local space
         public Vector3 planetNormal;
+        public Vector3 runtimePlanetNormal;
         public Vector3 localPlanetNormal;
         public Vector3 planetOrigin;
         public float planetRadius;

@@ -239,6 +239,9 @@ namespace Parallax
         }
         public void Evaluate()
         {
+            // There aren't any of this scatter on this quad
+            if (count[0] == 0) { return; }
+
             // Quad is not in the view frustum or used for shadow rendering
             if (!parent.quad.meshRenderer.isVisible) { return; }
 

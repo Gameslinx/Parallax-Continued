@@ -32,7 +32,7 @@ namespace Parallax
 
         public delegate void EvaluateScatters();
         public event EvaluateScatters onEvaluateScatters;
-        void OnEnable()
+        public void Enable()
         {
             Debug.Log("[Renderer] OnEnable");
             Prerequisites();
@@ -260,8 +260,11 @@ namespace Parallax
             outputLOD0?.Dispose();
             outputLOD1?.Dispose();
             outputLOD2?.Dispose();
+            indirectArgsLOD0?.Dispose();
+            indirectArgsLOD1?.Dispose();
+            indirectArgsLOD2?.Dispose();
         }
-        void OnDisable()
+        public void Disable()
         {
             Cleanup();
         }

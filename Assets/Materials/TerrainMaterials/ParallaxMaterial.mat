@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: ParallaxMaterial
   m_Shader: {fileID: 4800000, guid: b9860552776eb2c4f998cf8c4044ee5a, type: 3}
-  m_ShaderKeywords: PARALLAX_FULL
+  m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0

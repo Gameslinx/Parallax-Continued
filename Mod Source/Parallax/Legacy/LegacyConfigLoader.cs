@@ -256,13 +256,12 @@ namespace Parallax.Legacy
 
                 foreach (string texture in properties.scatterMaterial.Textures.Keys)
                 {
-                    string texValue = properties.scatterMaterial.Textures[texture];
-                    string modifiedValue = texValue;
-                    if (texValue == "_EdgeBumpMap")
+                    string modifiedValue = texture;
+                    if (texture == "_EdgeBumpMap")
                     {
                         modifiedValue = "_BumpMap";
                     }
-                    node.AddValue(modifiedValue, texValue);
+                    node.AddValue(modifiedValue, properties.scatterMaterial.Textures[texture]);
                 }
                 foreach (string floatValue in properties.scatterMaterial.Floats.Keys)
                 {

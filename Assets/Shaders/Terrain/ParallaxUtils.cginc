@@ -269,8 +269,12 @@ NORMAL_FLOAT SampleBiplanarNormal(sampler2D tex, PixelBiplanarParams params, flo
     NORMAL_FLOAT y1 = ParallaxUnpackNormalEmission(texLevel1y);
     
     // Blend zoom levels
-    NORMAL_FLOAT x = lerp(x0, x1, blend) * _BumpScale;
-    NORMAL_FLOAT y = lerp(y0, y1, blend) * _BumpScale;
+    NORMAL_FLOAT x = lerp(x0, x1, blend);
+    NORMAL_FLOAT y = lerp(y0, y1, blend);
+    
+    // Scale normal by bump scale, but not emission if enabled
+    x.xyz *= _BumpScale;
+    y.xyz *= _BumpScale;
     
     // Swizzle axes depending on plane
     x.xyz = normalize(float3(x.y + worldNormal[params.ma.z], x.x + worldNormal[params.ma.y], worldNormal[params.ma.x]));
