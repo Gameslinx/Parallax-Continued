@@ -70,7 +70,6 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 /Mod Source/Parallax/bin/Debug/net48
 /Mod Source/Parallax/obj/Debug
-/Assets/Textures/Parallax_StockTextures
 /Assets/Models/baobabtreebillboard.obj
 /Assets/Models/baobabtreebillboard.obj.meta
 /Assets/Models/baobabtrunk0.obj
