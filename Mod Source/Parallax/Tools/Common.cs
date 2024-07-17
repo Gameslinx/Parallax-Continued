@@ -167,7 +167,6 @@ namespace Parallax
             {
                 foreach (KeyValuePair<string, string> textureValue in terrainShaderProperties.shaderTextures)
                 {
-                    bool linear = false;
                     Debug.Log("Attempting load: " + textureValue.Key + " at " + textureValue.Value);
                     if (loadedTextures.ContainsKey(textureValue.Key))
                     {
@@ -183,7 +182,7 @@ namespace Parallax
                     }
                     // Bump maps need to be linear, while everything else sRGB
                     // This could be handled better, tbh, but at least we're accounting for linear textures this time around
-                    linear = TextureUtils.IsLinear(textureValue.Key);
+                    bool linear = TextureUtils.IsLinear(textureValue.Key);
                     Texture2D tex = TextureLoader.LoadTexture(textureValue.Value, linear);
 
                     parallaxMaterials.parallaxLow.SetTexture(textureValue.Key, tex);
@@ -325,8 +324,11 @@ namespace Parallax
     public class ParallaxScatterBody
     {
         public string planetName;
-        public int nearestQuadSubdivisionLevel = 1;
-        public float nearestQuadSubdivisionRange = 1.0f;
+
+        /// <summary>
+        /// Minimum subdivision level for scatters to appear. Initialized at something big.
+        /// </summary>
+        public int minimumSubdivisionLevel = 100;
 
         /// <summary>
         /// Contains scatters and shared scatters
@@ -334,7 +336,8 @@ namespace Parallax
         public Dictionary<string, Scatter> scatters = new Dictionary<string, Scatter>();
 
         // Shared textures across the planet
-        public Dictionary<string, Texture2D> loadedTextures = new Dictionary<string, Texture2D>();
+        // Holds Texture2D and Cubemaps
+        public Dictionary<string, Texture> loadedTextures = new Dictionary<string, Texture>();
 
         /// <summary>
         /// Contains all scatters for fast iteration, but not sharedScatters
@@ -344,10 +347,33 @@ namespace Parallax
         {
             this.planetName = planetName;
         }
+        public void SetSubdivisionRequirements(double[] subdivisionThresholds, double thresholdMultiplier, int maxLevel)
+        {
+            // Each index is a quad subdivision level, ending at maxLevel inclusive (0 to maxLevel)
+            foreach (KeyValuePair<string, Scatter> scatter in scatters)
+            {
+                int minimumSubdivision = maxLevel;
+                float scatterRange = scatter.Value.distributionParams.range;
+                foreach (double threshold in subdivisionThresholds)
+                {
+                    double subdivisionRange = threshold * thresholdMultiplier;
+                    // The scatter will appear on this quad
+                    if (scatterRange > subdivisionRange)
+                    {
+                        minimumSubdivision--;
+                    }
+                }
+                if (minimumSubdivision < minimumSubdivisionLevel)
+                {
+                    minimumSubdivisionLevel = minimumSubdivision;
+                }
+            }
+            ParallaxDebug.Log("Minimum Subdivision Level for " + planetName + " = " + minimumSubdivisionLevel + " (MaxLevel is " + maxLevel + ")");
+        }
         public void UnloadTextures()
         {
             ParallaxDebug.Log("Unloading textures for " + planetName);
-            foreach (KeyValuePair<string, Texture2D> texturePair in loadedTextures)
+            foreach (KeyValuePair<string, Texture> texturePair in loadedTextures)
             {
                 UnityEngine.Object.Destroy(texturePair.Value);
             }

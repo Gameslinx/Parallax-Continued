@@ -16,6 +16,11 @@ namespace Parallax
     /// </summary>
     public class ScatterSystemQuadData
     {
+        /// <summary>
+        /// The index of this class in the manager list
+        /// </summary>
+        public int ID { get; set; }
+
         ParallaxScatterBody body;
 
         // The terrain quad
@@ -61,12 +66,10 @@ namespace Parallax
         // Stores the scatter components
         public List<ScatterData> quadScatters = new List<ScatterData>();
 
-        public ScatterSystemQuadData(ParallaxScatterBody body, PQ quad, int subdivisionLevel, float subdivisionRadius)
+        public ScatterSystemQuadData(ParallaxScatterBody body, PQ quad)
         {
             this.body = body;
             this.quad = quad;
-            this.subdivisionLevel = subdivisionLevel;
-            this.subdivisionRadius = subdivisionRadius;
         }
         /// <summary>
         /// Perform a first time initialization of this quad. Gets all prerequisite data and generates all scatters.
@@ -82,8 +85,7 @@ namespace Parallax
 
             // We can estimate this using (float)((2f * Mathf.PI * quad.sphereRoot.radius / 4f) / (Mathf.Pow(2f, quad.subdivision)));
             // But quads do vary in size because of the cube sphere transformation, making this unreliable
-            sqrQuadWidth = Vector3.Distance(quad.transform.TransformPoint(vertices[0]), quad.transform.TransformPoint(vertices[vertices.Length - 1])) * 2; 
-            sqrQuadWidth *= sqrQuadWidth;
+            sqrQuadWidth = (quad.transform.TransformPoint(vertices[0]) - quad.transform.TransformPoint(vertices[vertices.Length - 1])).sqrMagnitude * 4; 
 
             // Quad has UVs but they're not the right ones - we want planet UVs so we fetch them from here
             uvs = PQSMod_Parallax.quadPlanetUVs[quad];
@@ -176,7 +178,7 @@ namespace Parallax
 
             //foreach (ScatterData scatter in quadScatters)
             //{
-            //    if (cameraDistance > scatter.scatter.distributionParams.range + Mathf.Sqrt(sqrQuadWidth))
+            //    if (cameraDistance > scatter.scatter.distributionParams.range * scatter.scatter.distributionParams.range + sqrQuadWidth)
             //    { 
             //        scatter.Cleanup(); 
             //    }

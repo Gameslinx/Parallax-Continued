@@ -14,6 +14,7 @@ Shader "Custom/ParallaxInstancedSolid"
         _BumpMap("Bump Map", 2D) = "bump" {}
         _SpecularTexture("Alt Specular Map", 2D) = "black" {}
         _ThicknessMap("Subsurface Thickness Map", 2D) = "black" {}
+        _RefractionTexture("Refraction Cube", CUBE) = "white" {}
 
         // Wind params
         [Space(10)]
@@ -39,8 +40,9 @@ Shader "Custom/ParallaxInstancedSolid"
         _FresnelColor("Fresnel Color", COLOR) = (0, 0, 0)
         _EnvironmentMapFactor("Environment Map Factor", Range(0.0, 2.0)) = 1
         _RefractionIntensity("Refraction Intensity", Range(0, 2)) = 1
+        _RefractionEta("Refraction Eta", Range(0, 10)) = 1
         _Hapke("Hapke", Range(0.001, 2)) = 1
-
+        
         // Subsurface
         [Space(10)]
         [Header(Subsurface Parameters)]
@@ -65,8 +67,8 @@ Shader "Custom/ParallaxInstancedSolid"
     }
     SubShader
     {
+        // We can override the rendertype tag at runtime using Material.SetOverrideTag()
         Tags {"RenderType" = "Opaque"}
-        ZWrite On
         Cull [_CullMode]
         Pass
         {
@@ -75,14 +77,13 @@ Shader "Custom/ParallaxInstancedSolid"
 
             // Shader variants
 
-            #pragma multi_compile_fragment      _ TWO_SIDED
-            
-            #pragma multi_compile_fragment      _ ALPHA_CUTOFF
-            #pragma multi_compile_fragment      _ ALTERNATE_SPECULAR_TEXTURE
             #pragma multi_compile_vertex        _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
+            #pragma multi_compile_vertex        _ WIND
+            #pragma multi_compile_fragment      _ TWO_SIDED
+            #pragma multi_compile_fragment      _ ALPHA_CUTOFF
+            #pragma multi_compile_fragment      _ ALTERNATE_SPECULAR_TEXTURE        REFRACTION
             #pragma multi_compile_fragment      _ DEBUG_FACE_ORIENTATION            DEBUG_SHOW_WIND_TEXTURE
             #pragma multi_compile_fragment      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
-            #pragma multi_compile        _ WIND
 
             // Shader stages
             #pragma vertex vert
@@ -176,14 +177,11 @@ Shader "Custom/ParallaxInstancedSolid"
                 float3 worldNormal = normalize(mul(TBN, normal));
 
                 // Calculate lighting from core params, plus potential additional params (worldpos required for subsurface scattering)
-                float3 result = CalculateLighting(
-                                mainTex, worldNormal, viewDir, GET_SHADOW, lightDir
-                                ADDITIONAL_LIGHTING_PARAMS(i.worldPos, THICKNESS)
-                );
+                float3 result = CalculateLighting(BASIC_LIGHTING_PARAMS ADDITIONAL_LIGHTING_PARAMS );
 
                 // Process any enabled debug options that affect the output colour
                 DEBUG_IF_ENABLED
-                return float4(result, 1);
+                return float4(result, mainTex.a);
             }
 
             ENDCG

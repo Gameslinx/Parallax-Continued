@@ -110,10 +110,12 @@ float3 CalculatePhongPosition(float3 bary, float3 p0PositionWS, float3 p0NormalW
     return lerp(flatPositionWS, smoothedPositionWS, 0.333);
 }
 
-#define CALCULATE_VERTEX_DISPLACEMENT(o, landMask)                                                                                                                            \
+#define CALCULATE_VERTEX_DISPLACEMENT(o, landMask)                                                                                                                  \
     float dislacementRange = 1 - min(1, terrainDistance / _MaxTessellationRange);                                                                                   \
     float4 displacementTex = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, o.worldNormal, texLevelBlend);                      \
     float displacement = BLEND_CHANNELS_IN_TEX(landMask, displacementTex);                                                                                          \
+    displacement = lerp(displacement, displacementTex.a, landMask.b);                                                                                               \
+    displacement = lerp(displacement * exponent * 2, displacement * exponent * 4, texLevelBlend);                                                                   \
     float3 displacedWorldPos = o.worldPos + (displacement + _DisplacementOffset) * o.worldNormal * _DisplacementScale * dislacementRange;
 
 //

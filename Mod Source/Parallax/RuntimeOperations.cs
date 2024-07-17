@@ -44,7 +44,7 @@ namespace Parallax
         {
             flightProbeObject = GameObject.Find("Reflection Probe");
             FlightReflectionProbe probeComponent = flightProbeObject.GetComponent<FlightReflectionProbe>();
-            probeComponent.probeComponent.size = Vector3.one * 5000;
+            probeComponent.probeComponent.size = Vector3.one * 10000;
             if (onFlightReflectionProbeReady != null)
             { 
                 onFlightReflectionProbeReady(flightProbeObject.transform);

@@ -200,5 +200,13 @@ namespace Parallax
             if (textureName.Contains("Bump") || textureName.Contains("Displacement") || textureName.Contains("Influence") || textureName.Contains("Wind")) { return true; }
             return false;
         }
+        public static bool IsCube(string textureName)
+        {
+            if (textureName.Contains("Reflection") || textureName.Contains("Cube") || textureName.Contains("Refraction"))
+            {
+                return true;
+            }
+            return false;
+        }
     }
 }

@@ -8,6 +8,7 @@ float _SpecularPower;
 float _SpecularIntensity;
 float _EnvironmentMapFactor;
 float _RefractionIntensity;
+float _RefractionEta;
 float _Hapke;
 
 //
@@ -67,9 +68,13 @@ float FresnelEffect(float3 worldNormal, float3 viewDir, float power)
 #else
     #if defined (DIRECTIONAL)
         #define GET_REFLECTION_COLOR float3 reflColor = _FresnelColor * NdotL;
-        #define GET_REFRACTION_COLOR float3 refrColor = 0;
     #else
         #define GET_REFLECTION_COLOR float3 reflColor = 0;
+    #endif
+
+    #if defined (REFRACTION)
+        #define GET_REFRACTION_COLOR float3 refrColor = texCUBE(_RefractionTexture, refract(-viewDir, worldNormal, _RefractionEta)) * refractionIntensity;
+    #else
         #define GET_REFRACTION_COLOR float3 refrColor = 0;
     #endif
 #endif
@@ -88,11 +93,28 @@ float3 SubsurfaceScattering(float3 worldPos, float3 worldNormal, float3 viewDir,
 }
 #endif
 
-// The terrain shader will never use subsurface scattering. This is reserved for the scatter shader
-#if defined (SUBSURFACE_SCATTERING) || defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
-    #define LIGHTING_INPUT  float4 col, float3 worldNormal, float3 viewDir, float shadow, float3 lightDir, float3 worldPos, float thickness
+// Basic lighting parameters
+#define BASIC_LIGHTING_INPUT float4 col, float3 worldNormal, float3 viewDir, float shadow, float3 lightDir
+
+// Subsurface macro
+#define SUBSURFACE_SCATTERING_INPUT float3 worldPos, float thickness
+
+// Refraction parameters
+#define REFRACTION_INPUT float refractionIntensity
+
+// Macro to combine parameter sets
+#if defined(SUBSURFACE_SCATTERING) || defined(SUBSURFACE_USE_THICKNESS_TEXTURE)
+    #if defined(REFRACTION)
+        #define LIGHTING_INPUT BASIC_LIGHTING_INPUT, SUBSURFACE_SCATTERING_INPUT, REFRACTION_INPUT
+    #else
+        #define LIGHTING_INPUT BASIC_LIGHTING_INPUT, SUBSURFACE_SCATTERING_INPUT
+    #endif
 #else
-    #define LIGHTING_INPUT  float4 col, float3 worldNormal, float3 viewDir, float shadow, float3 lightDir
+    #if defined(REFRACTION)
+        #define LIGHTING_INPUT BASIC_LIGHTING_INPUT, REFRACTION_INPUT
+    #else
+        #define LIGHTING_INPUT BASIC_LIGHTING_INPUT
+    #endif
 #endif
 
 #if defined (EMISSION) && defined (DIRECTIONAL)
@@ -119,7 +141,7 @@ float3 CalculateLighting(LIGHTING_INPUT)
     float3 ambient = UNITY_LIGHTMODEL_AMBIENT.rgb * col.rgb;
     float3 diffuse = _LightColor0.rgb * col.rgb * NdotL;
     float3 specular = spec * _LightColor0.rgb;
-    float3 reflection = fresnel * reflColor * col.a * _EnvironmentMapFactor + (1 - fresnel) * refrColor * _RefractionIntensity; // For refraction
+    float3 reflection = fresnel * reflColor * col.a * _EnvironmentMapFactor + (1 - fresnel) * refrColor * _RefractionIntensity * NdotL; // For refraction
     reflection *= shadow + UNITY_LIGHTMODEL_AMBIENT;
     float3 scattering = 0;
     

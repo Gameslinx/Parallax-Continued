@@ -22,7 +22,7 @@ public class ScatterGUI : MonoBehaviour
     void OnGUI()
     {
         // Do visibility key check here
-        window = GUILayout.Window(GetInstanceID(), window, DrawWindow, "Parallax GUI");
+        //window = GUILayout.Window(GetInstanceID(), window, DrawWindow, "Parallax GUI");
     }
     static void DrawWindow(int windowID)
     {

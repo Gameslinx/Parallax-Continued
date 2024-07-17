@@ -18,7 +18,7 @@ namespace Parallax
         // The scatter we're generating
         public Scatter scatter;
         // Output evaluate results to the renderer
-        ScatterRenderer scatterRenderer;
+        public ScatterRenderer scatterRenderer;
 
         // Contains our distribute and evaluate kernels
         public ComputeShader scatterShader;

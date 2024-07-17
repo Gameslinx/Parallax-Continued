@@ -65,21 +65,56 @@ namespace Parallax
             // Set textures - OnEnable is called when the renderer is re-enabled on planet change, so we can load textures here
             // They are unloaded by the scatter manager
 
+            bool isCutout = false;
             // Keywords
             foreach (string keyword in materialParams.shaderKeywords)
             {
                 Debug.Log("Enabling shader keyword: " + keyword);
                 material.EnableKeyword(keyword);
+                if (keyword == "ALPHA_CUTOFF")
+                {
+                    isCutout = true;
+                }
+            }
+
+            // Set scriptable render params
+            if (isCutout)
+            {
+                // Is alpha cutout
+                material.SetOverrideTag("RenderType", "TransparentCutout");
+                material.SetOverrideTag("IgnoreProjector", "True");
+                material.SetOverrideTag("Queue", "AlphaTest");
+
+                material.SetInt("_SrcMode", (int)UnityEngine.Rendering.BlendMode.One);
+                material.SetInt("_DstMode", (int)UnityEngine.Rendering.BlendMode.Zero);
+            }
+            else
+            {
+                // Is opaque (we don't support transparency)
+                material.SetOverrideTag("RenderType", "Opaque");
+                material.SetOverrideTag("Queue", "Geometry");
+
+                material.SetInt("_SrcMode", (int)UnityEngine.Rendering.BlendMode.One);
+                material.SetInt("_DstMode", (int)UnityEngine.Rendering.BlendMode.Zero);
             }
 
             // Textures
             foreach (KeyValuePair<string, string> texturePair in properties.shaderTextures)
             {
-                Texture2D texture;
+                Texture texture;
                 if (!ConfigLoader.parallaxScatterBodies[planetName].loadedTextures.ContainsKey(texturePair.Value))
                 {
                     bool linear = TextureUtils.IsLinear(texturePair.Key);
-                    texture = TextureLoader.LoadTexture(texturePair.Value, linear);
+                    bool isCube = TextureUtils.IsCube(texturePair.Key);
+                    if (!isCube)
+                    {
+                        texture = TextureLoader.LoadTexture(texturePair.Value, linear);
+                    }
+                    else
+                    {
+                        texture = TextureLoader.LoadCubeTexture(texturePair.Value, linear);
+                    }
+                    
                     ConfigLoader.parallaxScatterBodies[planetName].loadedTextures.Add(texturePair.Value, texture);
                 }
                 else

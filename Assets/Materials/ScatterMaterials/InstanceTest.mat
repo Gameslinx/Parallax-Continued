@@ -9,18 +9,21 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: InstanceTest
   m_Shader: {fileID: 4800000, guid: c26be5ad2dbe5714e9df106a69036cfa, type: 3}
-  m_ShaderKeywords: SUBSURFACE_THICKNESS_TEXTURE WIND
+  m_ShaderKeywords: REFRACTION SUBSURFACE_THICKNESS_TEXTURE
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
-  stringTagMap: {}
+  stringTagMap:
+    IGNOREPROJECTOR: true
+    QUEUE: Geometry
+    RenderType: Opaque
   disabledShaderPasses: []
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
     - _BumpMap:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: cd81a0d55d14e8442b932ace59439ef2, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _CubeMap:
@@ -44,7 +47,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 95f5fa3b0b2e8be41b451b0453cb4906, type: 3}
+        m_Texture: {fileID: 2800000, guid: 9bf3cdccb156d0b4b89cda077ac9b4e9, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -59,8 +62,16 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _RefractionTex:
+        m_Texture: {fileID: 8900000, guid: 976c2abf7b93adf468a1a6f7fece7c78, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RefractionTexture:
+        m_Texture: {fileID: 8900000, guid: 976c2abf7b93adf468a1a6f7fece7c78, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _SpecularTexture:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 9bf3cdccb156d0b4b89cda077ac9b4e9, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ThicknessMap:
@@ -72,27 +83,30 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
-    - _BumpScale: 1.11
-    - _CullMode: 0
-    - _Cutoff: 0.315
+    - _BumpScale: 1
+    - _CullMode: 2
+    - _Cutoff: 0.889
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
-    - _EnvironmentMapFactor: 0.21
-    - _FresnelPower: 1.8
+    - _DstMode: 0
+    - _EnvironmentMapFactor: 1
+    - _FresnelPower: 4.4
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _Hapke: 1
+    - _Hapke: 0.45
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _RefractionIntensity: 0.21
+    - _RefractionEta: 0.72
+    - _RefractionIntensity: 1
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
-    - _SpecularIntensity: 0.28
-    - _SpecularPower: 63
+    - _SpecularIntensity: 0.5
+    - _SpecularPower: 343
     - _SrcBlend: 1
+    - _SrcMode: 1
     - _SubsurfaceIntensity: 1.57
     - _SubsurfaceMax: 1
     - _SubsurfaceMin: 0.381
@@ -109,6 +123,6 @@ Material:
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _FresnelColor: {r: 0.5248413, g: 0.6421588, b: 0.77800006, a: 1}
+    - _FresnelColor: {r: 0.6765753, g: 0.7924528, b: 0.75734574, a: 1}
     - _PlanetOrigin: {r: 5, g: -10000, b: -5, a: 0}
     - _SubsurfaceColor: {r: 0.4906138, g: 0.5283019, b: 0.12210752, a: 1}

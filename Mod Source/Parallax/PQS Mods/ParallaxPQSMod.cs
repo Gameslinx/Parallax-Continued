@@ -4,6 +4,7 @@ using Kopernicus.ConfigParser.Enumerations;
 using Kopernicus.Configuration.ModLoader;
 using Kopernicus.Configuration.NoiseLoader.Noise;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -25,8 +26,6 @@ namespace Parallax
 
         Vector2[] uvCache;
 
-        public ParallaxScatterBody scatterBody;
-
         bool hasTerrainShader = false;
         public override void OnSetup()
         {
@@ -39,6 +38,19 @@ namespace Parallax
             if (ConfigLoader.parallaxTerrainBodies.ContainsKey(sphere.name))
             {
                 hasTerrainShader = true;
+            }
+
+            // If this planet has scatters, we need to set the subdivision requirements
+            if (ConfigLoader.parallaxScatterBodies.ContainsKey(sphere.name))
+            {
+                // Detect quad enhance coast pqsmod, if any. This modifies the subdivision threshold on a per-quad basis, so we need to increase the subdivision range accordingly
+                PQSMod_QuadEnhanceCoast qec = sphere.mods.Where((x) => x.GetType() == typeof(PQSMod_QuadEnhanceCoast)).FirstOrDefault() as PQSMod_QuadEnhanceCoast;
+                double thresholdMultiplier = 1;
+                if (qec != null)
+                {
+                    thresholdMultiplier = Math.Max(qec.oceanFactor, qec.coastFactor);
+                }
+                ConfigLoader.parallaxScatterBodies[sphere.name].SetSubdivisionRequirements(sphere.subdivisionThresholds, thresholdMultiplier, sphere.maxLevel);
             }
         }
         // Occurs before vertex build - Get quad data here
@@ -58,13 +70,19 @@ namespace Parallax
 
             quadPlanetUVs.Add(quad, uvCache);
         }
-
+        public override void OnQuadUpdateNormals(PQ quad)
+        {
+            if (hasTerrainShader && terrainQuadData.TryGetValue(quad, out TerrainShaderQuadData data))
+            {
+                data.OnQuadNormalUpdate();
+            }
+        }
         public override void OnQuadDestroy(PQ quad)
         {
             // Clean up terrain shader
-            if (hasTerrainShader && terrainQuadData.ContainsKey(quad))
+            if (hasTerrainShader && terrainQuadData.TryGetValue(quad, out TerrainShaderQuadData data))
             {
-                terrainQuadData[quad].Cleanup();
+                data.Cleanup();
                 terrainQuadData.Remove(quad);
             }
 

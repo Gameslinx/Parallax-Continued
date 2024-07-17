@@ -141,7 +141,7 @@ Material:
     - _LowMidBlendEnd: -0.2
     - _LowMidBlendStart: -0.3
     - _LowStart: 0
-    - _MaxTessellation: 35.3
+    - _MaxTessellation: 64
     - _MaxTessellationRange: 7.6
     - _Metallic: 0
     - _MidHighBlendEnd: 1.3

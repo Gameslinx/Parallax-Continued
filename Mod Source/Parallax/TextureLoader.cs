@@ -10,30 +10,37 @@ namespace Parallax
 {
     public class TextureLoader
     {
-        public static Texture2D LoadTexture(string name, bool linear)
+        public static Texture2D LoadTexture(string name, bool linear, bool markUnreadable = true)
         {
             Debug.Log("Loading Parallax Texture: " + name);
             Texture2D output;
             string filePath = KSPUtil.ApplicationRootPath + "GameData/" + name;
             if (name.EndsWith(".dds"))
             {
-                output = TextureLoader.LoadDDSTexture(filePath, linear);
+                output = TextureLoader.LoadDDSTexture(filePath, linear, markUnreadable);
             }
             else
             {
-                output = TextureLoader.LoadPNGTexture(filePath, linear);
+                output = TextureLoader.LoadPNGTexture(filePath, linear, markUnreadable);
             }
             return output;
         }
-        public static Texture2D LoadPNGTexture(string url, bool linear)
+        public static Cubemap LoadCubeTexture(string name, bool linear)
+        {
+            Debug.Log("Loading Parallax Cubemap: " + name);
+            Texture2D texture = LoadTexture(name, linear, false);
+            Cubemap result = CubemapFromTexture2D(texture);
+            return result;
+        }
+        public static Texture2D LoadPNGTexture(string url, bool linear, bool markUnreadable)
         {
             Texture2D tex;
             tex = new Texture2D(2, 2, TextureFormat.ARGB32, true, linear);
             tex.LoadRawTextureData(File.ReadAllBytes(url));
-            tex.Apply(true, true);
+            tex.Apply(true, markUnreadable);
             return tex;
         }
-        public static Texture2D LoadDDSTexture(string url, bool linear)
+        public static Texture2D LoadDDSTexture(string url, bool linear, bool markUnreadable)
         {
             byte[] data = File.ReadAllBytes(url);
             byte ddsSizeCheck = data[4];
@@ -85,9 +92,28 @@ namespace Parallax
                 Debug.Log("CRITICAL ERROR: Parallax has halted the OnDemand loading process because texture.LoadRawTextureData(dxtBytes) would have resulted in overread");
                 Debug.Log("Please check the format for this texture and refer to the wiki if you're unsure:");
             }
-            texture.Apply(true, true);
+            texture.Apply(true, markUnreadable);
 
             return (texture);
+        }
+
+        // Helper function
+        public static Cubemap CubemapFromTexture2D(Texture2D texture)
+        {
+            System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
+            stopwatch.Start();
+            int cubedim = texture.width / 4;
+            Cubemap cube = new Cubemap(cubedim, TextureFormat.ARGB32, false);
+            cube.SetPixels(texture.GetPixels(2 * cubedim, 2 * cubedim, cubedim, cubedim), CubemapFace.NegativeY);
+            cube.SetPixels(texture.GetPixels(3 * cubedim, cubedim, cubedim, cubedim), CubemapFace.PositiveX);
+            cube.SetPixels(texture.GetPixels(2 * cubedim, cubedim, cubedim, cubedim), CubemapFace.PositiveZ);
+            cube.SetPixels(texture.GetPixels(cubedim, cubedim, cubedim, cubedim), CubemapFace.NegativeX);
+            cube.SetPixels(texture.GetPixels(0, cubedim, cubedim, cubedim), CubemapFace.NegativeZ);
+            cube.SetPixels(texture.GetPixels(2 * cubedim, 0, cubedim, cubedim), CubemapFace.PositiveY);
+            cube.Apply(true, true);
+            stopwatch.Stop();
+            Debug.Log("Cubemap conversion took: " + stopwatch.Elapsed.TotalMilliseconds.ToString("F5") + " ms");
+            return cube;
         }
     }
 }

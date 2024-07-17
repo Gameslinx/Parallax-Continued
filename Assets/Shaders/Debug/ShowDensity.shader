@@ -58,7 +58,7 @@
             float GetMult(float3 worldNormal)
             {
                 float3 segments = fmod(worldNormal, 0.5);
-                return dot(segments, float3(0, 1, 1));
+                return dot(segments, float3(0, 1, 1)); 
             }
 
             v2f vert (appdata v)

@@ -102,6 +102,7 @@
       <Publicize Include="Assembly-CSharp:PQS.fixedUpdateFrame" />
       <Publicize Include="Assembly-CSharp:PQS.maxLevel1" />
       <Publicize Include="Assembly-CSharp:PQS.itr" />
+      <Publicize Include="Assembly-CSharp:PQS.mods" />
 
       <Publicize Include="Assembly-CSharp:PQS.SetupMods" />
       <Publicize Include="Assembly-CSharp:PQS.SetupBuildDelegates" />

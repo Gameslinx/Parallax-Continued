@@ -1,5 +1,6 @@
 ﻿#define INSTANCE_DATA _InstanceData[instanceID]
 #define WIND_BLUR_KERNEL_SIZE 2
+#define PI 3.1415926
 
 #define GET_TEXTURE_WIDTH(texture) texture##_TexelSize.x;
 
@@ -36,10 +37,6 @@ float3 GetWindMap(float3 worldPos, float3 blendWeights)
     // Offset sample coords over time to give moving speed
     float2 uvOffset = frac(_Time.x * _WindSpeed);    //mult _Time.x by repetition factor
     float2 prevUVOffset = frac((_Time.x - unity_DeltaTime.x) * _WindSpeed);
-    // Realistically this should be better
-    //float3 texYZ = tex2Dlod(_WindMap, float4(worldPos.yz * _WindScale + uvOffset, 0, 0)).xyz;
-    //float3 texZX = tex2Dlod(_WindMap, float4(worldPos.zx * _WindScale + uvOffset, 0, 0)).xyz;
-    //float3 texXY = tex2Dlod(_WindMap, float4(worldPos.xy * _WindScale + uvOffset, 0, 0)).xyz;
     
     float pixelSize = GET_TEXTURE_WIDTH(_WindMap);
     float3 texYZ = tex2Dlod(_WindMap, float4(worldPos.yz * _WindScale + uvOffset, 0, 0)).xyz;
@@ -48,7 +45,6 @@ float3 GetWindMap(float3 worldPos, float3 blendWeights)
     
     // Blend textures
     float3 tex = texYZ * blendWeights.x + texZX * blendWeights.y + texXY * blendWeights.z;
-    // Mul this by wind speed
     return tex;
 }
 
@@ -139,8 +135,16 @@ float3 Wind(float3 localPos, float3 worldPos, float3 planetNormal, float4x4 obje
 
 // If alpha clipping is enabled, most people will probably want to also enable this
 // To get specular alpha from a non conflicting source
-#if defined (ALTERNATE_SPECULAR_TEXTURE)
-    #define GET_SPECULAR(resultColor, uv)   resultColor.a = tex2D(_SpecularTexture, uv).a;
+
+// If refraction is enabled, refraction intensity is stored in the main tex alpha so we need to assign it to its own variable before overwriting from specular tex
+#if defined (ALTERNATE_SPECULAR_TEXTURE) || defined (REFRACTION)
+    #if defined (REFRACTION)
+        #define GET_SPECULAR(resultColor, uv)                                       \
+            float refractionIntensity = resultColor.a;                              \
+            resultColor.a = tex2D(_SpecularTexture, uv).a;
+    #else
+        #define GET_SPECULAR(resultColor, uv)   resultColor.a = tex2D(_SpecularTexture, uv).a;
+    #endif
 #else
     #define GET_SPECULAR(resultColor, uv)
 #endif
@@ -153,6 +157,12 @@ float3 Wind(float3 localPos, float3 worldPos, float3 planetNormal, float4x4 obje
     #define THICKNESS                       0
 #endif
 
+#if defined (REFRACTION)
+    #define REFRACTION_INTENSITY refractionIntensity
+#else
+    #define REFRACTION_INTENSITY 0
+#endif
+
 // Billboard
 void Billboard(inout float4 vertex, inout float3 normal, inout float4 tangent, float4x4 mat)
 {
@@ -163,8 +173,6 @@ void Billboard(inout float4 vertex, inout float3 normal, inout float4 tangent, f
     float3 rightVector = normalize(cross(forwardVector, upVector));
              
     float3 position = local.x * rightVector + local.y * upVector + local.z * forwardVector;
-   
-    float3x3 rotMat = float3x3(forwardVector, upVector, rightVector);
                 
     vertex = float4(position, 1);
     
@@ -199,15 +207,68 @@ void Billboard(inout float4 vertex, inout float3 normal, inout float4 tangent, f
 // Lighting 
 //
 
-// ADDITIONAL_LIGHTING_PARAMS must include every possible param that can be passed in, but only needs to pass in the required ones for this effect
-#if defined (SUBSURFACE_SCATTERING) || defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
-    // Only subsurface scattering defined
-    #if defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
-        #define ADDITIONAL_LIGHTING_PARAMS(worldPos, thickness) , worldPos, thickness
-    #else
-        #define ADDITIONAL_LIGHTING_PARAMS(worldPos, thickness) , worldPos, 0
-    #endif
-    
+#define BASIC_LIGHTING_PARAMS mainTex, worldNormal, viewDir, GET_SHADOW, lightDir
+
+// Subsurface scattering parameters
+#if defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
+    #define SUBSURFACE_THICKNESS_PARAM THICKNESS
 #else
-    #define ADDITIONAL_LIGHTING_PARAMS(worldPos, thickness)
+    #define SUBSURFACE_THICKNESS_PARAM 0
 #endif
+
+// Subsurface macro
+#if defined (SUBSURFACE_SCATTERING) || defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
+    #define SUBSURFACE_SCATTERING_PARAMS i.worldPos, SUBSURFACE_THICKNESS_PARAM
+#else
+    #define SUBSURFACE_SCATTERING_PARAMS
+#endif
+
+// Refraction parameters
+#if defined (REFRACTION)
+    #define REFRACTION_PARAMS refractionIntensity
+#else
+    #define REFRACTION_PARAMS
+#endif
+
+// ADDITIONAL_LIGHTING_PARAMS must include every possible param that can be passed in, but only needs to pass in the required ones for this effect
+// For the record, it's not the prettiest. I would like this to be cleaner
+#if defined(SUBSURFACE_SCATTERING) || defined(SUBSURFACE_USE_THICKNESS_TEXTURE)
+    #if defined(REFRACTION)
+        #define ADDITIONAL_LIGHTING_PARAMS , SUBSURFACE_SCATTERING_PARAMS,  REFRACTION_PARAMS
+    #else
+        #define ADDITIONAL_LIGHTING_PARAMS , SUBSURFACE_SCATTERING_PARAMS
+    #endif
+#else
+    #if defined(REFRACTION)
+        #define ADDITIONAL_LIGHTING_PARAMS , REFRACTION_PARAMS
+    #else
+        #define ADDITIONAL_LIGHTING_PARAMS
+    #endif
+#endif
+
+// Alan Zucconi's method of approximating diffraction
+// https://www.alanzucconi.com/tag/diffraction-grating/
+
+float3 bump3y(float3 x, float3 yoffset)
+{
+    float3 y = 1 - x * x;
+    y = saturate(y - yoffset);
+    return y;
+}
+            
+float3 spectral_zucconi6(float wavelength)
+{
+    // w: [400, 700]
+    // x: [0,   1]
+    float x = saturate((wavelength - 400.0) / 300.0);
+            
+    const float3 c1 = float3(3.54585104, 2.93225262, 2.41593945);
+    const float3 x1 = float3(0.69549072, 0.49228336, 0.27699880);
+    const float3 y1 = float3(0.02312639, 0.15225084, 0.52607955);
+            
+    const float3 c2 = float3(3.90307140, 3.21182957, 3.96587128);
+    const float3 x2 = float3(0.11748627, 0.86755042, 0.66077860);
+    const float3 y2 = float3(0.84897130, 0.88445281, 0.73949448);
+            
+    return bump3y(c1 * (x - x1), y1) + bump3y(c2 * (x - x2), y2);
+}

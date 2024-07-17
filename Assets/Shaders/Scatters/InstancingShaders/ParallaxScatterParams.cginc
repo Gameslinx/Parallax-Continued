@@ -1,9 +1,13 @@
 ﻿sampler2D _MainTex;
 sampler2D _BumpMap;
 
-// If altnerative specular texture is defined
-#if defined (ALTERNATE_SPECULAR_TEXTURE)
+// Refraction also requires an alternate specular texture
+// Unity does not support sampling from the env map in DrawMeshInstancedIndirect so we need to supply one ourselves - for now, just a static texture
+#if defined (ALTERNATE_SPECULAR_TEXTURE) || defined (REFRACTION)
 sampler2D _SpecularTexture;
+#if defined (REFRACTION)
+    samplerCUBE _RefractionTexture;
+#endif
 #endif
 
 #if defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
@@ -37,3 +41,5 @@ float _SubsurfaceIntensity;
 float3 _SubsurfaceColor;
 float _SubsurfaceMax;
 float _SubsurfaceMin;
+
+float3 _TerrainShaderOffset;

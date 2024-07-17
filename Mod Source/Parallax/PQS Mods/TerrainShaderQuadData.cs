@@ -68,7 +68,7 @@ namespace Parallax
             {
                 // Sadly a requirement or quad meshes become corrupt
                 Profiler.BeginSample("Parallax Instantiate");
-                mesh = UnityEngine.Object.Instantiate(quad.mesh);
+                mesh = new Mesh();
                 Profiler.EndSample();
                 
                 quadWidth = (float)((2f * Mathf.PI * quad.sphereRoot.radius / 4f) / (Mathf.Pow(2f, quad.sphereRoot.maxLevel)));
@@ -96,23 +96,58 @@ namespace Parallax
         // Params to avoid garbage gen
         Vector3 worldOrigin = Vector3.zero;
         float dist = 0;
+        // Quad normals changed, we need to reinitialize the mesh
+        public void OnQuadNormalUpdate()
+        {
+            if (isMaxLevel)
+            {
+                if (alreadyInitialized)
+                {
+                    OutOfRange();
+                }
+                //mesh.normals = quad.GetComponent<MeshFilter>().sharedMesh.normals;
+                //mesh.co
+            }
+        }
+        /// <summary>
+        /// Get the quad mesh again, usually after it's modified, but maybe you want to just call it for fun
+        /// </summary>
+        public bool UpdateMesh()
+        {
+            // The normals will update again, wait
+            if (quad.isQueuedForNormalUpdate)
+            {
+                return false;
+            }
+
+            // I'd rather not do this but accessing quad mesh properties in any way outside of instantiation completely fucks the quads
+            // Removing this will improve quad build times a fair bit
+            mesh = UnityEngine.Object.Instantiate(quad.mesh);
+            return true;
+        }
+        public float GetSqrQuadCameraDistance(in Vector3 quadPosition, in Vector3 cameraPosition)
+        {
+            return (quadPosition - cameraPosition).sqrMagnitude;
+        }
         public void RangeCheck()
         {
             Profiler.BeginSample("Parallax Terrain RangeCheck");
-            worldOrigin = RuntimeOperations.vectorCameraPos;
-            dist = (worldOrigin - (Vector3)quad.PrecisePosition).sqrMagnitude;
+            dist = GetSqrQuadCameraDistance(quad.PrecisePosition, RuntimeOperations.vectorCameraPos);
             // We're within range
             if (dist < quadWidth)
             {
                 if (!alreadyInitialized)
                 {
-                    CreateFakeQuad();
-                    subdivisionComponent = newQuad.AddComponent<JobifiedSubdivision>();
-                    subdivisionComponent.maxSubdivisionLevel = subdivisionLevel;
-                    subdivisionComponent.subdivisionRange = subdivisionRadius;
-                    subdivisionComponent.mesh = newQuad.GetComponent<MeshFilter>().sharedMesh;
+                    if (UpdateMesh())
+                    {
+                        CreateFakeQuad();
+                        subdivisionComponent = newQuad.AddComponent<JobifiedSubdivision>();
+                        subdivisionComponent.maxSubdivisionLevel = subdivisionLevel;
+                        subdivisionComponent.subdivisionRange = subdivisionRadius;
+                        subdivisionComponent.mesh = newQuad.GetComponent<MeshFilter>().sharedMesh;
 
-                    materialCreated = false;
+                        materialCreated = false;
+                    }
                 }
             }
             // Out of range, and need to clean up the fake quad

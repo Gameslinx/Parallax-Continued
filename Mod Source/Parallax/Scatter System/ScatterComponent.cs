@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Parallax.Tools;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -22,9 +23,9 @@ namespace Parallax
         {
             // I'd rather not do this every time a quad is built but alas, we may need to
             // Necessary evil?
-            if (ConfigLoader.parallaxScatterBodies.TryGetValue(quad.sphereRoot.name, out ParallaxScatterBody scatterBody))
+            if (ConfigLoader.parallaxScatterBodies.TryGetValue(quad.sphereRoot.name, out ParallaxScatterBody scatterBody) && quad.subdivision >= scatterBody.minimumSubdivisionLevel)
             {
-                ScatterSystemQuadData scatterData = new ScatterSystemQuadData(scatterBody, quad, scatterBody.nearestQuadSubdivisionLevel, scatterBody.nearestQuadSubdivisionRange);
+                ScatterSystemQuadData scatterData = new ScatterSystemQuadData(scatterBody, quad);
                 scatterData.Initialize();
                 scatterQuadData.Add(quad, scatterData);
             }

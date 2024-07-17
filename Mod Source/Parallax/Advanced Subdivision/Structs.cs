@@ -164,7 +164,8 @@ namespace Parallax
         float CalculateDistance(in float3 pos, in float3 target, in float maxRange)
         {
             float log2SqrMaxRange = math.log2(maxRange * maxRange);
-            float dist = math.distance(pos, target);
+            // Must add sqrt(0.5) to prevent the division at the end from dropping below 0 to -infinity (distance must be above 0)
+            float dist = math.distance(pos, target) + 0.708f;
             float log2SqrDist = math.log2(dist * dist);
             return math.pow(math.saturate(log2SqrDist / log2SqrMaxRange), 1.6f);
         }

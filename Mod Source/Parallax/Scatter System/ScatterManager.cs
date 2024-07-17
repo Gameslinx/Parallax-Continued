@@ -23,6 +23,7 @@ namespace Parallax
 
         // The current biome map
         public static Texture2D currentBiomeMap;
+
         void Awake()
         {
             Instance = this;
