@@ -43,3 +43,20 @@
         float3 planetNormal : TEXCOORD3;        \
         LIGHTING_COORDS(3,4)                    \
     };
+
+//  Shadow caster struct
+
+#define PARALLAX_SHADOW_CASTER_STRUCT_APPDATA       \
+    struct appdata                                  \
+    {                                               \
+        float4 vertex : POSITION;                   \
+        float2 uv : TEXCOORD0;                      \
+        float3 normal : NORMAL;                     \
+    };
+
+#define PARALLAX_SHADOW_CASTER_STRUCT_V2F       \
+    struct v2f                                  \
+    {                                           \
+        float4 pos : SV_POSITION;               \
+        float2 uv : TEXCOORD0;                  \
+    };

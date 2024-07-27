@@ -39,10 +39,6 @@ namespace Parallax
         private static NoiseType activeEnumFieldLastValue = NoiseType.simplexPerlin;
         private static string activeEnumFieldString = "";
 
-        private static int activeStringField = -1;
-        private static string activeStringFieldLastValue = "";
-        private static string activeStringFieldString = "";
-
         /// <summary>
         /// Float Field for ingame purposes. Behaves exactly like UnityEditor.EditorGUILayout.FloatField.
         /// From https://forum.unity.com/threads/float-input-gui-item.83739/

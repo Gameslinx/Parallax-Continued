@@ -21,7 +21,6 @@ namespace Parallax
         JobifiedSubdivision subdivisionComponent;
 
         MeshRenderer quadMeshRenderer;
-        MeshFilter quadMeshFilter;
         Mesh mesh;
 
         public PQ quad;

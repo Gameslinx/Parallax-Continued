@@ -37,14 +37,6 @@ namespace Parallax
         public static void OnQuadVisible(PQ quad)
         {
             OnQuadVisibleBuilt(quad);
-            return;
-            if (ConfigLoader.parallaxScatterBodies.TryGetValue(quad.sphereRoot.name, out ParallaxScatterBody scatterBody))
-            {
-                if (scatterQuadData.TryGetValue(quad, out ScatterSystemQuadData scatterData))
-                {
-                    // Quad visible code
-                }
-            }
         }
         /// <summary>
         /// The quad is invisible.
@@ -53,20 +45,10 @@ namespace Parallax
         public static void OnQuadInvisible(PQ quad)
         {
             OnQuadDestroyed(quad);
-            return;
-            // If this scatter body is eligible
-            if (ConfigLoader.parallaxScatterBodies.TryGetValue(quad.sphereRoot.name, out ParallaxScatterBody scatterBody))
-            {
-                if (scatterQuadData.TryGetValue(quad, out ScatterSystemQuadData scatterData))
-                {
-                    // Quad invisible code
-                }
-            }
-            
         }
         /// <summary>
         /// The quad is unloaded.
-        /// This happens when a quad is too far away or the scene is changing, so it collapses.
+        /// This occurs when a quad is too far away or the scene is changing
         /// </summary>
         public static void OnQuadDestroyed(PQ quad)
         {

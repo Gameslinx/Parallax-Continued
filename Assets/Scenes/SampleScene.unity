@@ -604,7 +604,7 @@ MonoBehaviour:
     type: 2}
   instancedMaterialLOD2: {fileID: 2100000, guid: 770925c81d6f0b145acd07d67aa953ac,
     type: 2}
-  meshLOD0: {fileID: 5794214554363089957, guid: b70e268420a75e4489f55c5c39d475fc,
+  meshLOD0: {fileID: -2432090755550338912, guid: 4c066cd2bd03bcd44aef67d311036a7e,
     type: 3}
   meshLOD1: {fileID: -9113646534211321542, guid: 8348c8cb89ee6114bb640b0c3943fbc6,
     type: 3}
@@ -627,7 +627,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   scatterShader: {fileID: 7200000, guid: 7c479f5cd11a7184894f6dbf0ab96a0d, type: 3}
   _PopulationMultiplier: 1
-  _SpawnChance: 1
+  _SpawnChance: 0.08
   _MaxNormalDeviation: 1
   _MinScale: {x: 0.1, y: 0.1, z: 0.1}
   _MaxScale: {x: 0.1, y: 0.1, z: 0.1}

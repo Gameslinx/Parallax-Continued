@@ -93,9 +93,6 @@ namespace Parallax.Harmony_Patches
     public class QuadDestroyPatch
     {
         public delegate void OnQuadDestroyed(PQ quad);
-
-        public static event OnQuadDestroyed onQuadDestroyed;
-
         static bool Prefix(PQ __instance, PQ quad)
         {
             if (quad.isBuilt)

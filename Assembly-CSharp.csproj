@@ -71,7 +71,6 @@
      <Compile Include="Assets\Scripts\ScatterSystem\ScatterRenderer.cs" />
      <Compile Include="Assets\Scripts\ScatterSystem\TerrainScatters.cs" />
      <Compile Include="Assets\Scripts\Tools\CameraUtils.cs" />
-     <Compile Include="Assets\Scripts\Tools\CreateCubemap.cs" />
      <Compile Include="Assets\Scripts\Tools\ExportAssetBundle.cs" />
      <Compile Include="Assets\Scripts\Tools\FastList.cs" />
      <Compile Include="Assets\Scripts\Tools\GUI\GUIUtils.cs" />
@@ -99,6 +98,7 @@
      <None Include="Assets\Shaders\Debug\Billboard.shader" />
      <None Include="Assets\Shaders\Terrain\ParallaxUtils.cginc" />
      <None Include="Assets\Shaders\Scatters\InstancingShaders\ParallaxScatterStructs.cginc" />
+     <None Include="Assets\Shaders\Debug\ShowUVs.shader" />
      <None Include="Assets\Shaders\Scatters\InstancingShaders\ParallaxScatterParams.cginc" />
      <None Include="Assets\Marketplace\Animated Vegetation Ultimate Pack\Shaders\StandardDoubleSided.shader" />
      <None Include="Assets\Shaders\Terrain\Parallax.shader" />

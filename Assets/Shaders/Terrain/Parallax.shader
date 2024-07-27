@@ -263,6 +263,7 @@ Shader "Custom/Parallax"
         
             #pragma multi_compile PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
             #pragma multi_compile_fog
+            #pragma multi_compile_shadowcaster
 
             #define PARALLAX_SHADOW_CASTER_PASS
         
@@ -275,6 +276,7 @@ Shader "Custom/Parallax"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
         
+            #include "../Includes/ParallaxGlobalFunctions.cginc" 
             #include "ParallaxStructs.cginc"
             #include "ParallaxVariables.cginc"
             #include "ParallaxUtils.cginc"
@@ -347,10 +349,10 @@ Shader "Custom/Parallax"
                 // Defines 'displacedWorldPos'
                 CALCULATE_VERTEX_DISPLACEMENT(v, landMask)
         
-                TRANSFER_SHADOW_CASTER_NORMALOFFSET(v)
-                v.pos = UnityWorldToClipPos(displacedWorldPos);
+                v.pos = ParallaxClipSpaceShadowCasterPos(displacedWorldPos, v.worldNormal);
                 v.pos = UnityApplyLinearShadowBias(v.pos);
                 
+
                 return v;
             }
         

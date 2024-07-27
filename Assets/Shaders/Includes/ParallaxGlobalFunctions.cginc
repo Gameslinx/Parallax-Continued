@@ -141,16 +141,48 @@ float3 CalculateLighting(LIGHTING_INPUT)
     float3 ambient = UNITY_LIGHTMODEL_AMBIENT.rgb * col.rgb;
     float3 diffuse = _LightColor0.rgb * col.rgb * NdotL;
     float3 specular = spec * _LightColor0.rgb;
-    float3 reflection = fresnel * reflColor * col.a * _EnvironmentMapFactor + (1 - fresnel) * refrColor * _RefractionIntensity * NdotL; // For refraction
+    float3 reflection = fresnel * reflColor * col.a * _EnvironmentMapFactor; // For refraction
+    float3 refraction = (1 - fresnel) * refrColor * _RefractionIntensity;
     reflection *= shadow + UNITY_LIGHTMODEL_AMBIENT;
     float3 scattering = 0;
     
     #if defined (SUBSURFACE_SCATTERING) || defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
         scattering = SubsurfaceScattering(worldPos, worldNormal, viewDir, lightDir);
+        #if defined (REFRACTION)
+            scattering *= refraction;
+        #endif
         #if defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
             scattering *= lerp(_SubsurfaceMax, _SubsurfaceMin, thickness);
         #endif
     #endif
     
-    return diffuse + ambient + specular + reflection + scattering;
+    return diffuse + ambient + specular + reflection + refraction * NdotL + scattering;
+}
+
+//
+//  Helper Functions
+//
+
+// More efficient version of unity's UnityClipSpaceShadowCasterPos which avoids re-transforming to world space
+float4 ParallaxClipSpaceShadowCasterPos(float3 wPos, float3 wNormal)
+{
+    if (unity_LightShadowBias.z != 0.0)
+    {
+        float3 wLight = normalize(UnityWorldSpaceLightDir(wPos.xyz));
+
+        // apply normal offset bias (inset position along the normal)
+        // bias needs to be scaled by sine between normal and light direction
+        // (http://the-witness.net/news/2013/09/shadow-mapping-summary-part-1/)
+        //
+        // unity_LightShadowBias.z contains user-specified normal offset amount
+        // scaled by world space texel size.
+
+        float shadowCos = dot(wNormal, wLight);
+        float shadowSine = sqrt(1 - shadowCos * shadowCos);
+        float normalBias = unity_LightShadowBias.z * shadowSine;
+
+        wPos.xyz -= wNormal * normalBias;
+    }
+
+    return mul(UNITY_MATRIX_VP, float4(wPos, 1));
 }

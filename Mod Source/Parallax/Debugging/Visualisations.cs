@@ -16,13 +16,14 @@ namespace Parallax
         bool showingDistance = false;
         bool showingBiomes = false;
         bool showingDensity = false;
+        bool showingUVs = false;
         void Update()
         {
             bool noiseToggle = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha1);
             if (noiseToggle) 
             {
                 showingNoise = !showingNoise;
-                if (showingNoise) { ScatterNoiseDisplay.ShowNoise(FlightGlobals.currentMainBody.name + "-" + "Balls"); }
+                if (showingNoise) { ScatterNoiseDisplay.ShowNoise(ConfigLoader.parallaxScatterBodies[FlightGlobals.currentMainBody.name].scatters.FirstOrDefault().Value.scatterName); }
                 if (!showingNoise) { ScatterNoiseDisplay.Cleanup(); }
             }
             bool distanceToggle = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha2);
@@ -39,7 +40,7 @@ namespace Parallax
                 if (showingBiomes) { QuadBiomeDisplay.ShowQuadBiomes(); }
                 if (!showingBiomes) { QuadBiomeDisplay.Cleanup(); }
             }
-            bool densityToggle = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha5);
+            bool densityToggle = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha4);
             if (densityToggle)
             {
                 showingDensity = !showingDensity;
@@ -52,9 +53,21 @@ namespace Parallax
                     QuadDensityDisplay.Cleanup();
                 }
             }
+            bool uvToggle = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha5);
+            if (uvToggle)
+            {
+                showingUVs = !showingUVs;
+                if (showingUVs)
+                {
+                    QuadUVDisplay.ShowQuadUVs();
+                }
+                if (!showingUVs)
+                {
+                    QuadUVDisplay.Cleanup();
+                }
+            }
 
-
-            bool logVRAMStats = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha4);
+            bool logVRAMStats = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha6);
             if (logVRAMStats)
             {
                 ParallaxDiagnostics.LogComputeShaderResourceUsage();
@@ -202,6 +215,35 @@ namespace Parallax
                     objectDisplays.Add(go);
                 }
             }
+            public static void Cleanup()
+            {
+                foreach (GameObject go in objectDisplays)
+                {
+                    UnityEngine.Object.Destroy(go);
+                }
+            }
+        }
+
+        public class QuadUVDisplay
+        {
+            public static List<GameObject> objectDisplays = new List<GameObject>();
+
+            public static void ShowQuadUVs()
+            {
+                foreach (KeyValuePair<PQ, ScatterSystemQuadData> quadData in ScatterComponent.scatterQuadData)
+                {
+                    PQ quad = quadData.Key;
+                    GameObject go = CreateQuadGameObject(quad, out MeshRenderer meshRenderer, out MeshFilter meshFilter);
+
+                    Mesh mesh = UnityEngine.Object.Instantiate(quad.gameObject.GetComponent<MeshFilter>().sharedMesh);
+                    meshFilter.mesh = mesh;
+                    meshFilter.mesh.uv = PQSMod_Parallax.quadPlanetUVs[quad];
+                    meshRenderer.sharedMaterial = new Material(AssetBundleLoader.parallaxDebugShaders["Custom/ShowUVs"]);
+
+                    objectDisplays.Add(go);
+                }
+            }
+
             public static void Cleanup()
             {
                 foreach (GameObject go in objectDisplays)

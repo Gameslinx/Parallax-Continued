@@ -76,7 +76,6 @@ Shader "Custom/ParallaxInstancedSolid"
             CGPROGRAM
 
             // Shader variants
-
             #pragma multi_compile_vertex        _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
             #pragma multi_compile_vertex        _ WIND
             #pragma multi_compile_fragment      _ TWO_SIDED
@@ -104,7 +103,6 @@ Shader "Custom/ParallaxInstancedSolid"
 
             // The necessary structs
             DECLARE_INSTANCING_DATA
-
             PARALLAX_FORWARDBASE_STRUCT_APPDATA
             PARALLAX_FORWARDBASE_STRUCT_V2F
           
@@ -192,30 +190,33 @@ Shader "Custom/ParallaxInstancedSolid"
             Tags { "LightMode" = "ShadowCaster" }
             CGPROGRAM
         
-            #pragma multi_compile _ TWO_SIDED
-            #pragma multi_compile _ WIND
-            #pragma multi_compile _ ALPHA_CUTOFF
-            #pragma multi_compile _ ALTERNATE_SPECULAR_TEXTURE
-            #pragma multi_compile _ BILLBOARD
+            // Shader variants
+            #pragma multi_compile_vertex        _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
+            #pragma multi_compile_vertex        _ WIND
+            #pragma multi_compile_fragment      _ ALPHA_CUTOFF
         
+            #define PARALLAX_SHADOW_CASTER_PASS
+
             #pragma vertex vert
             #pragma fragment frag
-            #pragma multi_compile_fwdbase
+            #pragma multi_compile_shadowcaster
         
+            // Unity includes
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
         
+            // Includes
             #include "ParallaxScatterStructs.cginc"
             #include "ParallaxScatterParams.cginc"
             #include "../ScatterStructs.cginc"
             #include "../../Includes/ParallaxGlobalFunctions.cginc"
             #include "ParallaxScatterUtils.cginc"
         
+            // Necessary structs
             DECLARE_INSTANCING_DATA
-        
-            PARALLAX_FORWARDBASE_STRUCT_APPDATA
-            PARALLAX_FORWARDBASE_STRUCT_V2F
+            PARALLAX_SHADOW_CASTER_STRUCT_APPDATA
+            PARALLAX_SHADOW_CASTER_STRUCT_V2F
           
             v2f vert(appdata i, uint instanceID : SV_InstanceID)
             {
@@ -223,21 +224,15 @@ Shader "Custom/ParallaxInstancedSolid"
         
                 float4x4 objectToWorld = INSTANCE_DATA.objectToWorld;
         
-                BILLBOARD_IF_ENABLED(i.vertex, i.normal, i.tangent, objectToWorld);
+                BILLBOARD_IF_ENABLED(i.vertex, objectToWorld);
         
-                o.worldNormal = mul(objectToWorld, float4(i.normal, 0)).xyz;
-                o.worldTangent = mul(objectToWorld, float4(i.tangent.xyz, 0));
-                o.worldBinormal = cross(o.worldTangent, o.worldNormal) * i.tangent.w;
+                float3 worldNormal = mul(objectToWorld, float4(i.normal, 0)).xyz;
                 
                 float3 worldPos = mul(objectToWorld, i.vertex);
                 float3 planetNormal = normalize(worldPos - _PlanetOrigin);
                 PROCESS_WIND
 
-                o.worldPos = worldPos;
                 o.uv = i.uv;
-        
-                o.planetNormal = planetNormal;
-                o.viewDir = _WorldSpaceCameraPos - worldPos;
 
                 o.pos = UnityWorldToClipPos(worldPos);
                 o.pos = UnityApplyLinearShadowBias(o.pos);
@@ -247,11 +242,11 @@ Shader "Custom/ParallaxInstancedSolid"
         
             void frag(PIXEL_SHADER_INPUT(v2f))
             {   
-                // Remove this from build
-                //i.uv.y = -i.uv.y;
                 // Do as little work as possible, clip immediately
-                float mainTex = tex2D(_MainTex, i.uv * _MainTex_ST).a;
-                ALPHA_CLIP(mainTex);
+                #if defined (ALPHA_CUTOFF)
+                    float mainTex = tex2D(_MainTex, i.uv * _MainTex_ST).a;
+                    ALPHA_CLIP(mainTex);
+                #endif
             }
         
             ENDCG

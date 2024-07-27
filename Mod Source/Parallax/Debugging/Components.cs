@@ -19,7 +19,7 @@ namespace Parallax.Debugging
         }
         void Update()
         {
-            float scatterRange = ConfigLoader.parallaxScatterBodies[FlightGlobals.currentMainBody.name].scatters["Kerbin-Balls"].distributionParams.range;
+            float scatterRange = ConfigLoader.parallaxScatterBodies[FlightGlobals.currentMainBody.name].scatters.FirstOrDefault().Value.distributionParams.range;
             double quadDistance = quad.gcDist;
             if (quadDistance < scatterRange + Mathf.Sqrt(ScatterComponent.scatterQuadData[quad].sqrQuadWidth))
             {

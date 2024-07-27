@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 using UnityEngine.Rendering;
 using UnityEngine;
 using static Parallax.Legacy.LegacyConfigLoader;
+using UnityEngine.Profiling;
+using Unity.Collections;
+using Parallax.Tools;
 
 namespace Parallax
 {
@@ -15,10 +18,15 @@ namespace Parallax
     {
         // Grab reference to parent quad to access mesh data
         ScatterSystemQuadData parent;
+
         // The scatter we're generating
         public Scatter scatter;
+
         // Output evaluate results to the renderer
         public ScatterRenderer scatterRenderer;
+
+        // Collider data, if needed
+        public ScatterColliderData collisionData;
 
         // Contains our distribute and evaluate kernels
         public ComputeShader scatterShader;
@@ -41,6 +49,7 @@ namespace Parallax
         // Stores count of distribution output
         int[] count = new int[] { 0, 0, 0 };
         uint[] indirectArgs = { 1, 1, 1 };
+        int realCount = 0;
 
         // Frequently set prop IDs
         int objectToWorldMatrixPropID = 0;
@@ -49,6 +58,7 @@ namespace Parallax
         int worldSpaceCameraPositionPropID = 0;
 
         bool eventAdded = false;
+        bool collidersAdded = false;
         public bool cleaned = false;
 
         public ScatterData(ScatterSystemQuadData parent, Scatter scatter)
@@ -177,10 +187,12 @@ namespace Parallax
             // Dispatch 1 thread per triangle
             int dispatchCount = Mathf.CeilToInt((float)numTriangles / 32.0f);
             scatterShader.Dispatch(distributeKernel, dispatchCount, 1, 1);
+
+            // Prepare for evaluation
             ComputeDispatchArgs();
         }
-        // Processing an async readback request is faster
-        // than dispatching another compute shader to get the count
+
+        // Processing an async readback request is faster than dispatching another compute shader to get the count
         public void ComputeDispatchArgs()
         {
             // Stores the count of the generated positions
@@ -199,6 +211,14 @@ namespace Parallax
             // Data was cleaned up before generation completed - stop here
             if (cleaned) { return; }
             count = request.GetData<int>().ToArray(); //Creates garbage, unfortunate
+            realCount = count[0];
+            Debug.Log("Count: " + realCount + ", buffer size: " + outputScatterDataBuffer.count);
+            // Process collider data, if this scatter is collideable
+            // Todo: Make this a GetData if initializing the scene for the first time so all colliders are here on time
+            if (CollidersEligible())
+            {
+                AsyncGPUReadback.Request(outputScatterDataBuffer, OnColliderReadbackComplete);
+            }
 
             // Initialise indirect args
             count[0] = Mathf.CeilToInt((float)count[0] / 32f);
@@ -214,6 +234,32 @@ namespace Parallax
             // This function may never execute because the quad tries to cleanup before the readback is complete
             // So add this guard to prevent trying to remove the event before it was ever added
             eventAdded = true;
+        }
+
+        // Request the output buffer for collider processing
+        public void OnColliderReadbackComplete(AsyncGPUReadbackRequest req)
+        {
+            Profiler.BeginSample("Parallax collider data request");
+            Profiler.BeginSample("Parallax GetData request");
+
+            // Note - GetData requests the entire buffer!! Not just what we have appended, so most of this data is full of zeroes... FML
+            // Use slices to get the data we're interested in
+            NativeArray<PositionData> data = req.GetData<PositionData>();
+            NativeArray<PositionData> realData = new NativeArray<PositionData>(realCount, Allocator.Persistent);
+
+            NativeSlice<PositionData> slice1 = new NativeSlice<PositionData>(data, 0, realCount);
+            NativeSlice<PositionData> slice2 = new NativeSlice<PositionData>(realData);
+
+            slice2.CopyFrom(slice1);
+            data.Dispose();
+
+            Debug.Log("Length of data: " + realData.Length + ", count: " + realCount + ", buffer size: " + outputScatterDataBuffer.count);
+            Profiler.EndSample();
+
+            collisionData = new ScatterColliderData(parent, realData, scatter.collideableArrayIndex);
+            CollisionManager.QueueIncomingData(collisionData);
+            collidersAdded = true;
+            Profiler.EndSample();
         }
         public void InitializeEvaluate()
         {
@@ -260,15 +306,32 @@ namespace Parallax
 
             scatterShader.DispatchIndirect(evaluateKernel, dispatchArgs, 0);
         }
+        // Returns true if:
+        // 1. Scatter is collideable
+        // 2. Quad is max level
+        // 3. TODO: Quad is in range of a craft
+        bool CollidersEligible()
+        {
+            return scatter.collideable && parent.quad.subdivision == parent.quad.sphereRoot.maxLevel && realCount > 0;
+        }
         public void Cleanup()
         {
             // Check against this in the readback to stop us from adding an event after the data is cleaned up
             cleaned = true;
 
+            // Remove event
             if (eventAdded)
             {
                 scatterRenderer.onEvaluateScatters -= Evaluate;
                 eventAdded = false;
+            }
+
+            // Queue up collider removal
+            if (collidersAdded)
+            {
+                CollisionManager.QueueOutgoingData(collisionData);
+                collisionData.quadLocalData.Dispose();
+                collisionData.lastDistances.Dispose();
             }
 
             ConfigLoader.computeShaderPool.Add(scatterShader);

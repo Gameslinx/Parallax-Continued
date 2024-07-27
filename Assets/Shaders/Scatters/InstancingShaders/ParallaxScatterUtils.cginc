@@ -163,8 +163,18 @@ float3 Wind(float3 localPos, float3 worldPos, float3 planetNormal, float4x4 obje
     #define REFRACTION_INTENSITY 0
 #endif
 
+//
+//  Billboarding
+//
+
+#if !defined (PARALLAX_SHADOW_CASTER_PASS)
+    #define BILLBOARD_INPUT inout float4 vertex, inout float3 normal, inout float4 tangent, float4x4 mat
+#else
+    #define BILLBOARD_INPUT inout float4 vertex, float4x4 mat
+#endif
+
 // Billboard
-void Billboard(inout float4 vertex, inout float3 normal, inout float4 tangent, float4x4 mat)
+void Billboard(BILLBOARD_INPUT)
 {
     float3 local = vertex.xyz;
                 
@@ -176,21 +186,26 @@ void Billboard(inout float4 vertex, inout float3 normal, inout float4 tangent, f
                 
     vertex = float4(position, 1);
     
-    #if !defined (BILLBOARD_USE_MESH_NORMALS)
+    #if !defined (BILLBOARD_USE_MESH_NORMALS) && !defined (PARALLAX_SHADOW_CASTER_PASS)
     // Since we're in local space, we can set the y coordinate of the normal to 0 to prevent dependence on vertical viewing angle
     normal = normalize(float3(forwardVector.x, 0, forwardVector.z));
     tangent.xyz = rightVector;
-    
-    #else
-    // At the moment, not sure how to do appropriate normal mapping for mesh normals where normals are pointing up
     #endif
-    // Output local space position
 }
 
+// If we're in the shadow caster pass and have billboard enabled, we don't care about the normal or tangent
 #if defined (BILLBOARD) || defined (BILLBOARD_USE_MESH_NORMALS)
-    #define BILLBOARD_IF_ENABLED(vertex, normal, tangent, objectToWorldMatrix)    Billboard(vertex, normal, tangent, objectToWorldMatrix);
+    #if !defined (PARALLAX_SHADOW_CASTER_PASS)
+        #define BILLBOARD_IF_ENABLED(vertex, normal, tangent, objectToWorldMatrix)      Billboard(vertex, normal, tangent, objectToWorldMatrix);
+    #else
+        #define BILLBOARD_IF_ENABLED(vertex, objectToWorldMatrix)                       Billboard(vertex, objectToWorldMatrix);
+    #endif
 #else
-    #define BILLBOARD_IF_ENABLED(vertex, normal, tangent, objectToWorldMatrix)
+    #if !defined (PARALLAX_SHADOW_CASTER_PASS)
+        #define BILLBOARD_IF_ENABLED(vertex, normal, tangent, objectToWorldMatrix)
+    #else
+        #define BILLBOARD_IF_ENABLED(vertex, objectToWorldMatrix)
+    #endif
 #endif
 
 #if defined (DEBUG_FACE_ORIENTATION)

@@ -33,6 +33,7 @@ namespace Parallax
         public float densityMultiplier;
         public float rangeMultiplier;
         public float fadeOutStartRange;
+        public float collisionLevel;
     }
     public struct DebugGlobalSettings
     {
@@ -41,6 +42,7 @@ namespace Parallax
     public struct ObjectPoolSettings
     {
         public int cachedComputeShaderCount;
+        public int cachedColliderCount;
     }
     // Stores the loaded values from the configs for each planet, except for the textures which are stored via file path
     // Textures are loaded On-Demand and stored in loadedTextures, where they are unloaded on scene change
@@ -343,6 +345,11 @@ namespace Parallax
         /// Contains all scatters for fast iteration, but not sharedScatters
         /// </summary>
         public Scatter[] fastScatters;
+
+        /// <summary>
+        /// The scatters that can be collided with on this planet
+        /// </summary>
+        public Scatter[] collideableScatters;
         public ParallaxScatterBody(string planetName)
         {
             this.planetName = planetName;
@@ -399,6 +406,12 @@ namespace Parallax
 
         public bool isShared = false;
 
+        public bool collideable = false;
+        public int collideableArrayIndex = -1;
+        public float sqrMeshBound = 0;
+
+        public ScatterRenderer renderer;
+
         public Scatter(string scatterName)
         {
             this.scatterName = scatterName;
@@ -410,6 +423,36 @@ namespace Parallax
                 quadData.Value.ReinitializeScatters(this);
             }
         }
+
+        /// <summary>
+        /// Computes the largest distance a vertex is from the origin. Used for collision checks
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <returns></returns>
+        public float CalculateSqrLargestBound(string modelPath)
+        {
+            Mesh mesh = GameDatabase.Instance.GetModel(modelPath).GetComponent<MeshFilter>().mesh;
+            if (mesh == null || mesh.vertexCount == 0)
+            {
+                ParallaxDebug.LogError("Mesh is null or has no vertices.");
+                return 0f;
+            }
+
+            Vector3[] vertices = mesh.vertices;
+            float maxDistance = 0f;
+
+            foreach (Vector3 vertex in vertices)
+            {
+                float distance = vertex.sqrMagnitude; // Distance from the origin
+                if (distance > maxDistance)
+                {
+                    maxDistance = distance;
+                }
+            }
+
+            return maxDistance;
+        }
+
         public virtual ConfigNode ToConfigNode()
         {
             ConfigNode scatterNode = new ConfigNode("Scatter");

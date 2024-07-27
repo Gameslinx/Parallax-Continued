@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
 using UnityEngine;
+using UnityEngine.Rendering;
 using static Targeting;
 
 //
@@ -34,6 +35,7 @@ namespace Parallax
 
         // Stores a cache of compute shaders to prevent slow instantiation
         public static ObjectPool<ComputeShader> computeShaderPool;
+        public static ObjectPool<GameObject> colliderPool;
 
         // Stores transparent material for terrain quads
         public static Material transparentMaterial;
@@ -46,6 +48,8 @@ namespace Parallax
         public void Awake()
         {
             ParallaxDebug.Log("Starting!");
+            System.Reflection.Assembly assembly = System.Reflection.Assembly.GetAssembly(typeof(AsyncGPUReadbackRequest));
+            Debug.Log(assembly.Location);
         }
         // Entry point
         public static void ModuleManagerPostLoad()
@@ -206,17 +210,27 @@ namespace Parallax
             parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier = float.Parse(scatterSettingsNode.GetValue("densityMultiplier"));
             parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier = float.Parse(scatterSettingsNode.GetValue("rangeMultiplier"));
             parallaxGlobalSettings.scatterGlobalSettings.fadeOutStartRange = float.Parse(scatterSettingsNode.GetValue("fadeOutStartRange"));
+            parallaxGlobalSettings.scatterGlobalSettings.collisionLevel = float.Parse(scatterSettingsNode.GetValue("collisionLevel"));
 
             ConfigNode debugSettingsNode = config.config.GetNode("DebugSettings");
             parallaxGlobalSettings.debugGlobalSettings.wireframeTerrain = bool.Parse(debugSettingsNode.GetValue("wireframeTerrain"));
 
             ConfigNode objectPoolsNode = config.config.GetNode("ObjectPoolSettings");
             parallaxGlobalSettings.objectPoolSettings.cachedComputeShaderCount = int.Parse(objectPoolsNode.GetValue("cachedComputeShaderCount"));
+            parallaxGlobalSettings.objectPoolSettings.cachedColliderCount = int.Parse(objectPoolsNode.GetValue("cachedColliderCount"));
         }
         public static void InitializeObjectPools(ParallaxSettings settings)
         {
             ComputeShader templateComputeShader = Instantiate(AssetBundleLoader.parallaxComputeShaders["TerrainScatters"]);
             computeShaderPool = new ObjectPool<ComputeShader>(templateComputeShader, settings.objectPoolSettings.cachedComputeShaderCount);
+
+            GameObject templateCollider = new GameObject("ParallaxCollider");
+            templateCollider.AddComponent<MeshCollider>();
+            templateCollider.AddComponent<MeshFilter>();
+            templateCollider.AddComponent<MeshRenderer>();
+            templateCollider.GetComponent<MeshRenderer>().material = new Material(Shader.Find("Standard"));
+            templateCollider.SetActive(false);
+            colliderPool = new ObjectPool<GameObject>(templateCollider, settings.objectPoolSettings.cachedColliderCount);
         }
         // Looks up a shader in the shader bank
         public static ShaderProperties LookupTemplateConfig(UrlDir.UrlConfig config, string shaderName, List<string> keywords)
@@ -408,21 +422,20 @@ namespace Parallax
                     continue;
                 }
 
-                string nearestQuadSubdivisionLevel = rootNode.config.GetValue("nearestQuadSubdivisionLevel");
-                string nearestQuadSubdivisionRange = rootNode.config.GetValue("nearestQuadSubdivisionRange");
-
-                //int nearestQuadSubdivisionLevelValue = (int)ConfigUtils.TryParse(body, "nearestQuadSubdivisionLevel", nearestQuadSubdivisionLevel, typeof(int));
-                //float nearestQuadSubdivisionRangeValue = (float)ConfigUtils.TryParse(body, "nearestQuadSubdivisionRange", nearestQuadSubdivisionRange, typeof(float));
-
                 ParallaxScatterBody scatterBody = new ParallaxScatterBody(body);
-                //scatterBody.nearestQuadSubdivisionLevel = nearestQuadSubdivisionLevelValue;
-                //scatterBody.nearestQuadSubdivisionRange = nearestQuadSubdivisionRangeValue;
+
+                // The scatters that are collideable, which depends on the collision level of the scatter and the level set in the global config
+                List<Scatter> collideableScatters = new List<Scatter>();
+                int collideableIndex = -1;
+
                 // "Scatter"
                 ConfigNode[] nodes = rootNode.config.GetNodes("Scatter");
                 foreach (ConfigNode node in nodes)
                 {
                     string scatterName = body + "-" + ConfigUtils.TryGetConfigValue(node, "name");
                     string model = ConfigUtils.TryGetConfigValue(node, "model");
+                    string collisionLevelString = ConfigUtils.TryGetConfigValue(node, "collisionLevel");
+                    int collisionLevel = (int)ConfigUtils.TryParse(body, "collisionLevel", collisionLevelString, typeof(int));
 
                     Scatter scatter = new Scatter(scatterName);
                     scatter.modelPath = model;
@@ -444,12 +457,21 @@ namespace Parallax
                     PerformNormalisationConversions(scatter);
                     PerformAdditionalOperations(scatter);
 
+                    if (collisionLevel >= parallaxGlobalSettings.scatterGlobalSettings.collisionLevel)
+                    {
+                        scatter.collideable = true;
+                        collideableIndex++;
+                        scatter.collideableArrayIndex = collideableIndex;
+                        collideableScatters.Add(scatter);
+                    }
+
                     Debug.Log("Adding scatter: " + scatterName);
                     scatterBody.scatters.Add(scatterName, scatter);
                 }
 
                 Debug.Log("Adding body with name: " + body + " to scatter bodies");
                 scatterBody.fastScatters = scatterBody.scatters.Values.ToArray();
+                scatterBody.collideableScatters = collideableScatters.ToArray();
                 parallaxScatterBodies.Add(body, scatterBody);
             }
         }
@@ -807,6 +829,9 @@ namespace Parallax
             {
                 scatter.distributionParams.altitudeFadeRange = 0.05f;
             }
+
+            // Calculate the LOD1 mesh's largest bound for colliders
+            scatter.sqrMeshBound = scatter.CalculateSqrLargestBound(scatter.distributionParams.lod1.modelPathOverride);
         }
         void OnDestroy()
         {

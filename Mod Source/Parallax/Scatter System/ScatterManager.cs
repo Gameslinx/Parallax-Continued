@@ -49,6 +49,7 @@ namespace Parallax
                     renderer.scatter = scatter.Value;
                     scatterRenderers.Add(renderer);
                     fastScatterRenderers.Add(scatter.Key, renderer);
+                    scatter.Value.renderer = renderer;
                     Debug.Log("Init new renderer: " + scatter.Value.scatterName);
                 }
 

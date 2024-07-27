@@ -32,6 +32,10 @@ namespace Parallax
         protected virtual T InitSingle()
         {
             T obj = UnityEngine.Object.Instantiate(type);
+            if (typeof(T) == typeof(GameObject))
+            {
+                GameObject.DontDestroyOnLoad(obj);
+            }
             return obj;
         }
         public virtual T Fetch()

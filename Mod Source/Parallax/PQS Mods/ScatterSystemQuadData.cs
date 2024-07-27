@@ -175,6 +175,8 @@ namespace Parallax
             cameraDistance = ((Vector3)quad.meshRenderer.localToWorldMatrix.GetColumn(3) - cameraPos).sqrMagnitude;
 
             // Warning - bugged - Especially on GUI refreshes
+            // Intention is to clean up quads that are out of range completely to save some VRAM and reduce compute shader usage...
+            // Commented out for now 
 
             //foreach (ScatterData scatter in quadScatters)
             //{
@@ -215,7 +217,6 @@ namespace Parallax
         public bool ScatterEligible(Scatter scatter)
         {
             // Max level quads are always eligible because they're in range
-
             float range = scatter.distributionParams.range;
 
             // The distance at which this quad will subdivide next
@@ -315,6 +316,24 @@ namespace Parallax
             float multiplier = Mathf.Clamp01(Mathf.Lerp(1.0f, 0.333333f, Mathf.Pow((float)factor, 2)));
 
             return multiplier;
+        }
+        /// <summary>
+        /// Returns the non-smoothed terrain normal at a given index in the normals buffer
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        public Vector3 GetTerrainNormal(uint index)
+        {
+            int index1 = triangles[index];
+            int index2 = triangles[index + 1];
+            int index3 = triangles[index + 2];
+
+            Vector3 vert1 = vertices[index1];
+            Vector3 vert2 = vertices[index2];
+            Vector3 vert3 = vertices[index3];
+
+            Vector3 localNormal = Vector3.Normalize(Vector3.Cross(vert2 - vert1, vert3 - vert1));
+            return quad.meshRenderer.localToWorldMatrix.MultiplyVector(localNormal);
         }
         /// <summary>
         /// Releases all memory consumed by this quad. Called when a quad is unloaded, or has a subdivision level below this.

@@ -113,6 +113,8 @@
       <Publicize Include="Assembly-CSharp:PQS.Mod_OnSphereStarted" />
       <Publicize Include="Assembly-CSharp:PQS.StartSphere" />
       <Publicize Include="Assembly-CSharp:PQS.UpdateSphere" />
+
+      <Publicize Include="UnityEngine.CoreModule:UnityEngine.Rendering.AsyncGPUReadbackRequest.GetDataRaw" />
     </ItemGroup>
 
 </Project>

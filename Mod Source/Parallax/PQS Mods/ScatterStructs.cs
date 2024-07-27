@@ -19,8 +19,7 @@ namespace Parallax
         {
             return 7 * sizeof(float) + 1 * sizeof(uint);
         }
-    };
-
+    }
     // Output from the evaluate points kernel
     // And sent to shader for rendering
     public struct TransformData
