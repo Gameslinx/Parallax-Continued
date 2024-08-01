@@ -209,10 +209,12 @@ namespace Parallax
         public void OnDistributeComplete(AsyncGPUReadbackRequest request)
         {
             // Data was cleaned up before generation completed - stop here
-            if (cleaned) { return; }
+            if (cleaned) 
+            { 
+                return; 
+            }
             count = request.GetData<int>().ToArray(); //Creates garbage, unfortunate
             realCount = count[0];
-            Debug.Log("Count: " + realCount + ", buffer size: " + outputScatterDataBuffer.count);
             // Process collider data, if this scatter is collideable
             // Todo: Make this a GetData if initializing the scene for the first time so all colliders are here on time
             if (CollidersEligible())
@@ -239,6 +241,11 @@ namespace Parallax
         // Request the output buffer for collider processing
         public void OnColliderReadbackComplete(AsyncGPUReadbackRequest req)
         {
+            if (cleaned)
+            {
+                return;
+            }
+
             Profiler.BeginSample("Parallax collider data request");
             Profiler.BeginSample("Parallax GetData request");
 

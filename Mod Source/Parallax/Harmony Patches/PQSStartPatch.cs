@@ -22,6 +22,7 @@ namespace Parallax
 
         public delegate void PQSStart(string bodyName);
         public delegate void PQSUnload(string bodyName);
+        public delegate void PQSRestart(string bodyName);
 
         /// <summary>
         /// Called when the planet currently loading is just about to start building terrain. Use this for functions you need to run before the quads are built.
@@ -29,6 +30,7 @@ namespace Parallax
         /// </summary>
         public static event PQSStart onPQSStart;
         public static event PQSUnload onPQSUnload;
+        public static event PQSRestart onPQSRestart;
         static bool Prefix(PQS __instance)
         {
             Debug.Log("Update Quads Init: " + __instance.name);
@@ -37,6 +39,7 @@ namespace Parallax
                 Debug.Log(" - Invoking events for: " + __instance.name);
                 if (currentLoadedBody == __instance.name)
                 {
+                    onPQSRestart?.Invoke(__instance.name);
                     return true;
                 }
                 onPQSUnload?.Invoke(currentLoadedBody);

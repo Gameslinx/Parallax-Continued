@@ -23,6 +23,9 @@ namespace Parallax
         }
         private void InitPool()
         {
+            // Would be a bit silly to need to instantiate if we're out of capacity later and the template object was destroyed innit
+            // Bit like yoinking a turret out of the scanner in Chapter 5 (The Escape) from the hit game Portal 2 by Valve
+            GameObject.DontDestroyOnLoad(type);
             for (int i = 0; i < capacity; i++)
             {
                 T obj = InitSingle();

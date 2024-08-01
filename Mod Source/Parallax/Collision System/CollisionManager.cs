@@ -6,7 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Unity.Collections;
 using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
+using static Kopernicus.ConfigParser.ParserOptions;
 
 namespace Parallax
 {
@@ -37,25 +39,12 @@ namespace Parallax
         public void InitializeDistances()
         {
             lastDistances = new NativeArray<float>(dataCount, Allocator.Persistent);
-            InitalizeArray initJob = new InitalizeArray
+            InitalizeArrayJob initJob = new InitalizeArrayJob
             {
                 array = lastDistances,
                 initializeTo = float.MaxValue
             };
             initDistancesHandle = initJob.Schedule(dataCount, dataCount / 8);
-        }
-    }
-    public class ScatterTransformData : FastListItem
-    {
-        public ScatterSystemQuadData scatterSystemQuad;
-        public PositionData position;
-        public int collideableScattersIndex;
-        public GameObject colliderObject;
-        public ScatterTransformData(ScatterSystemQuadData scatterSystemQuad, PositionData transform, int collideableScattersIndex)
-        {
-            this.scatterSystemQuad = scatterSystemQuad;
-            this.position = transform;
-            this.collideableScattersIndex = collideableScattersIndex;
         }
     }
     /// <summary>
@@ -66,6 +55,7 @@ namespace Parallax
     {
         public static CollisionManager Instance;
         public static ParallaxScatterBody currentScatterBody;
+        public static int numCollideableScatters = 0;
 
         // O(1) insertion and deletion makes managing large amounts of data much easier
         // Iterated through often to determine which colliders need spawning
@@ -75,25 +65,39 @@ namespace Parallax
         static List<ScatterColliderData> incomingData = new List<ScatterColliderData>(1000);
         static List<ScatterColliderData> outgoingData = new List<ScatterColliderData>(1000);
 
-        static List<ScatterTransformData> collidersToAdd = new List<ScatterTransformData>();
-        static List<ScatterTransformData> collidersToRemove = new List<ScatterTransformData>();
-
-        static FastList<ScatterTransformData> activeObjects = new FastList<ScatterTransformData>(300);
+        //static FastList<ScatterTransformData> activeObjects = new FastList<ScatterTransformData>(300);
 
         // Collideable scatter index plus the dictionary belonging to it
         // Allows for colliders between same seeds
-        static Dictionary<PositionData, ScatterTransformData>[] activeObjectsDict;
 
-        //static List<Vector3> vesselPositions = new List<Vector3>();
-        //static List<float> sqrVesselMaxSizes = new List<float>();
         static int numVesselsLoaded = 0;
+        static int numQuads = 0;
 
-        static NativeList<Vector3> vesselPositions;
+        // Vessel requirements
+        static NativeList<float3> vesselPositions;
         static NativeList<float> sqrVesselBounds;
 
+        // Quad requirements
+        static NativeList<float3> quadPositions;
+        static NativeList<float> sqrQuadBounds;
+        static NativeList<int> quadIDs;
 
         // All scatters on this planet that satisfy the global config's collision level, and are collideable
         public static Scatter[] collideableScatters;
+        //public static NativeList<PositionDataQuadID>[] collidersToAdd;
+        //public static NativeList<PositionDataQuadID>[] collidersToRemove;
+
+        // Array index is collideable scatter
+        // One stream per quad in the quadIDs array output from the quadDistance job
+        // We need to append from multiple quad sources to one list, and a NativeList is not concurrency-safe
+        // Sadly, NativeList.AsParallelWriter does not exist in this version of unity
+        // THESE ARE NOT PERSISTENT, THEY ARE CREATED WHEN NEEDED
+        public static NativeStream[] collidersToAdd;
+        public static NativeStream[] collidersToRemove;
+
+        public static Dictionary<PositionDataQuadID, GameObject>[] activeObjects;
+
+        static bool initialized = false;
 
         void Awake()
         {
@@ -101,16 +105,45 @@ namespace Parallax
             GameObject.DontDestroyOnLoad(this);
             PQSStartPatch.onPQSStart += DominantBodyLoaded;
             PQSStartPatch.onPQSUnload += DominantBodyUnloaded;
+            PQSStartPatch.onPQSRestart += SameBodyLoaded;
+
+            // Allow 100 vessels max before we ignore any extra
+            vesselPositions = new NativeList<float3>(100, Allocator.Persistent);
+            sqrVesselBounds = new NativeList<float>(100, Allocator.Persistent);
+
+            quadPositions = new NativeList<float3>(1000, Allocator.Persistent);
+            sqrQuadBounds = new NativeList<float>(1000, Allocator.Persistent);
+            quadIDs = new NativeList<int>(250, Allocator.Persistent);
+        }
+        // We need to cleanup even if the same body requested a load
+        void SameBodyLoaded(string name)
+        {
+            //Debug.Log("Same body loading: " + name);
+            DominantBodyUnloaded(name);
+            DominantBodyLoaded(name);
         }
         void DominantBodyLoaded(string name)
         {
+            Debug.Log("Dominant body loaded start (collision manager");
             currentScatterBody = ConfigLoader.parallaxScatterBodies[name];
             collideableScatters = currentScatterBody.collideableScatters;
-            activeObjectsDict = new Dictionary<PositionData, ScatterTransformData>[collideableScatters.Length];
-            for (int i = 0; i < activeObjectsDict.Length; i++)
+
+            numCollideableScatters = collideableScatters.Length;
+
+            // Init streams
+            collidersToAdd = new NativeStream[numCollideableScatters];
+            collidersToRemove = new NativeStream[numCollideableScatters];
+
+            activeObjects = new Dictionary<PositionDataQuadID, GameObject>[numCollideableScatters];
+
+            // Initialize job native arrays
+            // Streams created at runtime
+            for (int i = 0; i < numCollideableScatters; i++)
             {
-                activeObjectsDict[i] = new Dictionary<PositionData, ScatterTransformData>();
+                activeObjects[i] = new Dictionary<PositionDataQuadID, GameObject>();
             }
+            initialized = true;
+            Debug.Log("Dominant body loaded end (collision manager");
         }
         void DominantBodyUnloaded(string name)
         {
@@ -141,6 +174,9 @@ namespace Parallax
                 // Complete the distance initialisation here
                 data.initDistancesHandle.Complete();
                 collisionData.Add(data);
+
+                // Add job info
+                sqrQuadBounds.Add(data.scatterSystemQuad.sqrQuadWidth);
             }
             incomingData.Clear();
         }
@@ -149,6 +185,9 @@ namespace Parallax
         {
             foreach (ScatterColliderData data in outgoingData)
             {
+                // Mirror the removal from fastlist in our own data here
+                // Remove job info
+                sqrQuadBounds.RemoveAtSwapBack(data.id);
                 collisionData.Remove(data);
             }
             outgoingData.Clear();
@@ -168,128 +207,291 @@ namespace Parallax
                 sqrVesselBounds.Add(maxBound * maxBound);
             }
         }
-        
-        void Update()
+        // Update the quad positions
+        static void UpdateQuadData()
         {
-            /*
-             * Requirements
-             * Quad requirements:
-             * 1. Quad positions - every frame
-             * 2. Quad width - once
-             * 3. Quad local to world matrix - every frame
-             * 
-             * Craft requirements:
-             * 1. Craft positions
-             * 2. Craft bounds
-             * 
-             * Scatter requirements:
-             * 1. Scatter bounds
-             */
-        }
-
-        // Single threaded implementation
-        void OldUpdate()
-        {
-            // Process incoming and outgoing data
-            RemoveQueuedData();
-            AddQueuedData();
-            UpdateCraftData();
-
+            quadIDs.Clear();
+            quadPositions.Clear();
             foreach (ScatterColliderData data in collisionData)
             {
-                ScatterSystemQuadData scatterSystemQuad = data.scatterSystemQuad;
-                PQ quad = scatterSystemQuad.quad;
-                Scatter scatter = collideableScatters[data.collideableScattersIndex];
+                quadPositions.Add((Vector3)data.scatterSystemQuad.quad.PrecisePosition);
+            }
+            numQuads = collisionData.Length;
+        }
 
-                float quadSqrDistance = SqrQuadDistanceToNearestCraft(quad.gameObject.transform.position);
-                float quadSqrWidth = ScatterComponent.scatterQuadData[quad].sqrQuadWidth;
-                if (quadSqrDistance - quadSqrWidth > 0)
-                {
-                    continue;
-                }
+        static bool inQuadJob = false;
+        static bool inColliderJob = false;
+        static List<JobHandle> colliderJobHandles = new List<JobHandle>();
+        static JobHandle findQuadsHandle = new JobHandle();
+        static int numColliderJobsCompleted = 0;
 
-                // Potentially:
-                // Work out the last world position by using how far the craft moved to offset the world position backwards by that amount
-                // Then we know if it's just come in range, or just gone out of range, based on if one distance check is true and the other is false
-                // Support world origin changes by doing the same for the world origin and offsetting the previous craft position by the difference
-
-                for (int i = 0; i < data.dataCount; i++)
-                {
-                    PositionData position = data.quadLocalData[i];
-                    // All data stored for this scatter
-                    Vector3 localPos = position.localPos;
-                    Vector3 localScale = position.localScale;
-
-                    // Evaluate distance to nearest craft
-                    Vector3 worldPos = quad.meshRenderer.localToWorldMatrix.MultiplyPoint3x4(localPos);
-                    float meshSize = Mathf.Max(localScale.x, localScale.y, localScale.z) * scatter.sqrMeshBound;
-                    float sqrDistance = SqrDistanceToNearestCraft(worldPos, meshSize);
-
-                    // Just come into range, add the collider
-                    if (sqrDistance < 0 && data.lastDistances[i] >= 0)
-                    {
-                        ScatterTransformData transformData = new ScatterTransformData(scatterSystemQuad, position, data.collideableScattersIndex);
-                        collidersToAdd.Add(transformData);
-
-                        // Note - this is added before collidersToAdd is processed and added
-                        activeObjectsDict[data.collideableScattersIndex].Add(position, transformData);
-                        Debug.Log("Queued collider data");
-                    }
-                    // Just gone out of range, remove the collider
-                    if (sqrDistance >= 0 && data.lastDistances[i] < 0)
-                    {
-                        // This collider needs removing if it's active
-                        if (activeObjectsDict[data.collideableScattersIndex].TryGetValue(position, out ScatterTransformData transformData))
-                        {
-                            collidersToRemove.Add(transformData);
-                            activeObjectsDict[data.collideableScattersIndex].Remove(position);
-                        }
-                    }
-                    data.lastDistances[i] = sqrDistance;
-                }
+        bool allComplete = false;
+        void Update()
+        {
+            if (!initialized)
+            {
+                return;
             }
 
-            DisableInvalidColliders();
-            EnableValidColliders();
+            // No jobs running
+            if (!inQuadJob && !inColliderJob && !allComplete) 
+            {
+                RemoveQueuedData();
+                AddQueuedData();
+                UpdateCraftData();
+                UpdateQuadData();
+
+                // INCREDIBLY important - If we try to kick off jobs without any loaded vessels or quads, things go to shit
+                if (numVesselsLoaded == 0 || numQuads == 0)
+                {
+                    return;
+                }
+
+                DispatchQuadJob();
+                inQuadJob = true;
+            }
+
+            // Quad job completed - setup collider job
+            if (inQuadJob && findQuadsHandle.IsCompleted)
+            {
+                inQuadJob = false;
+                SetupColliderJob(quadIDs.Length);
+                
+                // Dispatch a job on a new thread for each quad
+                int stream = 0;
+                foreach (int i in quadIDs)
+                {
+                    ScatterColliderData data = collisionData[i];
+                    Scatter scatter = collideableScatters[data.collideableScattersIndex];
+                
+                    DispatchColliderJob(scatter, data, stream);
+                    stream++;
+                }
+                inColliderJob = true;
+            }
+            
+            if (colliderJobHandles.All(x => x.IsCompleted) && inColliderJob)
+            {
+                foreach (JobHandle handle in colliderJobHandles)
+                {
+                    handle.Complete();
+                }
+            
+                allComplete = true;
+            }
+
+            if (allComplete)
+            {
+                DisableInvalidColliders();
+                EnableValidColliders();
+
+                CompleteColliderJob();
+                inColliderJob = false;
+
+                allComplete = false;
+            }
+
+            //
+            //// Check if all jobs are completed. Complete the ones that have
+            //if (inColliderJob)
+            //{
+            //    numColliderJobsCompleted = 0;
+            //    foreach (JobHandle handle in colliderJobHandles)
+            //    {
+            //        if (handle.IsCompleted)
+            //        {
+            //            handle.Complete();
+            //            numColliderJobsCompleted++;
+            //        }
+            //    }
+            //}
+            //
+            //// If all jobs have completed, we update the colliders
+            //if (numColliderJobsCompleted == colliderJobHandles.Count && !inQuadJob && inColliderJob)
+            //{
+            //    // Release locks and process colliders
+            //    inColliderJob = false;
+            //    colliderJobHandles.Clear();
+            //
+            //    DisableInvalidColliders();
+            //    EnableValidColliders();
+            //    CompleteColliderJob();
+            //}
+            //
+            //// Determine which quads are worth evaluating
+            //// This runs first, and only if we're finished
+            //if (!inColliderJob && !inQuadJob)
+            //{
+            //    // Process incoming and outgoing data
+            //    RemoveQueuedData();
+            //    AddQueuedData();
+            //    UpdateCraftData();
+            //    UpdateQuadData();
+            //
+            //    // Start the quad job - new cycle
+            //    DispatchQuadJob();
+            //}
+            //
+            //// We're done evaluating quad distances
+            //if (inQuadJob && findQuadsHandle.IsCompleted && !inColliderJob)
+            //{
+            //    // Complete the quads job
+            //    findQuadsHandle.Complete();
+            //    inQuadJob = false;
+            //
+            //    // Initialize the job
+            //    inColliderJob = true;
+            //
+            //    // Initialize quad streams
+            //    SetupColliderJob(quadIDs.Length);
+            //
+            //    // Dispatch a job on a new thread for each quad
+            //    int stream = 0;
+            //    foreach (int i in quadIDs)
+            //    {
+            //        ScatterColliderData data = collisionData[i];
+            //        Scatter scatter = collideableScatters[data.collideableScattersIndex];
+            //
+            //        DispatchColliderJob(scatter, data, stream);
+            //        stream++;
+            //    }
+            //}
+        }
+        static void SetupColliderJob(int numStreams)
+        {
+            for (int i = 0; i < numCollideableScatters; i++)
+            {
+                collidersToAdd[i] = new NativeStream(numStreams, Allocator.Persistent);
+                collidersToRemove[i] = new NativeStream(numStreams, Allocator.Persistent);
+            }
+        }
+        static void CompleteColliderJob()
+        {
+            colliderJobHandles.Clear();
+
+            for (int i = 0; i < numCollideableScatters; i++)
+            {
+                if (collidersToAdd[i].IsCreated)
+                {
+                    collidersToAdd[i].Dispose();
+                }
+                if (collidersToRemove[i].IsCreated)
+                {
+                    collidersToRemove[i].Dispose();
+                }
+                
+            }
+        }
+        static void DispatchQuadJob()
+        {
+            DetermineQuadsForEvaluationJob findQuadsJob = new DetermineQuadsForEvaluationJob
+            {
+                vesselPositions = CollisionManager.vesselPositions,
+                vesselBounds = CollisionManager.sqrVesselBounds,
+                vesselCount = CollisionManager.numVesselsLoaded,
+
+                quadPositions = CollisionManager.quadPositions,
+                sqrQuadBounds = CollisionManager.sqrQuadBounds,
+
+                quadIndices = CollisionManager.quadIDs,
+                count = quadPositions.Length
+            };
+            findQuadsHandle = findQuadsJob.Schedule();
+        }
+        static void DispatchColliderJob(Scatter scatter, ScatterColliderData data, int stream)
+        {
+            ProcessColliderJob colliderJob = new ProcessColliderJob
+            {
+                positions = data.quadLocalData,
+                lastDistances = data.lastDistances,
+
+                vesselPositions = CollisionManager.vesselPositions,
+                vesselBounds = CollisionManager.sqrVesselBounds,
+                vesselCount = CollisionManager.numVesselsLoaded,
+
+                quadPosition = data.scatterSystemQuad.quad.gameObject.transform.position,
+                sqrQuadBound = data.scatterSystemQuad.sqrQuadWidth,
+                localToWorldMatrix = data.scatterSystemQuad.quad.meshRenderer.localToWorldMatrix,
+                quadID = data.id,
+
+                scatterSqrMeshBound = scatter.sqrMeshBound,
+                collideableScatterIndex = data.collideableScattersIndex,
+
+                collidersToAdd = collidersToAdd[data.collideableScattersIndex].AsWriter(),
+                collidersToRemove = collidersToRemove[data.collideableScattersIndex].AsWriter(),
+                count = data.quadLocalData.Length,
+                stream = stream
+            };
+            JobHandle colliderHandle = colliderJob.Schedule();
+            colliderJobHandles.Add(colliderHandle);
         }
         static void EnableValidColliders()
         {
-            // foreach in colliders to add
-            // add colliders
-            foreach (ScatterTransformData transformData in collidersToAdd)
+            for (int i = 0; i < collidersToAdd.Length; i++)
             {
-                Debug.Log("Collider added");
-                activeObjects.Add(transformData);
-                CreateGameObject(transformData);
+                // The scatter this reader belongs to
+                NativeStream.Reader collidersToAddReader = collidersToAdd[i].AsReader();
+
+                // Number of quads this reader contains streams for
+                int streamCount = collidersToAddReader.ForEachCount;
+
+                // For each quad in the nativestream
+                for (int b = 0; b < streamCount; b++)
+                {
+                    // Begin reading from the stream
+                    int itemsInLocalStream = collidersToAddReader.BeginForEachIndex(b);
+                    for (int c = 0; c < itemsInLocalStream; c++)
+                    {
+                        PositionDataQuadID transformData = collidersToAddReader.Read<PositionDataQuadID>();
+                        GameObject go = CreateGameObject(collideableScatters[i], transformData);
+                        activeObjects[i].Add(transformData, go);
+                    }
+                    collidersToAddReader.EndForEachIndex();
+                }
             }
-            collidersToAdd.Clear();
         }
 
         static void DisableInvalidColliders()
         {
-            foreach (ScatterTransformData transformData in collidersToRemove)
+            for (int i = 0; i < collidersToRemove.Length; i++)
             {
-                Debug.Log("Collider removed");
-                activeObjects.Remove(transformData);
+                // The scatter this reader belongs to
+                NativeStream.Reader collidersToRemoveReader = collidersToRemove[i].AsReader();
 
-                // Remove collider
-                transformData.colliderObject.SetActive(false);
-                ConfigLoader.colliderPool.Add(transformData.colliderObject);
+                // Number of quads this reader contains streams for
+                int streamCount = collidersToRemoveReader.ForEachCount;
+                for (int b = 0; b < streamCount; b++)
+                {
+                    // Get the number of items in this stream
+                    int itemsInLocalStream = collidersToRemoveReader.BeginForEachIndex(b);
+                   
+                    // Read data in this stream
+                    for (int c = 0; c < itemsInLocalStream; c++)
+                    {
+                        PositionDataQuadID transformData = collidersToRemoveReader.Read<PositionDataQuadID>();
+                        GameObject go = activeObjects[i][transformData];
+
+                        // Remove collider
+                        go.SetActive(false);
+                        activeObjects[i].Remove(transformData);
+                        ConfigLoader.colliderPool.Add(go);
+                    }
+                    collidersToRemoveReader.EndForEachIndex();
+                }
             }
-            collidersToRemove.Clear();
         }
-        static void CreateGameObject(ScatterTransformData transform)
+        static GameObject CreateGameObject(Scatter scatter, PositionDataQuadID transform)
         {
+            ScatterSystemQuadData scatterSystemQuad = collisionData[transform.quadID].scatterSystemQuad;
             GameObject go = ConfigLoader.colliderPool.Fetch();
-            Scatter scatter = collideableScatters[transform.collideableScattersIndex];
 
             go.GetComponent<MeshCollider>().sharedMesh = scatter.renderer.meshLOD1;
             go.GetComponent<MeshFilter>().sharedMesh = scatter.renderer.meshLOD1;
 
-            go.transform.SetParent(transform.scatterSystemQuad.quad.gameObject.transform, false);
+            go.transform.SetParent(scatterSystemQuad.quad.gameObject.transform, false);
 
-            go.transform.localPosition = transform.position.localPos;
-            go.transform.localScale = transform.position.localScale;
+            go.transform.localPosition = transform.localPos;
+            go.transform.localScale = transform.localScale;
 
             // Ideally I would like this to set localRotation but I spent days trying to get it to work in local space, and couldn't figure it out
             // If align to terrain normal, we need to obtain the terrain normal at this scatter
@@ -297,98 +499,71 @@ namespace Parallax
             if (scatter.distributionParams.alignToTerrainNormal == 1)
             {
                 // Terrain normal
-                targetNormal = transform.scatterSystemQuad.GetTerrainNormal(transform.position.index);
+                targetNormal = scatterSystemQuad.GetTerrainNormal(transform.index);
             }
             else
             {
                 // Planet normal
-                targetNormal = Vector3.Normalize(transform.scatterSystemQuad.quad.gameObject.transform.position - transform.scatterSystemQuad.quad.sphereRoot.transform.position);
+                targetNormal = Vector3.Normalize(scatterSystemQuad.quad.gameObject.transform.position - scatterSystemQuad.quad.sphereRoot.transform.position);
             }
             
             Quaternion rotAWorld = Quaternion.FromToRotation(Vector3.up, targetNormal);
-            Quaternion rotBWorld = Quaternion.AngleAxis(transform.position.rotation, Vector3.up);
+            Quaternion rotBWorld = Quaternion.AngleAxis(transform.rotation, Vector3.up);
             go.transform.rotation = rotAWorld * rotBWorld;
 
-            transform.colliderObject = go;
+            //transform.colliderObject = go;
 
             go.SetActive(true);
-        }
-        static void DecomposeTRS(in Matrix4x4 m, out Vector3 position, out Quaternion rotation, out Vector3 scale)
-        {
-            // Extract new local position
-            position = m.GetColumn(3);
-
-            // Extract new local rotation
-            rotation = Quaternion.LookRotation(
-                m.GetColumn(2),
-                m.GetColumn(1)
-            );
-
-            // Extract new local scale
-            scale = new Vector3(
-                m.GetColumn(0).magnitude,
-                m.GetColumn(1).magnitude,
-                m.GetColumn(2).magnitude
-            );
-        }
-        /// <summary>
-        /// Calculates the square distance to the nearest craft, taking into account vessel bounds and scatter bounds. Returns 0 if in range
-        /// </summary>
-        /// <param name="worldPos"></param>
-        /// <returns></returns>
-        public float SqrDistanceToNearestCraft(in Vector3 worldPos, in float sqrMeshSize)
-        {
-            float closest = float.MaxValue;
-            float distance;
-            for (int i = 0; i < numVesselsLoaded; i++)
-            {
-                // Generous distance calculation that assumes worst case mesh and craft alignment
-                distance = (vesselPositions[i] - worldPos).sqrMagnitude - sqrVesselMaxSizes[i] - sqrMeshSize;
-                if (distance < closest)
-                {
-                    closest = distance;
-                }
-            }
-            return closest;
-        }
-        public float SqrQuadDistanceToNearestCraft(in Vector3 worldPos)
-        {
-            float closest = float.MaxValue;
-            float distance;
-            for (int i = 0; i < numVesselsLoaded; i++)
-            {
-                // Generous distance calculation that assumes worst case mesh and craft alignment
-                distance = (vesselPositions[i] - worldPos).sqrMagnitude - sqrVesselMaxSizes[i];
-                if (distance < closest)
-                {
-                    closest = distance;
-                }
-            }
-            return closest;
+            return go;
         }
         // Release resources and destroy colliders
         public void Cleanup()
         {
-            foreach (ScatterTransformData collider in activeObjects)
+            if (inQuadJob)
             {
-                collider.colliderObject.SetActive(false);
-                ConfigLoader.colliderPool.Add(collider.colliderObject);
+                findQuadsHandle.Complete();
             }
-            activeObjects.Clear();
-
-            if (activeObjectsDict != null)
+            if (inColliderJob)
             {
-                foreach (var dictionary in activeObjectsDict)
+                foreach (JobHandle handle in colliderJobHandles)
                 {
-                    dictionary.Clear();
+                    handle.Complete();
                 }
+                CompleteColliderJob();
             }
 
             incomingData.Clear();
             outgoingData.Clear();
-            
-            collidersToAdd.Clear();
-            collidersToRemove.Clear();
+
+            for (int i = 0; i < numCollideableScatters; i++)
+            {
+                foreach (GameObject go in activeObjects[i].Values)
+                {
+                    go.SetActive(false);
+                    ConfigLoader.colliderPool.Add(go);
+                }
+                activeObjects[i].Clear();
+            }
+
+            numCollideableScatters = 0;
+            initialized = false;
+            inQuadJob = false;
+            inColliderJob = false;
+            allComplete = false;
+        }
+        void OnDestroy()
+        {
+            Debug.Log("OnDestroy begun");
+            Cleanup();
+
+            // Dispose native resources
+            vesselPositions.Dispose();
+            sqrVesselBounds.Dispose();
+
+            quadPositions.Dispose();
+            sqrQuadBounds.Dispose();
+            quadIDs.Dispose();
+            Debug.Log("OnDestroy completed");
         }
     }
 }

@@ -232,7 +232,7 @@ void Evaluate(uint3 id : SV_DispatchThreadID)
     // Calculating the average normal using (nrm1 + nrm2 + nrm3) / 3 does not give face normal, so compute face normal from vertex positions
 
     float3 vert1 = vertices[index1];
-    float3 vert2 = vertices[index2];
+    float3 vert2 = vertices[index2];    
     float3 vert3 = vertices[index3];
 
     // Get the terrain normal in world space
