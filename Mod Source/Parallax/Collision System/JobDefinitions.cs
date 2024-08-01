@@ -47,7 +47,10 @@ namespace Parallax
             }
             return false;
         }
-
+        /////////////////
+        //  IMPORTANT  //
+        /////////////////
+        
         // Override equals and gethashcode to prevent quadID from being used when hashing for dictionaries
         // This is because quadID can change and must retain parity with the quad collider data IDs
         public bool Equals(PositionDataQuadID other)

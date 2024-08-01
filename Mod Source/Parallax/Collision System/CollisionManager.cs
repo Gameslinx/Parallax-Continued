@@ -234,6 +234,7 @@ namespace Parallax
             }
 
             // No jobs running
+            // We restart from the beginning here by processing incoming/outgoing data and updating the craft and quad positions
             if (!inQuadJob && !inColliderJob && !allComplete) 
             {
                 RemoveQueuedData();
@@ -247,7 +248,10 @@ namespace Parallax
                     return;
                 }
 
+                // Find which quads are nearest the craft and worth checking the objects on
                 DispatchQuadJob();
+
+                // Lock until the quad job is complete
                 inQuadJob = true;
             }
 
@@ -258,6 +262,8 @@ namespace Parallax
                 SetupColliderJob(quadIDs.Length);
                 
                 // Dispatch a job on a new thread for each quad
+                // Stream represents the quad we're processing. Sometimes we will be processing data from multiple quads where a NativeStream is required
+                // Nativelist does not support parallel writing (which will happen from multiple quads)
                 int stream = 0;
                 foreach (int i in quadIDs)
                 {
@@ -267,11 +273,16 @@ namespace Parallax
                     DispatchColliderJob(scatter, data, stream);
                     stream++;
                 }
+
+                // Lock until the collider job is complete
                 inColliderJob = true;
             }
             
+            // Check for all collider job handles completing
             if (colliderJobHandles.All(x => x.IsCompleted) && inColliderJob)
             {
+                // When all collider handles are done, get the data back
+                // We cannot shorten this loop from 2O(n) to O(n) because sometimes the final completion(s) will run over to the next frame, and the data will be stagnant
                 foreach (JobHandle handle in colliderJobHandles)
                 {
                     handle.Complete();
@@ -280,6 +291,7 @@ namespace Parallax
                 allComplete = true;
             }
 
+            // Finalize - Process the colliders that need to be enabled/disabled and dispose the streams
             if (allComplete)
             {
                 DisableInvalidColliders();
@@ -290,73 +302,9 @@ namespace Parallax
 
                 allComplete = false;
             }
-
-            //
-            //// Check if all jobs are completed. Complete the ones that have
-            //if (inColliderJob)
-            //{
-            //    numColliderJobsCompleted = 0;
-            //    foreach (JobHandle handle in colliderJobHandles)
-            //    {
-            //        if (handle.IsCompleted)
-            //        {
-            //            handle.Complete();
-            //            numColliderJobsCompleted++;
-            //        }
-            //    }
-            //}
-            //
-            //// If all jobs have completed, we update the colliders
-            //if (numColliderJobsCompleted == colliderJobHandles.Count && !inQuadJob && inColliderJob)
-            //{
-            //    // Release locks and process colliders
-            //    inColliderJob = false;
-            //    colliderJobHandles.Clear();
-            //
-            //    DisableInvalidColliders();
-            //    EnableValidColliders();
-            //    CompleteColliderJob();
-            //}
-            //
-            //// Determine which quads are worth evaluating
-            //// This runs first, and only if we're finished
-            //if (!inColliderJob && !inQuadJob)
-            //{
-            //    // Process incoming and outgoing data
-            //    RemoveQueuedData();
-            //    AddQueuedData();
-            //    UpdateCraftData();
-            //    UpdateQuadData();
-            //
-            //    // Start the quad job - new cycle
-            //    DispatchQuadJob();
-            //}
-            //
-            //// We're done evaluating quad distances
-            //if (inQuadJob && findQuadsHandle.IsCompleted && !inColliderJob)
-            //{
-            //    // Complete the quads job
-            //    findQuadsHandle.Complete();
-            //    inQuadJob = false;
-            //
-            //    // Initialize the job
-            //    inColliderJob = true;
-            //
-            //    // Initialize quad streams
-            //    SetupColliderJob(quadIDs.Length);
-            //
-            //    // Dispatch a job on a new thread for each quad
-            //    int stream = 0;
-            //    foreach (int i in quadIDs)
-            //    {
-            //        ScatterColliderData data = collisionData[i];
-            //        Scatter scatter = collideableScatters[data.collideableScattersIndex];
-            //
-            //        DispatchColliderJob(scatter, data, stream);
-            //        stream++;
-            //    }
-            //}
         }
+
+        // Init the streams for the collider job
         static void SetupColliderJob(int numStreams)
         {
             for (int i = 0; i < numCollideableScatters; i++)
@@ -365,6 +313,7 @@ namespace Parallax
                 collidersToRemove[i] = new NativeStream(numStreams, Allocator.Persistent);
             }
         }
+        // Dispose the streams after collider job completion
         static void CompleteColliderJob()
         {
             colliderJobHandles.Clear();
@@ -382,6 +331,7 @@ namespace Parallax
                 
             }
         }
+        // Calculate which jobs need to be processed - simple distance check which takes into account vessel and quad bounds
         static void DispatchQuadJob()
         {
             DetermineQuadsForEvaluationJob findQuadsJob = new DetermineQuadsForEvaluationJob
@@ -398,6 +348,8 @@ namespace Parallax
             };
             findQuadsHandle = findQuadsJob.Schedule();
         }
+        // Calculate which colliders are in range using the vessel bounds and scatter mesh bounds
+        // One dispatched per quad in range (from quad job) per scatter
         static void DispatchColliderJob(Scatter scatter, ScatterColliderData data, int stream)
         {
             ProcessColliderJob colliderJob = new ProcessColliderJob
@@ -425,6 +377,7 @@ namespace Parallax
             JobHandle colliderHandle = colliderJob.Schedule();
             colliderJobHandles.Add(colliderHandle);
         }
+        // Colliders in range that must be enabled
         static void EnableValidColliders()
         {
             for (int i = 0; i < collidersToAdd.Length; i++)
@@ -451,6 +404,7 @@ namespace Parallax
             }
         }
 
+        // Colliders going out of range that need to be disabled
         static void DisableInvalidColliders()
         {
             for (int i = 0; i < collidersToRemove.Length; i++)
@@ -480,6 +434,7 @@ namespace Parallax
                 }
             }
         }
+        // Use TRS matrix from gpu data to parent the scatter to the quad to match the visual scatter
         static GameObject CreateGameObject(Scatter scatter, PositionDataQuadID transform)
         {
             ScatterSystemQuadData scatterSystemQuad = collisionData[transform.quadID].scatterSystemQuad;
@@ -551,6 +506,7 @@ namespace Parallax
             inColliderJob = false;
             allComplete = false;
         }
+        // Called on game exit
         void OnDestroy()
         {
             Debug.Log("OnDestroy begun");
