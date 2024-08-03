@@ -337,8 +337,6 @@ namespace Parallax
             if (collidersAdded)
             {
                 CollisionManager.QueueOutgoingData(collisionData);
-                collisionData.quadLocalData.Dispose();
-                collisionData.lastDistances.Dispose();
             }
 
             ConfigLoader.computeShaderPool.Add(scatterShader);

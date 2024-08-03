@@ -6,6 +6,8 @@ using static Kopernicus.ConfigParser.ParserOptions;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
 using System;
+using System.Runtime.CompilerServices;
+using Unity.Burst.CompilerServices;
 
 namespace Parallax
 {
@@ -186,12 +188,12 @@ namespace Parallax
                 float sqrDistance = SqrDistanceToNearestCraft(worldPos, meshSize);
 
                 // Just come into range, add the collider
-                if (sqrDistance < 0 && lastDistances[index] >= 0)
+                if (Hint.Unlikely(sqrDistance < 0 && lastDistances[index] >= 0))
                 {
                     collidersToAdd.Write(new PositionDataQuadID(transform, quadID));
                 }
                 // Just gone out of range, remove the collider
-                if (sqrDistance >= 0 && lastDistances[index] < 0)
+                if (Hint.Unlikely(sqrDistance >= 0 && lastDistances[index] < 0))
                 {
                     collidersToRemove.Write(new PositionDataQuadID(transform, quadID));
                 }

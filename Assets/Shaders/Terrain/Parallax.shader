@@ -374,7 +374,7 @@ Shader "Custom/Parallax"
         {
             Tags { "LightMode" = "ForwardAdd" }
             Blend SrcAlpha One
-            BlendOp Add
+            //BlendOp Add
             CGPROGRAM
         
             #pragma multi_compile           PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL

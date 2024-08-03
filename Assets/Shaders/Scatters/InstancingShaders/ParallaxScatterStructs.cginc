@@ -60,3 +60,29 @@
         float4 pos : SV_POSITION;               \
         float2 uv : TEXCOORD0;                  \
     };
+
+// Forward Add struct
+
+#define PARALLAX_FORWARDADD_STRUCT_APPDATA      \
+    struct appdata                              \
+    {                                           \
+        float4 vertex : POSITION;               \
+        float2 uv : TEXCOORD0;                  \
+        float3 normal : NORMAL;                 \
+        float4 tangent : TANGENT;               \
+    };
+
+#define PARALLAX_FORWARDADD_STRUCT_V2F          \
+    struct v2f                                  \
+    {                                           \
+        float4 pos : SV_POSITION;               \
+        float3 worldNormal : NORMAL;            \
+        float3 worldTangent : TANGENT;          \
+        float3 worldBinormal : BINORMAL;        \
+        float2 uv : TEXCOORD0;                  \
+        float3 worldPos : TEXCOORD1;            \
+        float3 viewDir : TEXCOORD2;             \
+        float3 planetNormal : TEXCOORD3;        \
+        float3 lightDir : TEXCOORD4;            \
+        LIGHTING_COORDS(5,6)                    \
+    };

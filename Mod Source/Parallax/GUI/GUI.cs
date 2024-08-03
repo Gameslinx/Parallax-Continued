@@ -38,6 +38,7 @@ namespace Parallax
 
         static bool showDebug = false;
         static bool debugShowFaceOrientation = false;
+        static bool debugShowCollideables = false;
 
         static int currentScatterIndex = 0;
 
@@ -694,6 +695,11 @@ namespace Parallax
                 {
                     ShowFaceOrientation(debugShowFaceOrientation, scatter);
                 }
+                if (ParamCreator.CreateParam("Show Collideable Scatters", ref debugShowCollideables, GUIHelperFunctions.BoolField))
+                {
+                    GUILayout.Label("Note: This debug visualisation only shows when in sunlight");
+                    ShowCollideableScatters(debugShowCollideables);
+                }
             }
         }
         static void ShowFaceOrientation(bool enabled, Scatter scatter)
@@ -710,6 +716,80 @@ namespace Parallax
                 renderer.instancedMaterialLOD0.DisableKeyword("DEBUG_FACE_ORIENTATION");
                 renderer.instancedMaterialLOD1.DisableKeyword("DEBUG_FACE_ORIENTATION");
                 renderer.instancedMaterialLOD2.DisableKeyword("DEBUG_FACE_ORIENTATION");
+            }
+        }
+        static void ShowCollideableScatters(bool enabled)
+        {
+            if (enabled)
+            {
+                foreach (Scatter scatter in scatters)
+                {
+                    if (scatter.renderer.instancedMaterialLOD0.HasProperty("_FresnelPower"))
+                    {
+                        scatter.renderer.instancedMaterialLOD0.SetFloat("_FresnelPower", 1);
+                    }
+                    if (scatter.renderer.instancedMaterialLOD1.HasProperty("_FresnelPower"))
+                    {
+                        scatter.renderer.instancedMaterialLOD1.SetFloat("_FresnelPower", 1);
+                    }
+                    if (scatter.renderer.instancedMaterialLOD2.HasProperty("_FresnelPower"))
+                    {
+                        scatter.renderer.instancedMaterialLOD2.SetFloat("_FresnelPower", 1);
+                    }
+
+                    Color col = scatter.collideable ? new Color(0.2f, 1.0f, 0.2f) : new Color(1.0f, 0.2f, 0.2f);
+                    if (scatter.renderer.instancedMaterialLOD0.HasProperty("_FresnelColor"))
+                    {
+                        scatter.renderer.instancedMaterialLOD0.SetColor("_FresnelColor", col);
+                    }
+                    if (scatter.renderer.instancedMaterialLOD1.HasProperty("_FresnelColor"))
+                    {
+                        scatter.renderer.instancedMaterialLOD1.SetColor("_FresnelColor", col);
+                    }
+                    if (scatter.renderer.instancedMaterialLOD2.HasProperty("_FresnelColor"))
+                    {
+                        scatter.renderer.instancedMaterialLOD2.SetColor("_FresnelColor", col);
+                    }
+
+                    scatter.renderer.instancedMaterialLOD0.SetColor("_Color", col);
+                    scatter.renderer.instancedMaterialLOD1.SetColor("_Color", col);
+                    scatter.renderer.instancedMaterialLOD2.SetColor("_Color", col);
+                }
+            }
+            else
+            {
+                foreach (Scatter scatter in scatters)
+                {
+                    if (scatter.renderer.instancedMaterialLOD0.HasProperty("_FresnelPower"))
+                    {
+                        scatter.renderer.instancedMaterialLOD0.SetFloat("_FresnelPower", scatter.materialParams.shaderProperties.shaderFloats["_FresnelPower"]);
+                    }
+                    if (scatter.renderer.instancedMaterialLOD1.HasProperty("_FresnelPower"))
+                    {
+                        scatter.renderer.instancedMaterialLOD1.SetFloat("_FresnelPower", scatter.distributionParams.lod1.materialOverride.shaderProperties.shaderFloats["_FresnelPower"]);
+                    }
+                    if (scatter.renderer.instancedMaterialLOD2.HasProperty("_FresnelPower"))
+                    {
+                        scatter.renderer.instancedMaterialLOD2.SetFloat("_FresnelPower", scatter.distributionParams.lod2.materialOverride.shaderProperties.shaderFloats["_FresnelPower"]);
+                    }
+
+                    if (scatter.renderer.instancedMaterialLOD0.HasProperty("_FresnelColor"))
+                    {
+                        scatter.renderer.instancedMaterialLOD0.SetColor("_FresnelColor", scatter.materialParams.shaderProperties.shaderColors["_FresnelColor"]);
+                    }
+                    if (scatter.renderer.instancedMaterialLOD1.HasProperty("_FresnelColor"))
+                    {
+                        scatter.renderer.instancedMaterialLOD1.SetColor("_FresnelColor", scatter.distributionParams.lod1.materialOverride.shaderProperties.shaderColors["_FresnelColor"]);
+                    }
+                    if (scatter.renderer.instancedMaterialLOD2.HasProperty("_FresnelColor"))
+                    {
+                        scatter.renderer.instancedMaterialLOD2.SetColor("_FresnelColor", scatter.distributionParams.lod2.materialOverride.shaderProperties.shaderColors["_FresnelColor"]);
+                    }
+
+                    scatter.renderer.instancedMaterialLOD0.SetColor("_Color", scatter.materialParams.shaderProperties.shaderColors["_Color"]);
+                    scatter.renderer.instancedMaterialLOD1.SetColor("_Color", scatter.distributionParams.lod2.materialOverride.shaderProperties.shaderColors["_Color"]);
+                    scatter.renderer.instancedMaterialLOD2.SetColor("_Color", scatter.distributionParams.lod2.materialOverride.shaderProperties.shaderColors["_Color"]);
+                }
             }
         }
         static void RemoveKeywordValues(ShaderProperties shaderProperties, ConfigNode keywordNode)

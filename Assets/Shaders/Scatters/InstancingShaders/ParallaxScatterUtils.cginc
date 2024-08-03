@@ -121,9 +121,9 @@ float3 Wind(float3 localPos, float3 worldPos, float3 planetNormal, float4x4 obje
 // Process wind sway and offset local vertex
 // Requires a re-transform back to world space, which we avoid if wind is disabled
 #if defined (WIND)
-    #define PROCESS_WIND worldPos = Wind(i.vertex.xyz, worldPos, planetNormal, objectToWorld);
+    #define PROCESS_WIND(i) worldPos = Wind(i.vertex.xyz, worldPos, planetNormal, objectToWorld);
 #else
-    #define PROCESS_WIND
+    #define PROCESS_WIND(i)
 #endif
 
 // Enable alpha clipping for foliage

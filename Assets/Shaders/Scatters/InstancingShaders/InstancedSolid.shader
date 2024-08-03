@@ -123,7 +123,7 @@ Shader "Custom/ParallaxInstancedSolid"
 
                 float3 worldPos = mul(objectToWorld, i.vertex);
                 float3 planetNormal = normalize(worldPos - _PlanetOrigin);
-                PROCESS_WIND
+                PROCESS_WIND(i)
 
                 o.worldPos = worldPos;
                 o.uv = i.uv;
@@ -230,7 +230,7 @@ Shader "Custom/ParallaxInstancedSolid"
                 
                 float3 worldPos = mul(objectToWorld, i.vertex);
                 float3 planetNormal = normalize(worldPos - _PlanetOrigin);
-                PROCESS_WIND
+                PROCESS_WIND(i)
 
                 o.uv = i.uv;
 
@@ -249,6 +249,129 @@ Shader "Custom/ParallaxInstancedSolid"
                 #endif
             }
         
+            ENDCG
+        }
+
+        //
+        //  ForwardAdd Pass
+        //
+
+        Pass
+        {
+            Tags { "LightMode" = "ForwardAdd" }
+            Blend SrcAlpha One
+            //BlendOp Add
+            CGPROGRAM
+
+            // Shader variants
+            #pragma multi_compile_vertex        _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
+            #pragma multi_compile_vertex        _ WIND
+            #pragma multi_compile_fragment      _ TWO_SIDED
+            #pragma multi_compile_fragment      _ ALPHA_CUTOFF
+            #pragma multi_compile_fragment      _ ALTERNATE_SPECULAR_TEXTURE        REFRACTION
+            #pragma multi_compile_fragment      _ DEBUG_FACE_ORIENTATION            DEBUG_SHOW_WIND_TEXTURE
+            #pragma multi_compile_fragment      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
+
+            // Shader stages
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_fwdadd_fullshadows
+
+            // Unity includes
+            #include "UnityCG.cginc"
+            #include "Lighting.cginc"
+            #include "AutoLight.cginc"
+
+            // Parallax includes
+            #include "ParallaxScatterStructs.cginc"
+            #include "ParallaxScatterParams.cginc"
+            #include "../ScatterStructs.cginc"
+            #include "../../Includes/ParallaxGlobalFunctions.cginc"
+            #include "ParallaxScatterUtils.cginc"
+
+            // The necessary structs
+            DECLARE_INSTANCING_DATA
+            PARALLAX_FORWARDADD_STRUCT_APPDATA
+            PARALLAX_FORWARDADD_STRUCT_V2F
+          
+            //
+            // Vertex Shader 
+            //
+
+            v2f vert(appdata i, uint instanceID : SV_InstanceID) 
+            {
+                v2f o;
+
+                float4x4 objectToWorld = INSTANCE_DATA.objectToWorld;
+                BILLBOARD_IF_ENABLED(i.vertex, i.normal, i.tangent, objectToWorld);
+
+                o.worldNormal = mul(objectToWorld, float4(i.normal, 0)).xyz;
+                o.worldTangent = mul(objectToWorld, float4(i.tangent.xyz, 0));
+                o.worldBinormal = cross(o.worldTangent, o.worldNormal) * i.tangent.w;
+
+                float3 worldPos = mul(objectToWorld, i.vertex);
+                float3 planetNormal = normalize(worldPos - _PlanetOrigin);
+                PROCESS_WIND(i)
+
+                o.worldPos = worldPos;
+                o.uv = i.uv;
+
+                o.planetNormal = planetNormal;
+                o.viewDir = _WorldSpaceCameraPos - worldPos;
+                o.lightDir = _WorldSpaceLightPos0 - worldPos;
+                o.pos = UnityWorldToClipPos(worldPos);
+
+                PARALLAX_TRANSFER_VERTEX_TO_FRAGMENT(o);
+
+                return o;
+            }
+
+            //
+            //  Fragment Shader
+            //
+
+            fixed4 frag(PIXEL_SHADER_INPUT(v2f)) : SV_Target
+            {   
+                // Do as little work as possible, clip immediately
+                float4 mainTex = tex2D(_MainTex, i.uv * _MainTex_ST);
+
+                ALPHA_CLIP(mainTex.a);
+                
+                mainTex.rgb *= _Color;
+                
+                // Get specular from MainTex or, if ALTERNATE_SPECULAR_TEXTURE is defined, use the specular texture
+                GET_SPECULAR(mainTex, i.uv * _MainTex_ST);
+
+                // Get thickness for subsurface scattering if defined
+                GET_THICKNESS(i.uv * _MainTex_ST);
+                
+                i.worldNormal = normalize(i.worldNormal);
+                i.worldTangent = normalize(i.worldTangent);
+                i.worldBinormal = normalize(i.worldBinormal);
+                
+                CORRECT_TWOSIDED_WORLDNORMAL
+
+                float3 viewDir = normalize(i.viewDir);
+                float3 lightDir = normalize(i.lightDir);
+
+                // Compute tangent to world matrix
+                float3x3 TBN = float3x3(normalize(i.worldTangent), normalize(i.worldBinormal), normalize(i.worldNormal));
+                TBN = transpose(TBN);
+                
+                float4 bumpMap = tex2D(_BumpMap, i.uv * _BumpMap_ST);
+
+                float3 normal = normalize(UnpackScaleNormal(bumpMap, _BumpScale));
+                float3 worldNormal = normalize(mul(TBN, normal));
+
+                // Calculate lighting from core params, plus potential additional params (worldpos required for subsurface scattering)
+                float atten = LIGHT_ATTENUATION(i);
+                float3 result = CalculateLighting(BASIC_LIGHTING_PARAMS ADDITIONAL_LIGHTING_PARAMS );
+
+                // Process any enabled debug options that affect the output colour
+                DEBUG_IF_ENABLED
+                return float4(result, atten);
+            }
+
             ENDCG
         }
     }

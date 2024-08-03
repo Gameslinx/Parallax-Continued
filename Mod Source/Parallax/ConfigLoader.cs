@@ -226,9 +226,6 @@ namespace Parallax
 
             GameObject templateCollider = new GameObject("ParallaxCollider");
             templateCollider.AddComponent<MeshCollider>();
-            templateCollider.AddComponent<MeshFilter>();
-            templateCollider.AddComponent<MeshRenderer>();
-            templateCollider.GetComponent<MeshRenderer>().material = new Material(Shader.Find("Standard"));
             templateCollider.SetActive(false);
             colliderPool = new ObjectPool<GameObject>(templateCollider, settings.objectPoolSettings.cachedColliderCount);
         }

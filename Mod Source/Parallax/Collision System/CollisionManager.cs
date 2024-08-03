@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
@@ -178,6 +179,11 @@ namespace Parallax
                 // Add job info
                 sqrQuadBounds.Add(data.scatterSystemQuad.sqrQuadWidth);
             }
+            if (incomingData.Count > 0)
+            {
+                Debug.Log("Added queued data, new length: " + collisionData.Length);
+            }
+            
             incomingData.Clear();
         }
         // Remove data from processing
@@ -189,6 +195,13 @@ namespace Parallax
                 // Remove job info
                 sqrQuadBounds.RemoveAtSwapBack(data.id);
                 collisionData.Remove(data);
+
+                data.lastDistances.Dispose();
+                data.quadLocalData.Dispose();
+            }
+            if (outgoingData.Count > 0)
+            {
+                Debug.Log("Removed queued data, new length: " + collisionData.Length);
             }
             outgoingData.Clear();
         }
@@ -441,7 +454,6 @@ namespace Parallax
             GameObject go = ConfigLoader.colliderPool.Fetch();
 
             go.GetComponent<MeshCollider>().sharedMesh = scatter.renderer.meshLOD1;
-            go.GetComponent<MeshFilter>().sharedMesh = scatter.renderer.meshLOD1;
 
             go.transform.SetParent(scatterSystemQuad.quad.gameObject.transform, false);
 
@@ -487,8 +499,15 @@ namespace Parallax
                 CompleteColliderJob();
             }
 
-            incomingData.Clear();
-            outgoingData.Clear();
+            // Complete the init distances job in the very rare case it has not completed yet
+            foreach (ScatterColliderData data in incomingData)
+            {
+                data.initDistancesHandle.Complete();
+                if (data.lastDistances.IsCreated)
+                {
+                    data.lastDistances.Dispose();
+                }
+            }
 
             for (int i = 0; i < numCollideableScatters; i++)
             {
