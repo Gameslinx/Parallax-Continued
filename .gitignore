@@ -213,3 +213,6 @@ crashlytics-build.properties
 /Assets/Marketplace
 /Assets/Models
 /Assets/Models
+/Mod Source/Parallax/Temp/bin/Debug/net48/Parallax.dll
+/Mod Source/Parallax/Temp/bin/Release/net48/Parallax.dll
+/Mod Source/Parallax/obj/Release/net48/Parallax.dll
