@@ -16,7 +16,9 @@
 StructuredBuffer<int> triangles;
 StructuredBuffer<float3> vertices;
 StructuredBuffer<float3> normals;
-StructuredBuffer<float2> uvs;
+
+// UV in xy, allowScatter in z
+StructuredBuffer<float3> uvs;
 
 // Normalized directions from planet center to quad vertex
 StructuredBuffer<float3> directionsFromCenter;
@@ -57,9 +59,9 @@ void Distribute (uint3 id : SV_DispatchThreadID)
     float3 v3 = vertices[index3];
     
     // Get triangle UVs
-    float2 uv1 = uvs[index1];
-    float2 uv2 = uvs[index2];
-    float2 uv3 = uvs[index3];
+    float3 uv1 = uvs[index1];
+    float3 uv2 = uvs[index2];
+    float3 uv3 = uvs[index3];
     
     // Get triangle normals
     float3 n1 = normals[index1];
@@ -69,10 +71,11 @@ void Distribute (uint3 id : SV_DispatchThreadID)
     float3 averageNormal = TriCenter(n1, n2, n3);
     
     // Get face center UV
-    float2 centerUV = (uv1 + uv2 + uv3) * 0.333f;
+    float3 centerUV = (uv1 + uv2 + uv3) * 0.333f;
+    float vertexAllowScatter = centerUV.z;
     
     // Get the biome colour
-    float3 biome = biomeMap.SampleLevel(pointClampSampler, centerUV, 0).rgb;
+    float3 biome = biomeMap.SampleLevel(pointClampSampler, centerUV.xy, 0).rgb;
     
     // Does this biome colour match any of the biomes this scatter can appear in?
     int biomesEligible = 0;
@@ -110,7 +113,7 @@ void Distribute (uint3 id : SV_DispatchThreadID)
     
     // Use UV and id as random seed. It's not elegant, but it's persistent. Fyi, using the quad local position triangle center is not valid here
     // This produces sufficient randomness
-    float3 randomSeed = float3(centerUV + _Seed, id.x);
+    float3 randomSeed = float3(centerUV.xy + _Seed, id.x);
     
     // Create an object on this triangle for every population multiplier
     for (int i = 0; i < _PopulationMultiplier; i++)
@@ -162,7 +165,7 @@ void Distribute (uint3 id : SV_DispatchThreadID)
         // 2. Is out of altitude range (close to altitude range, lower the spawn chance)
         // 3. Is on a slope (higher gradient, lower spawn chance)
         // 4. Noise is past cutoff threshold
-        bool canSpawn = (random4 < _SpawnChance * altitudeScalar * slope) && (noise > _NoiseCutoffThreshold);
+        bool canSpawn = (random4 < _SpawnChance * altitudeScalar * slope * vertexAllowScatter) && (noise > _NoiseCutoffThreshold);
         
         newObject.localPos = localPos;
         newObject.localScale = scale;

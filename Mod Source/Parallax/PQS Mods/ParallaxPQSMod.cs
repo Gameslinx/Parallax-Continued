@@ -22,9 +22,9 @@ namespace Parallax
         /// <summary>
         /// Contains the UVs that map the entire planet for sampling the biome map
         /// </summary>
-        public static Dictionary<PQ, Vector2[]> quadPlanetUVs = new Dictionary<PQ, Vector2[]>();
+        public static Dictionary<PQ, Vector3[]> quadPlanetUVs = new Dictionary<PQ, Vector3[]>();
 
-        Vector2[] uvCache;
+        Vector3[] uvCache;
 
         bool hasTerrainShader = false;
         public override void OnSetup()
@@ -56,7 +56,7 @@ namespace Parallax
         // Occurs before vertex build - Get quad data here
         public override void OnQuadPreBuild(PQ quad)
         {
-            uvCache = new Vector2[225];
+            uvCache = new Vector3[225];
         }
         public override void OnQuadBuilt(PQ quad)
         {
@@ -89,9 +89,10 @@ namespace Parallax
             quadPlanetUVs.Remove(quad);
         }
         // Generate the planet UVs used for sampling the biome map (scatter system)
+        // Also contains whether the vertex allows scatters in Z component
         public override void OnVertexBuild(PQS.VertexBuildData data)
         {
-            uvCache[data.vertIndex] = new Vector2((float)data.u, (float)data.v);
+            uvCache[data.vertIndex] = new Vector3((float)data.u, (float)data.v, data.allowScatter ? 1.0f : 0.0f);
         }
     }
     [RequireConfigType(ConfigType.Node)]

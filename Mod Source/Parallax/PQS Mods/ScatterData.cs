@@ -251,6 +251,7 @@ namespace Parallax
 
             // Note - GetData requests the entire buffer!! Not just what we have appended, so most of this data is full of zeroes... FML
             // Use slices to get the data we're interested in
+            // When stuff like grass is set to collideable this can take a few ms, otherwise pretty quick
             NativeArray<PositionData> data = req.GetData<PositionData>();
             NativeArray<PositionData> realData = new NativeArray<PositionData>(realCount, Allocator.Persistent);
 
@@ -260,7 +261,6 @@ namespace Parallax
             slice2.CopyFrom(slice1);
             data.Dispose();
 
-            Debug.Log("Length of data: " + realData.Length + ", count: " + realCount + ", buffer size: " + outputScatterDataBuffer.count);
             Profiler.EndSample();
 
             collisionData = new ScatterColliderData(parent, realData, scatter.collideableArrayIndex);
@@ -316,7 +316,6 @@ namespace Parallax
         // Returns true if:
         // 1. Scatter is collideable
         // 2. Quad is max level
-        // 3. TODO: Quad is in range of a craft
         bool CollidersEligible()
         {
             return scatter.collideable && parent.quad.subdivision == parent.quad.sphereRoot.maxLevel && realCount > 0;

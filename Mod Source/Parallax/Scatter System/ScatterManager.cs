@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -50,15 +51,13 @@ namespace Parallax
                     scatterRenderers.Add(renderer);
                     fastScatterRenderers.Add(scatter.Key, renderer);
                     scatter.Value.renderer = renderer;
-                    Debug.Log("Init new renderer: " + scatter.Value.scatterName);
                 }
 
-                Debug.Log("Init new manager body: " + body.Key);
             }
         }
         void DominantBodyLoaded(string bodyName)
         {
-            Debug.Log("[Scatter Manager] body loading " + bodyName);
+            ParallaxDebug.Log("[Scatter Manager] body loading " + bodyName);
             if (ConfigLoader.parallaxScatterBodies.ContainsKey(bodyName))
             {
                 currentBiomeMap = FlightGlobals.GetBodyByName(bodyName).BiomeMap.CompileToTexture();
@@ -70,23 +69,15 @@ namespace Parallax
                 {
                     //renderer.gameObject.SetActive(true);
                     renderer.Enable();
-                    Debug.Log("Renderer set active: " + renderer.scatter.scatterName);
                     activeScatterRenderers.Add(renderer);
                 }
             }
         }
         void DominantBodyUnloaded(string bodyName)
         {
-            Debug.Log("[Scatter Manager] body unloading " + bodyName);
             foreach (ScatterRenderer renderer in activeScatterRenderers)
             {
-                // Renderer body is not the new one - disable it
-                //if (renderer.planetName != bodyName)
-                //{
-                //renderer.gameObject.SetActive(false);
-                Debug.Log("Renderer set inactive: " + renderer.scatter.scatterName);
                 renderer.Disable();
-                //}
             }
             activeScatterRenderers.Clear();
 
@@ -108,7 +99,6 @@ namespace Parallax
         }
         public ScatterRenderer GetSharedScatterRenderer(SharedScatter scatter)
         {
-            Debug.Log("Parent = " + scatter.parent.scatterName);
             return fastScatterRenderers[scatter.parent.scatterName];
         }
         void OnDestroy()

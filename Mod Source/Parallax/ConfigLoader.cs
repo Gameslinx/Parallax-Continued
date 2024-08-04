@@ -1,4 +1,5 @@
-﻿using Kopernicus.Configuration;
+﻿using HarmonyLib;
+using Kopernicus.Configuration;
 using Parallax.Debugging;
 using Smooth.Collections;
 using System;
@@ -62,6 +63,11 @@ namespace Parallax
 
             AssetBundleLoader.Initialize();
             InitializeGlobalSettings(GetConfigByName("ParallaxGlobal"));
+
+            ParallaxDebug.Log("Starting Harmony patching...");
+            var harmony = new Harmony("Parallax");
+            harmony.PatchAll();
+            ParallaxDebug.Log("Harmony patching complete");
 
             // Initialize the shader template - holds the names of textures, floats, etc and initializes their defaults
             shaderPropertiesTemplate = new ShaderProperties();
@@ -211,6 +217,10 @@ namespace Parallax
             parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier = float.Parse(scatterSettingsNode.GetValue("rangeMultiplier"));
             parallaxGlobalSettings.scatterGlobalSettings.fadeOutStartRange = float.Parse(scatterSettingsNode.GetValue("fadeOutStartRange"));
             parallaxGlobalSettings.scatterGlobalSettings.collisionLevel = float.Parse(scatterSettingsNode.GetValue("collisionLevel"));
+
+            ConfigNode lightingSettingsNode = config.config.GetNode("LightingSettings");
+            parallaxGlobalSettings.lightingGlobalSettings.lightShadows = bool.Parse(lightingSettingsNode.GetValue("lightShadows"));
+            parallaxGlobalSettings.lightingGlobalSettings.lightShadowsQuality = (LightShadowResolution)Enum.Parse(typeof(LightShadowResolution), lightingSettingsNode.GetValue("lightShadowQuality"));
 
             ConfigNode debugSettingsNode = config.config.GetNode("DebugSettings");
             parallaxGlobalSettings.debugGlobalSettings.wireframeTerrain = bool.Parse(debugSettingsNode.GetValue("wireframeTerrain"));
@@ -454,7 +464,10 @@ namespace Parallax
                     PerformNormalisationConversions(scatter);
                     PerformAdditionalOperations(scatter);
 
-                    if (collisionLevel >= parallaxGlobalSettings.scatterGlobalSettings.collisionLevel)
+                    scatter.collisionLevel = collisionLevel;
+
+                    // -1 disables colliders
+                    if (parallaxGlobalSettings.scatterGlobalSettings.collisionLevel > -1 && collisionLevel >= parallaxGlobalSettings.scatterGlobalSettings.collisionLevel)
                     {
                         scatter.collideable = true;
                         collideableIndex++;

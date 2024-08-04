@@ -47,7 +47,9 @@ namespace Parallax
         Vector3[] vertices;
         Vector3[] normals;
         int[] triangles;
-        Vector2[] uvs;
+
+        // UV in xy, allowScatter in z
+        Vector3[] uvs;
 
         // Density multiplier based on the quad's position on the sphere
         public float sphereRelativeDensityMult = 1.0f;
@@ -96,7 +98,7 @@ namespace Parallax
             sourceVertsBuffer = new ComputeBuffer(vertices.Length, sizeof(float) * 3, ComputeBufferType.Structured);
             sourceNormalsBuffer = new ComputeBuffer(normals.Length, sizeof(float) * 3, ComputeBufferType.Structured);
             sourceTrianglesBuffer = new ComputeBuffer(triangles.Length, sizeof(int), ComputeBufferType.Structured);
-            sourceUVsBuffer = new ComputeBuffer(uvs.Length, sizeof(float) * 2, ComputeBufferType.Structured);
+            sourceUVsBuffer = new ComputeBuffer(uvs.Length, sizeof(float) * 3, ComputeBufferType.Structured);
             sourceDirsFromCenterBuffer = new ComputeBuffer(vertices.Length, sizeof(float) * 3, ComputeBufferType.Structured);
 
             sourceVertsBuffer.SetData(vertices);

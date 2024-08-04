@@ -237,7 +237,14 @@ namespace Parallax
 
                     Mesh mesh = UnityEngine.Object.Instantiate(quad.gameObject.GetComponent<MeshFilter>().sharedMesh);
                     meshFilter.mesh = mesh;
-                    meshFilter.mesh.uv = PQSMod_Parallax.quadPlanetUVs[quad];
+                    Vector3[] uv = PQSMod_Parallax.quadPlanetUVs[quad];
+                    Vector2[] realUV = new Vector2[uv.Length];
+                    for (int i = 0; i < uv.Length; i++)
+                    {
+                        Vector3 vec = uv[i];
+                        realUV[i] = new Vector2(vec.x, vec.y);
+                    }
+                    meshFilter.mesh.uv = realUV;
                     meshRenderer.sharedMaterial = new Material(AssetBundleLoader.parallaxDebugShaders["Custom/ShowUVs"]);
 
                     objectDisplays.Add(go);

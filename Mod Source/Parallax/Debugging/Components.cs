@@ -39,8 +39,14 @@ namespace Parallax.Debugging
         void Start()
         {
             Mesh mesh = GetComponent<MeshFilter>().sharedMesh;
-            Vector2[] uvs = PQSMod_Parallax.quadPlanetUVs[quad];
-            mesh.uv = uvs;
+            Vector3[] uv = PQSMod_Parallax.quadPlanetUVs[quad];
+            Vector2[] realUV = new Vector2[uv.Length];
+            for (int i = 0; i < uv.Length; i++)
+            {
+                Vector3 vec = uv[i];
+                realUV[i] = new Vector2(vec.x, vec.y);
+            }
+            mesh.uv = realUV;
 
             material = GetComponent<MeshRenderer>().sharedMaterial;
             Texture2D biomeMap = ScatterManager.currentBiomeMap;

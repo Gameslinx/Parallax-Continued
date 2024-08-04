@@ -16,13 +16,16 @@ namespace Parallax.Harmony_Patches
     {
         static void Postfix(ModuleLight __instance)
         {
-            foreach (Light light in __instance.lights)
+            if (ConfigLoader.parallaxGlobalSettings.lightingGlobalSettings.lightShadows)
             {
-                light.lightShadowCasterMode = LightShadowCasterMode.Everything;
-                light.shadows = LightShadows.Soft;
-                light.shadowResolution = UnityEngine.Rendering.LightShadowResolution.Medium;
-                light.shadowBias = 0.05f;
-                light.shadowNormalBias = 0.4f;
+                foreach (Light light in __instance.lights)
+                {
+                    light.lightShadowCasterMode = LightShadowCasterMode.Everything;
+                    light.shadows = LightShadows.Soft;
+                    light.shadowResolution = ConfigLoader.parallaxGlobalSettings.lightingGlobalSettings.lightShadowsQuality;
+                    light.shadowBias = 0.05f;
+                    light.shadowNormalBias = 0.4f;
+                }
             }
         }
     }

@@ -15,7 +15,7 @@ namespace Parallax
     {
         // Update is called once per frame
         private static Rect window = new Rect(100, 100, 450, 600);
-        private static Rect windowDefault = new Rect(100, 100, 450, 300);
+        private static Rect windowDefault = new Rect(100, 100, 450, 350);
 
         static bool showGUI = false;
         static bool showDistribution = false;
@@ -281,6 +281,13 @@ namespace Parallax
             if (!showDistribution && !showMaterial && !showDistributionNoise && !showScatterExporter && !showDebug)
             {
                 window.height = windowDefault.height;
+            }
+
+            if (ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.collisionLevel > -1)
+            {
+                GUILayout.Label("Scatter editing is disabled while colliders are enabled");
+                GUILayout.Label("Set collisionLevel to -1 in ParallaxGlobalSettings.cfg");
+                return;
             }
 
             GUIStyle labelSkin = HighLogic.Skin.label;

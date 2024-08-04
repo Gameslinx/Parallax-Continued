@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Rendering;
 using static Parallax.Legacy.LegacyConfigLoader;
 
 namespace Parallax
@@ -19,6 +20,7 @@ namespace Parallax
     {
         public TerrainGlobalSettings terrainGlobalSettings = new TerrainGlobalSettings();
         public ScatterGlobalSettings scatterGlobalSettings = new ScatterGlobalSettings();
+        public LightingGlobalSettings lightingGlobalSettings = new LightingGlobalSettings();
         public DebugGlobalSettings debugGlobalSettings = new DebugGlobalSettings();
         public ObjectPoolSettings objectPoolSettings = new ObjectPoolSettings();
     }
@@ -34,6 +36,11 @@ namespace Parallax
         public float rangeMultiplier;
         public float fadeOutStartRange;
         public float collisionLevel;
+    }
+    public struct LightingGlobalSettings
+    {
+        public bool lightShadows;
+        public LightShadowResolution lightShadowsQuality;
     }
     public struct DebugGlobalSettings
     {
@@ -407,6 +414,9 @@ namespace Parallax
         public bool isShared = false;
 
         public bool collideable = false;
+        // Only used for saving from GUI
+        public int collisionLevel;
+
         public int collideableArrayIndex = -1;
         public float sqrMeshBound = 0;
 
@@ -477,7 +487,7 @@ namespace Parallax
             node.AddValue("name", scatterName.Split('-')[1]);
 
             node.AddValue("model", modelPath);
-            node.AddValue("collisionLevel", 1);
+            node.AddValue("collisionLevel", collisionLevel);
         }
         protected virtual void PopulateOptimizationNode(ConfigNode node)
         {

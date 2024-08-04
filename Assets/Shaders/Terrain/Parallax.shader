@@ -380,7 +380,7 @@ Shader "Custom/Parallax"
             #pragma multi_compile           PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
             #pragma multi_compile_fragment  INFLUENCE_MAPPING
             #pragma multi_compile_fog
-            #pragma multi_compile_fwdadd_fullshadows
+            #pragma multi_compile_fwdadd
         
             #pragma vertex Vertex_Shader
             #pragma hull Hull_Shader
