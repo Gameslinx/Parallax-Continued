@@ -163,14 +163,6 @@ namespace Parallax
                 }
             }
         }
-        public void ReinitializeScatters(params ScatterData[] scatterData)
-        {
-            Reinitialize();
-            foreach (ScatterData data in scatterData)
-            {
-                data.Start();
-            }
-        }
         // Get the square distance from the quad to the camera
         public void UpdateQuadCameraDistance(ref Vector3 cameraPos)
         {

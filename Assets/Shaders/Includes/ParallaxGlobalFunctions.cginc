@@ -121,10 +121,16 @@ float3 SubsurfaceScattering(float3 worldPos, float3 worldNormal, float3 viewDir,
     #endif
 #endif
 
-#if defined (EMISSION) && defined (DIRECTIONAL)
+#if defined (EMISSION) && defined (DIRECTIONAL) && !defined (PARALLAX_DEFERRED_PASS)
     #define APPLY_EMISSION  result.rgb = result.rgb += _EmissionColor * (1 - finalNormal.a);
 #else
     #define APPLY_EMISSION
+#endif
+
+#if defined (EMISSION) && defined (PARALLAX_DEFERRED_PASS)
+    #define GET_EMISSION _EmissionColor * (1 - finalNormal.a)
+#else
+    #define GET_EMISSION 0
 #endif
 
 float3 CalculateLighting(LIGHTING_INPUT)
@@ -160,7 +166,12 @@ float3 CalculateLighting(LIGHTING_INPUT)
         #endif
     #endif
     
+    // We'll store refraction and subsurface scattering in the emission
+    #if !defined (PARALLAX_DEFERRED_PASS)
     return diffuse + ambient + specular + reflection + refraction * NdotL + scattering;
+    #else
+    return refraction * NdotL + scattering;
+    #endif
 }
 
 //
@@ -230,4 +241,120 @@ float4 ParallaxClipSpaceShadowCasterPos(float3 wPos, float3 wNormal)
 #endif
 #ifdef DIRECTIONAL
     #define PARALLAX_TRANSFER_VERTEX_TO_FRAGMENT(a) PARALLAX_TRANSFER_SHADOW(a)
+#endif
+
+//
+// Deferred Functions
+//
+
+#if defined (PARALLAX_DEFERRED_PASS)
+
+#define PARALLAX_DEFERRED_OUTPUT_BUFFERS out half4 outGBuffer0 : SV_Target0, out half4 outGBuffer1 : SV_Target1, out half4 outGBuffer2 : SV_Target2, out half4 outEmission : SV_Target3
+
+#define blinnPhongShininessPower 0.215
+#define ONE_OVER_PI 0.31830989161
+
+// From blackrack's BlinnPhong conversion
+void GetStandardSpecularPropertiesFromLegacy(float legacyShininess, float specularMap, float3 legacySpecularColor, out float smoothness, out float3 specular)
+{
+    legacySpecularColor = saturate(legacySpecularColor);
+    
+    smoothness = pow(legacyShininess, blinnPhongShininessPower) * specularMap;
+    smoothness *= sqrt(length(legacySpecularColor));
+
+    specular = legacySpecularColor * ONE_OVER_PI;
+}
+
+half4 LightingStandardSpecular_Deferred_Corrected(SurfaceOutputStandardSpecular s, float3 viewDir, UnityGI gi, out half4 outGBuffer0, out half4 outGBuffer1, out half4 outGBuffer2)
+{
+    // energy conservation
+    half oneMinusReflectivity;
+    s.Albedo = EnergyConservationBetweenDiffuseAndSpecular(s.Albedo, s.Specular, oneMinusReflectivity);
+
+    UnityStandardData data;
+    data.diffuseColor = s.Albedo;
+    data.occlusion = s.Occlusion;
+    data.specularColor = s.Specular;
+    data.smoothness = s.Smoothness;
+    data.normalWorld = s.Normal;
+
+    UnityStandardDataToGbuffer(data, outGBuffer0, outGBuffer1, outGBuffer2);
+
+    half4 emission = half4(s.Emission, 1);
+    return emission;
+}
+
+#ifndef UNITY_HDR_ON
+#define SET_OUT_EMISSION(emissionColor) outEmission.rgb = exp2(-emissionColor.rgb); 
+#else
+#define SET_OUT_EMISSION(emissionColor) outEmission.rgb = emissionColor.rgb;
+#endif
+
+SurfaceOutputStandardSpecular GetPBRStruct(float4 albedo, float3 emission, float3 normal, float3 worldPos)
+{
+    float smoothness = 0;
+    float3 specular = 0;
+    GetStandardSpecularPropertiesFromLegacy(_SpecularPower, albedo.a, saturate(_SpecularIntensity), smoothness, specular);
+    SurfaceOutputStandardSpecular o; 
+	o.Albedo = albedo.rgb; 
+	o.Specular = specular; 
+	o.Normal = normal.xyz;   
+	o.Emission = emission;
+	o.Smoothness = smoothness;
+	o.Occlusion = 1;
+	o.Alpha = 1;
+    
+    return o;
+}
+UnityGI GetUnityGI()
+{
+    UnityGI gi;
+    gi.indirect.diffuse = 0;
+    gi.indirect.specular = 0;
+    gi.light.color = 0;
+    gi.light.dir = half3(0, 1, 0);
+    gi.light.ndotl = 0;
+    return gi;
+}
+UnityGIInput GetGIInput(float3 worldPos, float3 viewDir)
+{
+    UnityGIInput giInput;
+    giInput.light.color = 0;
+    giInput.light.dir = half3(0, 1, 0);
+    giInput.light.ndotl = 0;
+    giInput.worldPos = worldPos;
+    giInput.worldViewDir = viewDir;
+    giInput.atten = 1;
+    giInput.lightmapUV = 0.0f;
+    giInput.ambient.rgb = 0;
+
+    giInput.probeHDR[0] = unity_SpecCube0_HDR;
+    giInput.probeHDR[1] = unity_SpecCube1_HDR;
+
+    #if defined(UNITY_SPECCUBE_BLENDING) || defined(UNITY_SPECCUBE_BOX_PROJECTION)
+    giInput.boxMin[0] = unity_SpecCube0_BoxMin;
+    #endif
+
+    #ifdef UNITY_SPECCUBE_BOX_PROJECTION
+    giInput.boxMax[0] = unity_SpecCube0_BoxMax; \
+    giInput.probePosition[0] = unity_SpecCube0_ProbePosition; \
+    giInput.boxMax[1] = unity_SpecCube1_BoxMax; \
+    giInput.boxMin[1] = unity_SpecCube1_BoxMin; \
+    giInput.probePosition[1] = unity_SpecCube1_ProbePosition;
+    #endif
+
+    return giInput;
+    
+}
+
+#define OUTPUT_GBUFFERS(surfaceOutput, gi) \
+    float3 emissionColor = LightingStandardSpecular_Deferred_Corrected(surfaceOutput, viewDir, gi, outGBuffer0, outGBuffer1, outGBuffer2);  \
+    SET_OUT_EMISSION(emissionColor)
+
+#if defined(SHADOWS_SHADOWMASK) && (UNITY_ALLOWED_MRT_COUNT > 4)
+    #define SET_OUT_SHADOWMASK outShadowMask(i) = UnityGetRawBakedOcclusions(i.lmap.xy, i.worldPos);
+#else
+    #define SET_OUT_SHADOWMASK(i)
+#endif
+
 #endif

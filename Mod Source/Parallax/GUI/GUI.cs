@@ -707,6 +707,10 @@ namespace Parallax
                     GUILayout.Label("Note: This debug visualisation only shows when in sunlight");
                     ShowCollideableScatters(debugShowCollideables);
                 }
+                if (GUILayout.Button("Log Performance Stats", HighLogic.Skin.button))
+                {
+                    LogPerformanceStats();
+                }
             }
         }
         static void ShowFaceOrientation(bool enabled, Scatter scatter)
@@ -798,6 +802,20 @@ namespace Parallax
                     scatter.renderer.instancedMaterialLOD2.SetColor("_Color", scatter.distributionParams.lod2.materialOverride.shaderProperties.shaderColors["_Color"]);
                 }
             }
+        }
+        static void LogPerformanceStats()
+        {
+            int numTris = 0;
+            foreach (Scatter scatter in scatters)
+            {
+                ScatterRenderer scatterRenderer = scatter.renderer;
+
+                numTris += scatterRenderer.LogStats();
+            }
+
+            ParallaxDebug.Log("");
+            ParallaxDebug.Log("Total number of triangles being rendered right now by Parallax: " + numTris);
+            ParallaxDebug.Log("Performance logging complete");
         }
         static void RemoveKeywordValues(ShaderProperties shaderProperties, ConfigNode keywordNode)
         {

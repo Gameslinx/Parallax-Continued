@@ -113,7 +113,7 @@ void Distribute (uint3 id : SV_DispatchThreadID)
     
     // Use UV and id as random seed. It's not elegant, but it's persistent. Fyi, using the quad local position triangle center is not valid here
     // This produces sufficient randomness
-    float3 randomSeed = float3(centerUV.xy + _Seed, id.x);
+    float3 randomSeed = float3(index1 + _Seed, index2, id.x);
     
     // Create an object on this triangle for every population multiplier
     for (int i = 0; i < _PopulationMultiplier; i++)

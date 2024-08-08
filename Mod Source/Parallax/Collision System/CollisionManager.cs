@@ -116,14 +116,7 @@ namespace Parallax
             sqrQuadBounds = new NativeList<float>(1000, Allocator.Persistent);
             quadIDs = new NativeList<int>(250, Allocator.Persistent);
         }
-        // We need to cleanup even if the same body requested a load
-        void SameBodyLoaded(string name)
-        {
-            //Debug.Log("Same body loading: " + name);
-            DominantBodyUnloaded(name);
-            DominantBodyLoaded(name);
-        }
-        void DominantBodyLoaded(string name)
+        public void Load(string name)
         {
             Debug.Log("Dominant body loaded start (collision manager");
             currentScatterBody = ConfigLoader.parallaxScatterBodies[name];
@@ -145,6 +138,17 @@ namespace Parallax
             }
             initialized = true;
             Debug.Log("Dominant body loaded end (collision manager");
+        }
+        // We need to cleanup even if the same body requested a load
+        void SameBodyLoaded(string name)
+        {
+            //Debug.Log("Same body loading: " + name);
+            DominantBodyUnloaded(name);
+            DominantBodyLoaded(name);
+        }
+        void DominantBodyLoaded(string name)
+        {
+            Load(name);
         }
         void DominantBodyUnloaded(string name)
         {
@@ -478,7 +482,7 @@ namespace Parallax
             Quaternion rotBWorld = Quaternion.AngleAxis(transform.rotation, Vector3.up);
             go.transform.rotation = rotAWorld * rotBWorld;
 
-            //transform.colliderObject = go;
+            go.tag = scatterSystemQuad.quad.tag;
 
             go.SetActive(true);
             return go;

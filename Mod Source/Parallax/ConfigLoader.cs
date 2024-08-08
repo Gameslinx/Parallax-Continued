@@ -237,6 +237,7 @@ namespace Parallax
             GameObject templateCollider = new GameObject("ParallaxCollider");
             templateCollider.AddComponent<MeshCollider>();
             templateCollider.SetActive(false);
+            templateCollider.layer = 15;
             colliderPool = new ObjectPool<GameObject>(templateCollider, settings.objectPoolSettings.cachedColliderCount);
         }
         // Looks up a shader in the shader bank
@@ -820,14 +821,33 @@ namespace Parallax
 
             return materialParams;
         }
-        static void PerformNormalisationConversions(Scatter scatter)
+        public static void PerformNormalisationConversions(Scatter scatter)
         {
+            // Back up originals
+            scatter.distributionParams.originalRange = scatter.distributionParams.range;
+            scatter.distributionParams.originalPopulationMultiplier = scatter.distributionParams.populationMultiplier;
+
+            // Apply global settings
+            scatter.distributionParams.range *= parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier;
+            scatter.distributionParams.populationMultiplier = (int)((float)scatter.distributionParams.populationMultiplier * parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier);
+
             // Normalise the LOD distances as a percentage of max range
             scatter.distributionParams.lod1.range /= scatter.distributionParams.range;
             scatter.distributionParams.lod2.range /= scatter.distributionParams.range;
 
             // Normalise the frustum culling start range as a percentage of max range
             scatter.optimizationParams.frustumCullingIgnoreRadius /= scatter.distributionParams.range;
+        }
+        public static void ReverseNormalisationConversions(Scatter scatter)
+        {
+            // Reverse global settings
+            scatter.distributionParams.lod1.range *= scatter.distributionParams.range;
+            scatter.distributionParams.lod2.range *= scatter.distributionParams.range;
+
+            scatter.optimizationParams.frustumCullingIgnoreRadius *= scatter.distributionParams.range;
+
+            scatter.distributionParams.range = scatter.distributionParams.originalRange;
+            scatter.distributionParams.populationMultiplier = scatter.distributionParams.originalPopulationMultiplier;
         }
         static void PerformAdditionalOperations(Scatter scatter)
         {

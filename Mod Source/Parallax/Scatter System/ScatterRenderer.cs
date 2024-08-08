@@ -290,6 +290,61 @@ namespace Parallax
             Graphics.DrawMeshInstancedIndirect(meshLOD1, 0, instancedMaterialLOD1, rendererBounds, indirectArgsLOD1, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, Camera.main);
             Graphics.DrawMeshInstancedIndirect(meshLOD2, 0, instancedMaterialLOD2, rendererBounds, indirectArgsLOD2, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, Camera.main);
         }
+
+        /// <summary>
+        /// Log performance stats. Outputs the number of triangles in total being rendered by this renderer
+        /// </summary>
+        /// <returns></returns>
+        public int LogStats()
+        {
+            ComputeBuffer countBuffer0 = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
+            ComputeBuffer countBuffer1 = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
+            ComputeBuffer countBuffer2 = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
+
+            int[] countLOD0 = { 0, 0, 0 };
+            int[] countLOD1 = { 0, 0, 0 };
+            int[] countLOD2 = { 0, 0, 0 };
+
+            ComputeBuffer.CopyCount(outputLOD0, countBuffer0, 0);
+            ComputeBuffer.CopyCount(outputLOD1, countBuffer1, 0);
+            ComputeBuffer.CopyCount(outputLOD2, countBuffer2, 0);
+
+            countBuffer0.GetData(countLOD0);
+            countBuffer1.GetData(countLOD1);
+            countBuffer2.GetData(countLOD2);
+
+            ParallaxDebug.Log("///////////////////");
+            ParallaxDebug.Log("");
+
+            ParallaxDebug.Log("Scatter: " + scatter.scatterName);
+
+            ParallaxDebug.Log(" - Count (LOD 0): " + countLOD0[0]);
+            ParallaxDebug.Log(" - Count (LOD 1): " + countLOD1[0]);
+            ParallaxDebug.Log(" - Count (LOD 2): " + countLOD2[0]);
+            ParallaxDebug.Log("");
+
+            int trisLOD0 = ((meshLOD0.triangles.Length / 3) * countLOD0[0]);
+            int trisLOD1 = ((meshLOD1.triangles.Length / 3) * countLOD1[0]);
+            int trisLOD2 = ((meshLOD2.triangles.Length / 3) * countLOD2[0]);
+
+            int numTotalTris = trisLOD0 + trisLOD1 + trisLOD2;
+
+            ParallaxDebug.Log(" - Triangles (LOD 0): " + trisLOD0);
+            ParallaxDebug.Log(" - Triangles (LOD 1): " + trisLOD1);
+            ParallaxDebug.Log(" - Triangles (LOD 2): " + trisLOD2);
+
+            ParallaxDebug.Log("");
+            ParallaxDebug.Log(" - Triangles (TOTAL): " + numTotalTris);
+
+            ParallaxDebug.Log("");
+            ParallaxDebug.Log("///////////////////");
+
+            countBuffer0.Dispose();
+            countBuffer1.Dispose();
+            countBuffer2.Dispose();
+
+            return numTotalTris;
+        }
         void Cleanup()
         {
             outputLOD0?.Dispose();

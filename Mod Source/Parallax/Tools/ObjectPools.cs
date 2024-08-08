@@ -38,6 +38,7 @@ namespace Parallax
             if (typeof(T) == typeof(GameObject))
             {
                 GameObject.DontDestroyOnLoad(obj);
+                (obj as GameObject).SetActive(false);
             }
             return obj;
         }

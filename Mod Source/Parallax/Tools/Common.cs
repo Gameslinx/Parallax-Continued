@@ -23,6 +23,45 @@ namespace Parallax
         public LightingGlobalSettings lightingGlobalSettings = new LightingGlobalSettings();
         public DebugGlobalSettings debugGlobalSettings = new DebugGlobalSettings();
         public ObjectPoolSettings objectPoolSettings = new ObjectPoolSettings();
+
+        public void SaveSettings()
+        {
+            ConfigNode rootNode = new ConfigNode("ParallaxGlobal");
+            ConfigNode globalNode = new ConfigNode("ParallaxGlobal");
+            rootNode.AddNode(globalNode);
+
+            ConfigNode terrainShaderSettingsNode = new ConfigNode("TerrainShaderSettings");
+            ConfigNode scatterSystemSettingsNode = new ConfigNode("ScatterSystemSettings");
+            ConfigNode lightingSettingsNode = new ConfigNode("LightingSettings");
+            ConfigNode debugSettingsNode = new ConfigNode("DebugSettings");
+            ConfigNode objectPoolSettingsNode = new ConfigNode("ObjectPoolSettings");
+
+            terrainShaderSettingsNode.AddValue("maxTessellation", terrainGlobalSettings.maxTessellation);
+            terrainShaderSettingsNode.AddValue("tessellationEdgeLength", terrainGlobalSettings.tessellationEdgeLength);
+            terrainShaderSettingsNode.AddValue("maxTessellationRange", terrainGlobalSettings.maxTessellationRange);
+
+            scatterSystemSettingsNode.AddValue("densityMultiplier", scatterGlobalSettings.densityMultiplier);
+            scatterSystemSettingsNode.AddValue("rangeMultiplier", scatterGlobalSettings.rangeMultiplier);
+            scatterSystemSettingsNode.AddValue("fadeOutStartRange", scatterGlobalSettings.fadeOutStartRange);
+            scatterSystemSettingsNode.AddValue("collisionLevel", scatterGlobalSettings.collisionLevel);
+
+            lightingSettingsNode.AddValue("lightShadows", lightingGlobalSettings.lightShadows);
+            lightingSettingsNode.AddValue("lightShadowQuality", lightingGlobalSettings.lightShadowsQuality.ToString());
+
+            debugSettingsNode.AddValue("wireframeTerrain", debugGlobalSettings.wireframeTerrain);
+
+            objectPoolSettingsNode.AddValue("cachedComputeShaderCount", objectPoolSettings.cachedComputeShaderCount);
+            objectPoolSettingsNode.AddValue("cachedColliderCount", objectPoolSettings.cachedColliderCount);
+
+            globalNode.AddNode(terrainShaderSettingsNode);
+            globalNode.AddNode(scatterSystemSettingsNode);
+            globalNode.AddNode(lightingSettingsNode);
+            globalNode.AddNode(debugSettingsNode);
+            globalNode.AddNode(objectPoolSettingsNode);
+
+            rootNode.Save(KSPUtil.ApplicationRootPath + "GameData/Parallax/Config/ParallaxGlobalSettings2.cfg");
+
+        }
     }
     public struct TerrainGlobalSettings
     {
@@ -240,6 +279,42 @@ namespace Parallax
         public Material parallaxMidHigh;
 
         public Material parallaxFull;
+
+        //
+        //  Functions for setting properties easily
+        //
+        private delegate void MaterialPropertySetter(Material material, string propertyName, object value);
+
+        private static readonly Dictionary<Type, MaterialPropertySetter> propertySetters = new Dictionary<Type, MaterialPropertySetter>
+        {
+            { typeof(int), (material, propertyName, value) => material.SetInt(propertyName, (int)value) },
+            { typeof(float), (material, propertyName, value) => material.SetFloat(propertyName, (float)value) },
+            { typeof(Color), (material, propertyName, value) => material.SetColor(propertyName, (Color)value) },
+            { typeof(Vector4), (material, propertyName, value) => material.SetVector(propertyName, (Vector4)value) },
+            { typeof(Texture), (material, propertyName, value) => material.SetTexture(propertyName, (Texture)value) }
+        };
+
+        public void SetAll(string propertyName, object value)
+        {
+            // Exception if property type is unsupported
+            Type valueType = value.GetType();
+            if (!propertySetters.ContainsKey(valueType))
+            {
+                throw new ArgumentException($"Unsupported property type: {valueType}");
+            }
+
+            // Set all material properties
+            MaterialPropertySetter setter = propertySetters[valueType];
+
+            setter(parallaxLow, propertyName, value);
+            setter(parallaxMid, propertyName, value);
+            setter(parallaxHigh, propertyName, value);
+
+            setter(parallaxLowMid, propertyName, value);
+            setter(parallaxMidHigh, propertyName, value);
+
+            setter(parallaxFull, propertyName, value);
+        }
     }
 
     //
@@ -308,6 +383,14 @@ namespace Parallax
         public LOD lod1;
         public LOD lod2;
         public HashSet<string> biomeBlacklist;
+        /// <summary>
+        /// Range before being scaled by the global settings
+        /// </summary>
+        public float originalRange;
+        /// <summary>
+        /// Population Multiplier before being scaled by the global settings
+        /// </summary>
+        public int originalPopulationMultiplier;
     }
     public struct LOD
     {
