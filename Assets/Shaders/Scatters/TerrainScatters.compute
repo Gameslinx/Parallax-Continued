@@ -10,7 +10,7 @@
 
 #include "ScatterStructs.cginc"
 #include "ScatterParams.cginc"
-#include "../Includes/gpu_noise_lib.glsl"
+#include "../Includes/gpu_noise_lib.glsl" 
 #include "ScatterUtils.cginc"
 
 StructuredBuffer<int> triangles;
@@ -31,7 +31,7 @@ Texture2D<float4> scatterBiomes;
 SamplerState linearClampSampler;
 SamplerState pointClampSampler;
 
-AppendStructuredBuffer<PositionData> output;
+AppendStructuredBuffer<PositionData> transforms;
 
 //
 //  Distribution Compute Shader
@@ -174,7 +174,7 @@ void Distribute (uint3 id : SV_DispatchThreadID)
     
         if (canSpawn)
         {
-            output.Append(newObject);
+            transforms.Append(newObject);
         }
     }
 }

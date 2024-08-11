@@ -123,6 +123,10 @@ public class ScatterRenderer : MonoBehaviour
         outputLOD0?.Dispose();
         outputLOD1?.Dispose();
         outputLOD2?.Dispose();
+
+        indirectArgsLOD0?.Dispose();
+        indirectArgsLOD1?.Dispose();
+        indirectArgsLOD2?.Dispose();
     }
     void OnDisable()
     {

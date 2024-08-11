@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.oddworm.heapexplorer": "https://github.com/pschraut/UnityHeapExplorer.git#4.1.1",
     "com.unity.burst": "1.5.0",
     "com.unity.collab-proxy": "1.14.18",
     "com.unity.collections": "0.1.1-preview",

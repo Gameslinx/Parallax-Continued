@@ -51,12 +51,6 @@ namespace Parallax
         uint[] indirectArgs = { 1, 1, 1 };
         int realCount = 0;
 
-        // Frequently set prop IDs
-        int objectToWorldMatrixPropID = 0;
-        int planetNormalPropID = 0;
-        int cameraFrustumPlanesPropID = 0;
-        int worldSpaceCameraPositionPropID = 0;
-
         bool eventAdded = false;
         bool collidersAdded = false;
         public bool cleaned = false;
@@ -82,7 +76,7 @@ namespace Parallax
         }
         void InitializeDistribute()
         {
-            scatterShader = ConfigLoader.computeShaderPool.Fetch();
+            scatterShader = scatter.shader; //ConfigLoader.computeShaderPool.Fetch();
 
             // Required values
             scatterShader.SetFloat("_PlanetRadius", parent.planetRadius);
@@ -101,7 +95,7 @@ namespace Parallax
             evaluateKernel = scatterShader.FindKernel("Evaluate");
 
             outputScatterDataBuffer = new ComputeBuffer(outputSize, PositionData.Size(), ComputeBufferType.Append);
-            scatterShader.SetBuffer(distributeKernel, "output", outputScatterDataBuffer);
+            scatterShader.SetBuffer(distributeKernel, "transforms", outputScatterDataBuffer);
             scatterShader.SetBuffer(evaluateKernel, "positions", outputScatterDataBuffer);
 
             scatterShader.SetBuffer(distributeKernel, "vertices", parent.sourceVertsBuffer);
@@ -204,7 +198,14 @@ namespace Parallax
             ComputeBuffer.CopyCount(outputScatterDataBuffer, objectLimits, 0);
 
             // Read this back to construct indirect dispatch args
-            AsyncGPUReadback.Request(objectLimits, OnDistributeComplete);
+            if (SystemInfo.supportsAsyncGPUReadback)
+            {
+                AsyncGPUReadback.Request(objectLimits, OnDistributeComplete);
+            }
+            else
+            {
+                ImmediateReadback();
+            }
         }
         public void OnDistributeComplete(AsyncGPUReadbackRequest request)
         {
@@ -237,6 +238,50 @@ namespace Parallax
             // So add this guard to prevent trying to remove the event before it was ever added
             eventAdded = true;
         }
+        /// <summary>
+        /// For systems that don't support asyncGPUReadback - such as OpenGL
+        /// </summary>
+        public void ImmediateReadback()
+        {
+            // Data was cleaned up before generation completed - stop here
+            if (cleaned)
+            {
+                return;
+            }
+
+            count = new int[3];
+            objectLimits.GetData(count);
+            realCount = count[0];
+
+            // Process collider data, if this scatter is collideable
+            // Todo: Make this a GetData if initializing the scene for the first time so all colliders are here on time
+            if (CollidersEligible())
+            {
+                if (SystemInfo.supportsAsyncGPUReadback)
+                {
+                    AsyncGPUReadback.Request(outputScatterDataBuffer, OnColliderReadbackComplete);
+                }
+                else
+                {
+                    DirectColliderReadback();
+                }
+            }
+
+            // Initialise indirect args
+            count[0] = Mathf.CeilToInt((float)count[0] / 32f);
+            count[1] = 1;
+            count[2] = 1;
+
+            dispatchArgs = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
+            dispatchArgs.SetData(count);
+
+            // Ready to start evaluating
+            scatterRenderer.onEvaluateScatters += Evaluate;
+
+            // This function may never execute because the quad tries to cleanup before the readback is complete
+            // So add this guard to prevent trying to remove the event before it was ever added
+            eventAdded = true;
+        }
 
         // Request the output buffer for collider processing
         public void OnColliderReadbackComplete(AsyncGPUReadbackRequest req)
@@ -245,9 +290,6 @@ namespace Parallax
             {
                 return;
             }
-
-            Profiler.BeginSample("Parallax collider data request");
-            Profiler.BeginSample("Parallax GetData request");
 
             // Note - GetData requests the entire buffer!! Not just what we have appended, so most of this data is full of zeroes... FML
             // Use slices to get the data we're interested in
@@ -261,12 +303,30 @@ namespace Parallax
             slice2.CopyFrom(slice1);
             data.Dispose();
 
-            Profiler.EndSample();
 
             collisionData = new ScatterColliderData(parent, realData, scatter.collideableArrayIndex);
             CollisionManager.QueueIncomingData(collisionData);
             collidersAdded = true;
-            Profiler.EndSample();
+        }
+        // For systems that do not support asyncGPUReadback - such as OpenGL
+        public void DirectColliderReadback()
+        {
+            if (cleaned)
+            {
+                return;
+            }
+
+            // Note - GetData requests the entire buffer!! Not just what we have appended, so most of this data is full of zeroes... FML
+            // Use slices to get the data we're interested in
+            // When stuff like grass is set to collideable this can take a few ms, otherwise pretty quick
+            PositionData[] data = new PositionData[realCount];
+            outputScatterDataBuffer.GetData(data);
+
+            NativeArray<PositionData> nativeData = new Unity.Collections.NativeArray<PositionData>(data, Allocator.Persistent);
+
+            collisionData = new ScatterColliderData(parent, nativeData, scatter.collideableArrayIndex);
+            CollisionManager.QueueIncomingData(collisionData);
+            collidersAdded = true;
         }
         public void InitializeEvaluate()
         {
@@ -277,19 +337,17 @@ namespace Parallax
             scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD1", scatterRenderer.outputLOD1);
             scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD2", scatterRenderer.outputLOD2);
 
+            scatterShader.SetBuffer(evaluateKernel, "positions", outputScatterDataBuffer);
+
             scatterShader.SetFloat("_CullRadius", scatter.optimizationParams.frustumCullingIgnoreRadius);
             scatterShader.SetFloat("_CullLimit", scatter.optimizationParams.frustumCullingSafetyMargin);
 
             scatterShader.SetFloat("_MaxRange", scatter.distributionParams.range);
             scatterShader.SetFloat("_Lod01Split", scatter.distributionParams.lod1.range);
             scatterShader.SetFloat("_Lod12Split", scatter.distributionParams.lod2.range);
-
-            // Init property IDs
-            objectToWorldMatrixPropID = Shader.PropertyToID("_ObjectToWorldMatrix");
-            planetNormalPropID = Shader.PropertyToID("_PlanetNormal");
-            cameraFrustumPlanesPropID = Shader.PropertyToID("_CameraFrustumPlanes");
-            worldSpaceCameraPositionPropID = Shader.PropertyToID("_WorldSpaceCameraPosition");
         }
+        // Evaluate which objects are in range, what LODs to show, and frustum cull them
+        // This is called very often, every frame. All calls combined take around 0.4 to 0.5ms CPU
         public void Evaluate()
         {
             // There aren't any of this scatter on this quad
@@ -304,18 +362,30 @@ namespace Parallax
             // Not finished distributing yet
             if (!eventAdded) { return; }
 
+            // Point the scatter's compute shader buffers to this quad's
+            scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.parentTrisBufferID, parent.sourceTrianglesBuffer);
+            scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.parentVertsBufferID, parent.sourceVertsBuffer);
+
+            scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.lod0BufferID, scatterRenderer.outputLOD0);
+            scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.lod1BufferID, scatterRenderer.outputLOD1);
+            scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.lod2BufferID, scatterRenderer.outputLOD2);
+
+            scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.objectLimitsBufferID, objectLimits);
+            scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.positionsBufferID, outputScatterDataBuffer);
+
             // Update runtime shader vars
-            // We need to know the size of the distribution before continuing with this
-            scatterShader.SetMatrix(objectToWorldMatrixPropID, parent.quad.meshRenderer.localToWorldMatrix);
-            scatterShader.SetVector(planetNormalPropID, Vector3.Normalize(parent.quad.PrecisePosition - parent.quad.sphereRoot.PrecisePosition));
-            scatterShader.SetFloats(cameraFrustumPlanesPropID, RuntimeOperations.floatCameraFrustumPlanes);
-            scatterShader.SetVector(worldSpaceCameraPositionPropID, RuntimeOperations.vectorCameraPos);
+            scatterShader.SetMatrix(ParallaxScatterShaderProperties.objectToWorldMatrixPropID, parent.quad.meshRenderer.localToWorldMatrix);
+            scatterShader.SetVector(ParallaxScatterShaderProperties.planetNormalPropID, Vector3.Normalize(parent.quad.PrecisePosition - parent.quad.sphereRoot.PrecisePosition));
+            scatterShader.SetFloats(ParallaxScatterShaderProperties.cameraFrustumPlanesPropID, RuntimeOperations.floatCameraFrustumPlanes);
+            scatterShader.SetVector(ParallaxScatterShaderProperties.worldSpaceCameraPositionPropID, RuntimeOperations.vectorCameraPos);
+            scatterShader.SetInt(   ParallaxScatterShaderProperties.maxCountPropID, outputSize);
 
             scatterShader.DispatchIndirect(evaluateKernel, dispatchArgs, 0);
         }
-        // Returns true if:
-        // 1. Scatter is collideable
-        // 2. Quad is max level
+        /// <summary>
+        /// Returns true if the scatter is collideable and the quad is fully subdivided
+        /// </summary>
+        /// <returns></returns>
         bool CollidersEligible()
         {
             return scatter.collideable && parent.quad.subdivision == parent.quad.sphereRoot.maxLevel && realCount > 0;
@@ -337,8 +407,6 @@ namespace Parallax
             {
                 CollisionManager.QueueOutgoingData(collisionData);
             }
-
-            ConfigLoader.computeShaderPool.Add(scatterShader);
 
             outputScatterDataBuffer?.Dispose();
             dispatchArgs?.Dispose();

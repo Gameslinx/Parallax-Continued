@@ -34,8 +34,6 @@ namespace Parallax
         // Stores all parallax scatter bodies by planet name
         public static Dictionary<string, ParallaxScatterBody> parallaxScatterBodies = new Dictionary<string, ParallaxScatterBody>();
 
-        // Stores a cache of compute shaders to prevent slow instantiation
-        public static ObjectPool<ComputeShader> computeShaderPool;
         public static ObjectPool<GameObject> colliderPool;
 
         // Stores transparent material for terrain quads
@@ -78,9 +76,7 @@ namespace Parallax
             LoadSharedScatterConfigs(GetConfigsByName("ParallaxScatters"));
             InitializeObjectPools(parallaxGlobalSettings);
 
-            transparentMaterial = new Material(Shader.Find("Unlit/Transparent"));
-            transparentMaterial.SetTexture("_MainTex", Resources.FindObjectsOfTypeAll<Texture>().FirstOrDefault(t => t.name == "Parallax/BlankAlpha"));
-
+            transparentMaterial = new Material(AssetBundleLoader.parallaxTerrainShaders["Custom/DiscardAll"]);
             wireframeMaterial = new Material(AssetBundleLoader.parallaxTerrainShaders["Custom/Wireframe"]);
         }
         public static UrlDir.UrlConfig[] GetConfigsByName(string name)
@@ -231,9 +227,6 @@ namespace Parallax
         }
         public static void InitializeObjectPools(ParallaxSettings settings)
         {
-            ComputeShader templateComputeShader = Instantiate(AssetBundleLoader.parallaxComputeShaders["TerrainScatters"]);
-            computeShaderPool = new ObjectPool<ComputeShader>(templateComputeShader, settings.objectPoolSettings.cachedComputeShaderCount);
-
             GameObject templateCollider = new GameObject("ParallaxCollider");
             templateCollider.AddComponent<MeshCollider>();
             templateCollider.SetActive(false);
@@ -830,6 +823,7 @@ namespace Parallax
             // Apply global settings
             scatter.distributionParams.range *= parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier;
             scatter.distributionParams.populationMultiplier = (int)((float)scatter.distributionParams.populationMultiplier * parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier);
+            if (scatter.distributionParams.populationMultiplier == 0) { scatter.distributionParams.populationMultiplier = 1; }
 
             // Normalise the LOD distances as a percentage of max range
             scatter.distributionParams.lod1.range /= scatter.distributionParams.range;

@@ -285,9 +285,9 @@ half4 LightingStandardSpecular_Deferred_Corrected(SurfaceOutputStandardSpecular 
 }
 
 #ifndef UNITY_HDR_ON
-#define SET_OUT_EMISSION(emissionColor) outEmission.rgb = exp2(-emissionColor.rgb); 
+#define SET_OUT_EMISSION(emissionColor) outEmission = float4(exp2(-emissionColor.rgb), 0); 
 #else
-#define SET_OUT_EMISSION(emissionColor) outEmission.rgb = emissionColor.rgb;
+#define SET_OUT_EMISSION(emissionColor) outEmission = float4(emissionColor.rgb, 0);
 #endif
 
 SurfaceOutputStandardSpecular GetPBRStruct(float4 albedo, float3 emission, float3 normal, float3 worldPos)

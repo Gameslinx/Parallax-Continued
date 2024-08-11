@@ -81,13 +81,16 @@ Shader "Custom/ParallaxInstancedSolid"
             CGPROGRAM
 
             // Shader variants
-            #pragma multi_compile_vertex        _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
-            #pragma multi_compile_vertex        _ WIND
-            #pragma multi_compile_fragment      _ TWO_SIDED
-            #pragma multi_compile_fragment      _ ALPHA_CUTOFF
-            #pragma multi_compile_fragment      _ ALTERNATE_SPECULAR_TEXTURE        REFRACTION
-            #pragma multi_compile_fragment      _ DEBUG_FACE_ORIENTATION            DEBUG_SHOW_WIND_TEXTURE
-            #pragma multi_compile_fragment      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
+            #pragma multi_compile      _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
+            #pragma multi_compile      _ WIND
+            #pragma multi_compile      _ TWO_SIDED
+            #pragma multi_compile      _ ALPHA_CUTOFF
+            #pragma multi_compile      _ ALTERNATE_SPECULAR_TEXTURE        REFRACTION
+            #pragma multi_compile      _ DEBUG_FACE_ORIENTATION            DEBUG_SHOW_WIND_TEXTURE
+            #pragma multi_compile      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
+
+            // Skip these, KSP won't use them
+            #pragma skip_variants POINT_COOKIE LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING VERTEXLIGHT_ON
 
             // Shader stages
             #pragma vertex vert
@@ -200,10 +203,12 @@ Shader "Custom/ParallaxInstancedSolid"
             CGPROGRAM
         
             // Shader variants
-            #pragma multi_compile_vertex        _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
-            #pragma multi_compile_vertex        _ WIND
-            #pragma multi_compile_fragment      _ ALPHA_CUTOFF
+            #pragma multi_compile      _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
+            #pragma multi_compile      _ WIND
+            #pragma multi_compile      _ ALPHA_CUTOFF
         
+            #pragma skip_variants POINT_COOKIE LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING VERTEXLIGHT_ON
+
             #define PARALLAX_SHADOW_CASTER_PASS
 
             #pragma vertex vert
@@ -273,13 +278,15 @@ Shader "Custom/ParallaxInstancedSolid"
             CGPROGRAM
 
             // Shader variants
-            #pragma multi_compile_vertex        _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
-            #pragma multi_compile_vertex        _ WIND
-            #pragma multi_compile_fragment      _ TWO_SIDED
-            #pragma multi_compile_fragment      _ ALPHA_CUTOFF
-            #pragma multi_compile_fragment      _ ALTERNATE_SPECULAR_TEXTURE        REFRACTION
-            #pragma multi_compile_fragment      _ DEBUG_FACE_ORIENTATION            DEBUG_SHOW_WIND_TEXTURE
-            #pragma multi_compile_fragment      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
+            #pragma multi_compile      _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
+            #pragma multi_compile      _ WIND
+            #pragma multi_compile      _ TWO_SIDED
+            #pragma multi_compile      _ ALPHA_CUTOFF
+            #pragma multi_compile      _ ALTERNATE_SPECULAR_TEXTURE        REFRACTION
+            #pragma multi_compile      _ DEBUG_FACE_ORIENTATION            DEBUG_SHOW_WIND_TEXTURE
+            #pragma multi_compile      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
+
+            #pragma skip_variants POINT_COOKIE LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING VERTEXLIGHT_ON
 
             // Shader stages
             #pragma vertex vert
@@ -390,19 +397,29 @@ Shader "Custom/ParallaxInstancedSolid"
 
         Pass
         {
-            Tags { "LightMode" = "Deferred" }
+            Tags{ "LightMode" = "Deferred" }
+
+            Stencil
+			{
+			    Ref 32
+			    Comp Always
+			    Pass Replace
+			}
+
             CGPROGRAM
 
             #define PARALLAX_DEFERRED_PASS
 
             // Shader variants
-            #pragma multi_compile_vertex        _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
-            #pragma multi_compile_vertex        _ WIND
-            #pragma multi_compile_fragment      _ TWO_SIDED
-            #pragma multi_compile_fragment      _ ALPHA_CUTOFF
-            #pragma multi_compile_fragment      _ ALTERNATE_SPECULAR_TEXTURE        REFRACTION
-            #pragma multi_compile_fragment      _ DEBUG_FACE_ORIENTATION            DEBUG_SHOW_WIND_TEXTURE
-            #pragma multi_compile_fragment      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
+            #pragma multi_compile      _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
+            #pragma multi_compile      _ WIND
+            #pragma multi_compile      _ TWO_SIDED
+            #pragma multi_compile      _ ALPHA_CUTOFF
+            #pragma multi_compile      _ ALTERNATE_SPECULAR_TEXTURE        REFRACTION
+            #pragma multi_compile      _ DEBUG_FACE_ORIENTATION            DEBUG_SHOW_WIND_TEXTURE
+            #pragma multi_compile      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
+
+            #pragma skip_variants POINT_COOKIE LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING VERTEXLIGHT_ON
 
             // Shader stages
             #pragma vertex vert

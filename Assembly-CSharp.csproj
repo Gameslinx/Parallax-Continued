@@ -90,6 +90,7 @@
      <None Include="Assets\Shaders\Scatters\InstancingShaders\Bubble.shader" />
      <None Include="Assets\Shaders\Debug\DistanceTest.shader" />
      <None Include="Assets\Shaders\Debug\ShowCubemap.shader" />
+     <None Include="Assets\Shaders\Terrain\DiscardAll.shader" />
      <None Include="Assets\Shaders\Scatters\SimplexNoise.cginc" />
      <None Include="Assets\Shaders\Debug\Old Parallax\PF.shader" />
      <None Include="Assets\Shaders\Scatters\ScatterStructs.cginc" />
@@ -683,6 +684,12 @@
  </Reference>
  <Reference Include="Unity.Timeline">
  <HintPath>E:/Productivity/Unity/Parallax Continued/Library/ScriptAssemblies/Unity.Timeline.dll</HintPath>
+ </Reference>
+ <Reference Include="Unity.HeapExplorer.Editor.Tests">
+ <HintPath>E:/Productivity/Unity/Parallax Continued/Library/ScriptAssemblies/Unity.HeapExplorer.Editor.Tests.dll</HintPath>
+ </Reference>
+ <Reference Include="Unity.HeapExplorer.Editor">
+ <HintPath>E:/Productivity/Unity/Parallax Continued/Library/ScriptAssemblies/Unity.HeapExplorer.Editor.dll</HintPath>
  </Reference>
  <Reference Include="Unity.Rider.Editor">
  <HintPath>E:/Productivity/Unity/Parallax Continued/Library/ScriptAssemblies/Unity.Rider.Editor.dll</HintPath>

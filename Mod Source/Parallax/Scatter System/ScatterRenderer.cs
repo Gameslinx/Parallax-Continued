@@ -290,6 +290,37 @@ namespace Parallax
             Graphics.DrawMeshInstancedIndirect(meshLOD1, 0, instancedMaterialLOD1, rendererBounds, indirectArgsLOD1, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, Camera.main);
             Graphics.DrawMeshInstancedIndirect(meshLOD2, 0, instancedMaterialLOD2, rendererBounds, indirectArgsLOD2, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, Camera.main);
         }
+        // Called on Update from ScatterManager.cs, if we're not in DX11
+        public void RenderInCameras(params Camera[] cameras)
+        {
+            // Hugely important we set the count to 0 or the buffer will keep filling up
+            // For shared scatters, this is already done in the parent scatter renderer so we can skip it here
+            if (!scatter.isShared)
+            {
+                outputLOD0.SetCounterValue(0);
+                outputLOD1.SetCounterValue(0);
+                outputLOD2.SetCounterValue(0);
+
+                // Fill the buffer with our instanced data
+                if (onEvaluateScatters != null)
+                {
+                    onEvaluateScatters();
+                }
+            }
+
+            // Copy the count from the output buffer to the indirect args for instancing
+            ComputeBuffer.CopyCount(outputLOD0, indirectArgsLOD0, 4);
+            ComputeBuffer.CopyCount(outputLOD1, indirectArgsLOD1, 4);
+            ComputeBuffer.CopyCount(outputLOD2, indirectArgsLOD2, 4);
+
+            foreach (Camera cam in cameras)
+            {
+                // Render instanced data
+                Graphics.DrawMeshInstancedIndirect(meshLOD0, 0, instancedMaterialLOD0, rendererBounds, indirectArgsLOD0, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, cam);
+                Graphics.DrawMeshInstancedIndirect(meshLOD1, 0, instancedMaterialLOD1, rendererBounds, indirectArgsLOD1, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, cam);
+                Graphics.DrawMeshInstancedIndirect(meshLOD2, 0, instancedMaterialLOD2, rendererBounds, indirectArgsLOD2, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, cam);
+            }
+        }
 
         /// <summary>
         /// Log performance stats. Outputs the number of triangles in total being rendered by this renderer

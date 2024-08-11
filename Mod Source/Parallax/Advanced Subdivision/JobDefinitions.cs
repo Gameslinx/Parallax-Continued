@@ -32,10 +32,10 @@ namespace Parallax
 
     public static class InterlockedCounters
     {
-        // Create a queue of unique identifiers (0 to 15)
+        // Create a queue of unique identifiers (0 to 255)
         // And use the identifier to access a unique counter for a specific quad
         // To prevent collisions between multiple quads performing the subdivide jobs (specifically the readback job)
-        public static int[] triangleReadbackCounters = new int[16384];
+        public static int[] triangleReadbackCounters = new int[256];
         public static Queue<int> uniqueQuadIdentifiers = new Queue<int>();
         static InterlockedCounters()
         {
@@ -44,7 +44,7 @@ namespace Parallax
         static void ResetAllInterlockedCounters()
         {
             uniqueQuadIdentifiers.Clear();
-            for (int i = 0; i < 16384; i++)
+            for (int i = 0; i < 256; i++)
             {
                 // MUST start the counter at -3, because triangles are read back in threes
                 // and add 3 to the counter at the start of each iteration, bringing it to 0 initially
@@ -58,23 +58,20 @@ namespace Parallax
         }
         public static void Return(int counter)
         {
-            UnityEngine.Debug.Log("Returning identifier: " + counter);
             triangleReadbackCounters[counter] = -3;
             uniqueQuadIdentifiers.Enqueue(counter);
         }
         public static int Request()
         {
             // We can't really guard against this from happening, so we'll return a unique identifier of 0 and let the jobs clash
-            // While KSP won't crash, the meshes will completely scramble
-            // Edit: Crashes KSP
-            // This error should typically never happen
 
             if (uniqueQuadIdentifiers.Count - 1 == 0)
             {
-                ParallaxDebug.LogError("CATASTROPHIC EXCEPTION: The unique quad identifier queue is empty - subdivision jobs cannot continue. If you see this in your log file, too many quads are trying to subdivide! (Max 16)");
+                ParallaxDebug.LogError("Exception: The unique quad identifier queue is empty - subdivision jobs cannot continue. If you see this in your log file, too many quads are trying to subdivide! (Max 32)");
                 return 0;
             }
-            return uniqueQuadIdentifiers.Dequeue();
+            int identifier = uniqueQuadIdentifiers.Dequeue();
+            return identifier;
         }
     }
 

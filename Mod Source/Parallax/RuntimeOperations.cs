@@ -104,6 +104,13 @@ namespace Parallax
                 cameraFrustumPlanes[i] = planes[i];
             }
 
+            
+            if (SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Direct3D11)
+            {
+                Camera farCam = FlightCamera.fetch.cameras[1];
+                planes[5].distance = farCam != null ? farCam.farClipPlane : 25000;
+            }
+
             floatCameraFrustumPlanes = new float[planes.Length * 4];
             for (int i = 0; i < planes.Length; ++i)
             {

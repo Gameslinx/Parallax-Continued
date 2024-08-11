@@ -69,6 +69,7 @@ namespace Parallax
 
         public int maxSubdivisionLevel = 7;
         public float subdivisionRange = 50.0f;
+        public bool hasIdentifier = false;
 
         public void Start()
         {
@@ -82,6 +83,7 @@ namespace Parallax
         void GetUniqueIdentifier()
         {
             uniqueIdentifier = InterlockedCounters.Request();
+            hasIdentifier = true;
         }
         void Initialize()
         {
@@ -333,7 +335,7 @@ namespace Parallax
 
             if (frustumPlanes.IsCreated) { frustumPlanes.Dispose(); }
 
-            if (uniqueIdentifier > -1)
+            if (hasIdentifier)
             {
                 InterlockedCounters.Return(uniqueIdentifier);
             }

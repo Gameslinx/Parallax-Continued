@@ -92,10 +92,11 @@ Shader "Custom/Parallax"
 
             // For anyone wondering, the _ after multi_compile tells unity the keyword is a toggle, and avoids creating variants "_ON" and "_OFF"
             // I would move this to ParallaxStructs.cginc but as we're on unity 2019 you can't have preprocessor directives in cgincludes. Sigh
-            #pragma multi_compile           PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
-            #pragma multi_compile_fragment _ INFLUENCE_MAPPING
-            #pragma multi_compile_fragment _ EMISSION
+            #pragma multi_compile            PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
+            #pragma multi_compile _          INFLUENCE_MAPPING
+            #pragma multi_compile _          EMISSION
             #pragma multi_compile_fog
+            //#pragma skip_variants POINT_COOKIE LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING VERTEXLIGHT_ON
 
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
@@ -380,7 +381,7 @@ Shader "Custom/Parallax"
             CGPROGRAM
         
             #pragma multi_compile           PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
-            #pragma multi_compile_fragment  INFLUENCE_MAPPING
+            #pragma multi_compile _         INFLUENCE_MAPPING
             #pragma multi_compile_fog
             #pragma multi_compile_fwdadd
         
@@ -548,6 +549,14 @@ Shader "Custom/Parallax"
         Pass
         {
             Tags { "LightMode" = "Deferred" }
+
+            Stencil
+			{
+			    Ref 2
+			    Comp Always
+			    Pass Replace
+			}
+
             CGPROGRAM
 
             // Single:  One surface texture
@@ -560,8 +569,8 @@ Shader "Custom/Parallax"
             // For anyone wondering, the _ after multi_compile tells unity the keyword is a toggle, and avoids creating variants "_ON" and "_OFF"
             // I would move this to ParallaxStructs.cginc but as we're on unity 2019 you can't have preprocessor directives in cgincludes. Sigh
             #pragma multi_compile            PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
-            #pragma multi_compile_fragment _ INFLUENCE_MAPPING
-            #pragma multi_compile_fragment _ EMISSION
+            #pragma multi_compile _ INFLUENCE_MAPPING
+            #pragma multi_compile _ EMISSION
             #pragma multi_compile_fog
 
             #include "UnityCG.cginc"

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.Jobs;
 using UnityEngine;
 
 namespace Parallax
@@ -58,32 +59,42 @@ namespace Parallax
         void DominantBodyLoaded(string bodyName)
         {
             ParallaxDebug.Log("[Scatter Manager] body loading " + bodyName);
+
             if (ConfigLoader.parallaxScatterBodies.ContainsKey(bodyName))
             {
                 currentBiomeMap = FlightGlobals.GetBodyByName(bodyName).BiomeMap.CompileToTexture();
-            }
-            foreach (ScatterRenderer renderer in scatterRenderers)
-            {
-                // Renderer body is the new one - enable it
-                if (renderer.planetName == bodyName)
+                foreach (Scatter scatter in ConfigLoader.parallaxScatterBodies[bodyName].fastScatters)
                 {
-                    //renderer.gameObject.SetActive(true);
-                    renderer.Enable();
-                    activeScatterRenderers.Add(renderer);
+                    scatter.InitShader();
+                }
+
+                foreach (ScatterRenderer renderer in scatterRenderers)
+                {
+                    // Renderer body is the new one - enable it
+                    if (renderer.planetName == bodyName)
+                    {
+                        //renderer.gameObject.SetActive(true);
+                        renderer.Enable();
+                        activeScatterRenderers.Add(renderer);
+                    }
                 }
             }
         }
         void DominantBodyUnloaded(string bodyName)
         {
-            foreach (ScatterRenderer renderer in activeScatterRenderers)
+            if (ConfigLoader.parallaxScatterBodies.ContainsKey(bodyName))
             {
-                renderer.Disable();
-            }
-            activeScatterRenderers.Clear();
+                foreach (ScatterRenderer renderer in activeScatterRenderers)
+                {
+                    renderer.Disable();
+                }
+                activeScatterRenderers.Clear();
 
-            // Could be more elegant but it's effectively a "is this first run?" check
-            if (bodyName != "ParallaxFirstRunDoNotCallAPlanetThis")
-            {
+                foreach (Scatter scatter in ConfigLoader.parallaxScatterBodies[bodyName].fastScatters)
+                {
+                    scatter.UnloadShader();
+                }
+
                 ParallaxScatterBody body = ConfigLoader.parallaxScatterBodies[bodyName];
                 body.UnloadTextures();
                 UnityEngine.Object.Destroy(currentBiomeMap);
@@ -92,9 +103,19 @@ namespace Parallax
         // After any world origin shifts
         void LateUpdate()
         {
-            foreach (ScatterRenderer renderer in activeScatterRenderers)
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Direct3D11)
             {
-                renderer.Render();
+                foreach (ScatterRenderer renderer in activeScatterRenderers)
+                {
+                    renderer.Render();
+                }
+            }
+            else
+            {
+                foreach (ScatterRenderer renderer in activeScatterRenderers)
+                {
+                    renderer.RenderInCameras(FlightCamera.fetch.cameras);
+                }
             }
         }
         public ScatterRenderer GetSharedScatterRenderer(SharedScatter scatter)

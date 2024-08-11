@@ -48,7 +48,6 @@ namespace Parallax
                             {
                                 biomeControltexture.SetPixel(0, pixelIndex, biomeColor);
                                 pixelIndex++;
-                                Debug.Log("Biome eligible - " + biomeName);
                             }
                         }
 
@@ -62,8 +61,7 @@ namespace Parallax
             }
             stopwatch.Stop();
 
-            // Usually around 0.5ms for Kerbin (has a lot of biomes) so this is acceptable performance
-            Debug.Log("Biome processing took " + stopwatch.Elapsed.TotalMilliseconds + " ms");
+            ParallaxDebug.Log("Biome processing took " + stopwatch.Elapsed.TotalMilliseconds + " ms");
         }
     }
 }

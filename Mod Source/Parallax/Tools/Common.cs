@@ -504,10 +504,19 @@ namespace Parallax
         public float sqrMeshBound = 0;
 
         public ScatterRenderer renderer;
+        public ComputeShader shader;
 
         public Scatter(string scatterName)
         {
             this.scatterName = scatterName;
+        }
+        public void InitShader()
+        {
+            shader = UnityEngine.Object.Instantiate(AssetBundleLoader.parallaxComputeShaders["TerrainScatters"]);
+        }
+        public void UnloadShader()
+        {
+            UnityEngine.Object.Destroy(shader);
         }
         public void ReinitializeDistribution()
         {

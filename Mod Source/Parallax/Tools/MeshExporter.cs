@@ -14,8 +14,11 @@ namespace Parallax.Tools
     [KSPAddon(KSPAddon.Startup.FlightAndKSC, false)]
     public class MeshExporter : MonoBehaviour
     {
+        // Not used in release versions
         void Update()
         {
+            return;
+
             bool flag = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha9);
             if (flag)
             {
@@ -29,15 +32,15 @@ namespace Parallax.Tools
                         string lod0Path = scatter.modelPath;
                         string lod1Path = scatter.distributionParams.lod1.modelPathOverride;
                         string lod2Path = scatter.distributionParams.lod2.modelPathOverride;
-
+        
                         ParallaxDebug.Log(" - " + lod0Path);
                         ParallaxDebug.Log(" - " + lod1Path);
                         ParallaxDebug.Log(" - " + lod2Path);
-
+        
                         GameObject lod0 = GameDatabase.Instance.GetModel(lod0Path);
                         GameObject lod1 = GameDatabase.Instance.GetModel(lod1Path);
                         GameObject lod2 = GameDatabase.Instance.GetModel(lod2Path);
-
+        
                         ExportMeshToOBJ(lod0, basePath + GetFileName(lod0Path) + ".obj");
                         ExportMeshToOBJ(lod1, basePath + GetFileName(lod1Path) + ".obj");
                         ExportMeshToOBJ(lod2, basePath + GetFileName(lod2Path) + ".obj");

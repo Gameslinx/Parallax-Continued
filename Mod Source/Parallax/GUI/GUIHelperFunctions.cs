@@ -73,16 +73,17 @@ namespace Parallax
                 activeFloatFieldString = strValue;
 
             // Try Parse if value got changed. If the string could not be parsed, ignore it and keep last value
-            bool parsed = true;
-            if (strValue != value.ToString())
+
+            float newValue;
+            bool parsed = float.TryParse(strValue, out newValue);
+            if (parsed)
             {
-                float newValue;
-                parsed = float.TryParse(strValue, out newValue);
-                if (parsed)
+                if (newValue != value)
                 {
                     value = activeFloatFieldLastValue = newValue;
                     valueWasChanged = true;
                 }
+                
             }
 
             if (active && !recorded)

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Mathematics;
+using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.UIElements;
@@ -200,7 +201,7 @@ public class TerrainScatters : MonoBehaviour
         scatterShader.SetBuffer(distributeKernel, "triangles", sourceTrianglesBuffer);
         scatterShader.SetBuffer(distributeKernel, "uvs", sourceUVsBuffer);
         scatterShader.SetBuffer(distributeKernel, "directionsFromCenter", dirFromCenterBuffer);
-        scatterShader.SetBuffer(distributeKernel, "output", outputScatterDataBuffer);
+        scatterShader.SetBuffer(distributeKernel, "transforms", outputScatterDataBuffer);
 
         scatterShader.SetTexture(distributeKernel, "biomeMap", biomeMap);
         scatterShader.SetTexture(distributeKernel, "scatterBiomes", biomeTex);
@@ -237,11 +238,41 @@ public class TerrainScatters : MonoBehaviour
         ComputeBuffer.CopyCount(outputScatterDataBuffer, objectLimits, 0);
 
         // Read this back to construct indirect dispatch args
-        AsyncGPUReadback.Request(objectLimits, OnDistributeComplete);
+        if (SystemInfo.supportsAsyncGPUReadback)
+        {
+            AsyncGPUReadback.Request(objectLimits, OnDistributeComplete);
+        }
+        else
+        {
+            GetDataImmediately();
+        }
     }
     public void OnDistributeComplete(AsyncGPUReadbackRequest request)
     {
         count = request.GetData<int>().ToArray(); //Creates garbage, unfortunate
+
+        Debug.Log("Raw Count = " + count[0]);
+
+        // Initialise indirect args
+        count[0] = Mathf.CeilToInt((float)count[0] / 32f);
+        count[1] = 1;
+        count[2] = 1;
+
+        Debug.Log("Count = " + count[0]);
+
+        dispatchArgs = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
+        dispatchArgs.SetData(count);
+
+        // Ready to start evaluating
+        scatterRenderer.scatterComponents.Add(this);
+    }
+    public void GetDataImmediately()
+    {
+        count = new int[3]; //Creates garbage, unfortunate
+
+        objectLimits.GetData(count);
+
+        Debug.Log("Raw Count = " + count[0]);
 
         // Initialise indirect args
         count[0] = Mathf.CeilToInt((float)count[0] / 32f);
@@ -250,6 +281,8 @@ public class TerrainScatters : MonoBehaviour
 
         dispatchArgs = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
         dispatchArgs.SetData(count);
+
+        Debug.Log("Count = " + count[0]);
 
         // Ready to start evaluating
         scatterRenderer.scatterComponents.Add(this);

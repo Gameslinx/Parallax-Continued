@@ -111,14 +111,14 @@ float3 CalculatePhongPosition(float3 bary, float3 p0PositionWS, float3 p0NormalW
 }
 
 #define CALCULATE_VERTEX_DISPLACEMENT(o, landMask)                                                                                                                  \
-    float dislacementRange = 1 - min(1, terrainDistance / _MaxTessellationRange);                                                                                   \
+    float displacementRange = 1 - min(1, terrainDistance / _MaxTessellationRange);                                                                                  \
     float4 displacementTex = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, o.worldNormal, texLevelBlend);                      \
     float displacement = BLEND_CHANNELS_IN_TEX(landMask, displacementTex);                                                                                          \
     float displacementOffset = _DisplacementOffset;                                                                                                                 \
     displacement = lerp(displacement, displacementTex.a, landMask.b);                                                                                               \
-    displacement = lerp(displacement * exponent * 2, displacement * exponent * 4, texLevelBlend);                                                                   \
-    displacementOffset = lerp(displacementOffset * exponent * 1, displacementOffset * exponent * 2, texLevelBlend);                                                       \
-    float3 displacedWorldPos = o.worldPos + (displacement + displacementOffset) * o.worldNormal * _DisplacementScale * dislacementRange;
+    float displacementAndOffset = displacement + displacementOffset;                                                                                                \
+    displacementAndOffset = lerp(displacementAndOffset * exponent * 2, displacementAndOffset * exponent * 4, texLevelBlend);                                        \
+    float3 displacedWorldPos = o.worldPos + displacementAndOffset * o.worldNormal * _DisplacementScale * displacementRange;
 
 //
 //  Biplanar Mapping Functions

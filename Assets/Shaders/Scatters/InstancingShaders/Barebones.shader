@@ -47,6 +47,7 @@
                 o.worldPos = worldPos;
                 o.uv = i.uv;
                 o.worldNormal = mul(i.normal, objectToWorld);
+                //o.planetNormal = 1;
                 return o;
             }
             

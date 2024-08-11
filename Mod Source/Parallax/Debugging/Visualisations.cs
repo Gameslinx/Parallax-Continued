@@ -17,8 +17,13 @@ namespace Parallax
         bool showingBiomes = false;
         bool showingDensity = false;
         bool showingUVs = false;
+
+        // Not used in release versions
+
         void Update()
         {
+            return;
+
             bool noiseToggle = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha1);
             if (noiseToggle) 
             {
@@ -66,7 +71,7 @@ namespace Parallax
                     QuadUVDisplay.Cleanup();
                 }
             }
-
+        
             bool logVRAMStats = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha6);
             if (logVRAMStats)
             {
