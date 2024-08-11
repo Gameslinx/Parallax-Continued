@@ -27,6 +27,8 @@ namespace Parallax
         bool initialized = false;
         bool buttonAdded = false;
 
+        static bool showCollideables = false;
+
         static int bingusCount = 0;
         void Start()
         {
@@ -99,6 +101,9 @@ namespace Parallax
             ParamCreator.CreateParam("Light Shadows",         ref ConfigLoader.parallaxGlobalSettings.lightingGlobalSettings.lightShadows,          GUIHelperFunctions.BoolField,   lightingCallback);
             ParamCreator.CreateParam("Light Shadows Quality", ref ConfigLoader.parallaxGlobalSettings.lightingGlobalSettings.lightShadowsQuality,   EnumField,                      lightingCallback);
 
+            GUILayout.Label("Visualisations", HighLogic.Skin.label);
+            ParamCreator.CreateParam("Highlight Collideable Objects", ref showCollideables, GUIHelperFunctions.BoolField, ShowCollideableScatters);
+
             // Save button
             if (GUILayout.Button("Save Changes", activeButton))
             {
@@ -166,6 +171,10 @@ namespace Parallax
             FlightDriver.SetPause(false);
         }
 
+        static void ShowCollideableScatters()
+        {
+            ParallaxGUI.ShowCollideableScatters(showCollideables);
+        }
         static void UpdateLightingSettings()
         {
             foreach (Vessel v in FlightGlobals.VesselsLoaded)

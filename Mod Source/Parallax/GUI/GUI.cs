@@ -38,7 +38,7 @@ namespace Parallax
 
         static bool showDebug = false;
         static bool debugShowFaceOrientation = false;
-        static bool debugShowCollideables = false;
+        public static bool debugShowCollideables = false;
 
         static int currentScatterIndex = 0;
 
@@ -704,7 +704,6 @@ namespace Parallax
                 }
                 if (ParamCreator.CreateParam("Show Collideable Scatters", ref debugShowCollideables, GUIHelperFunctions.BoolField))
                 {
-                    GUILayout.Label("Note: This debug visualisation only shows when in sunlight");
                     ShowCollideableScatters(debugShowCollideables);
                 }
                 if (GUILayout.Button("Log Performance Stats", HighLogic.Skin.button))
@@ -729,7 +728,7 @@ namespace Parallax
                 renderer.instancedMaterialLOD2.DisableKeyword("DEBUG_FACE_ORIENTATION");
             }
         }
-        static void ShowCollideableScatters(bool enabled)
+        public static void ShowCollideableScatters(bool enabled)
         {
             if (enabled)
             {

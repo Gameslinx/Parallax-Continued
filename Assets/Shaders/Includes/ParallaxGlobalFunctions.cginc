@@ -170,7 +170,7 @@ float3 CalculateLighting(LIGHTING_INPUT)
     #if !defined (PARALLAX_DEFERRED_PASS)
     return diffuse + ambient + specular + reflection + refraction * NdotL + scattering;
     #else
-    return refraction * NdotL + scattering;
+    return refraction * saturate(NdotL * 7) + scattering;
     #endif
 }
 
