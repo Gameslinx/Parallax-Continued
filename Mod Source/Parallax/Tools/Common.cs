@@ -50,7 +50,6 @@ namespace Parallax
 
             debugSettingsNode.AddValue("wireframeTerrain", debugGlobalSettings.wireframeTerrain);
 
-            objectPoolSettingsNode.AddValue("cachedComputeShaderCount", objectPoolSettings.cachedComputeShaderCount);
             objectPoolSettingsNode.AddValue("cachedColliderCount", objectPoolSettings.cachedColliderCount);
 
             globalNode.AddNode(terrainShaderSettingsNode);
@@ -87,7 +86,6 @@ namespace Parallax
     }
     public struct ObjectPoolSettings
     {
-        public int cachedComputeShaderCount;
         public int cachedColliderCount;
     }
     // Stores the loaded values from the configs for each planet, except for the textures which are stored via file path

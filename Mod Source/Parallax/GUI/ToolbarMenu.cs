@@ -85,15 +85,19 @@ namespace Parallax
             ParamCreator.CreateParam("Tessellation Edge Length", ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength,  GUIHelperFunctions.FloatField, terrainCallback);
             ParamCreator.CreateParam("Tessellation Range",       ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.maxTessellationRange,    GUIHelperFunctions.FloatField, terrainCallback);
 
+            GUILayout.Space(15);
             // Scatter system settings
             GUILayout.Label("Scatter System Settings", HighLogic.Skin.label);
             ParamCreator.ChangeMethod scatterCallback = UpdateScatterSettings;
 
+            GUILayout.Label("Note: The game will pause for a few seconds when changing these settings");
+            GUILayout.Space(10);
             ParamCreator.CreateParam("Density Multiplier",                  ref ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier,    GUIHelperFunctions.FloatField, scatterCallback);
             ParamCreator.CreateParam("Range Multiplier",                    ref ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier,      GUIHelperFunctions.FloatField, scatterCallback);
             ParamCreator.CreateParam("Fade Out Start Range",                ref ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.fadeOutStartRange,    GUIHelperFunctions.FloatField, scatterCallback);
             ParamCreator.CreateParam("Collision Level (Restart Required)",  ref ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.collisionLevel,       GUIHelperFunctions.FloatField, scatterCallback);
 
+            GUILayout.Space(15);
             // Light settings
             GUILayout.Label("Lighting Settings", HighLogic.Skin.label);
             ParamCreator.ChangeMethod lightingCallback = UpdateLightingSettings;
@@ -104,6 +108,7 @@ namespace Parallax
             GUILayout.Label("Visualisations", HighLogic.Skin.label);
             ParamCreator.CreateParam("Highlight Collideable Objects", ref showCollideables, GUIHelperFunctions.BoolField, ShowCollideableScatters);
 
+            GUILayout.Space(15);
             // Save button
             if (GUILayout.Button("Save Changes", activeButton))
             {
@@ -133,16 +138,9 @@ namespace Parallax
 
         static void UpdateScatterSettings()
         {
+            ParallaxDebug.Log("Updating scatter system settings from GUI...");
             // Pause to prevent collider issues
             FlightDriver.SetPause(true);
-
-            // Ensure we have a clean instance of the collision manager
-            CollisionManager.Instance.Cleanup();
-
-            if (ConfigLoader.parallaxScatterBodies.ContainsKey(FlightGlobals.currentMainBody.name))
-            {
-                CollisionManager.Instance.Load(FlightGlobals.currentMainBody.name);
-            }
 
             // Reverse normalisations - we're modifying the range
             foreach (ParallaxScatterBody body in ConfigLoader.parallaxScatterBodies.Values)
@@ -162,11 +160,7 @@ namespace Parallax
                 }
             }
 
-            foreach (ScatterSystemQuadData qd in ScatterComponent.scatterQuadData.Values)
-            {
-                qd.Cleanup();
-                qd.Initialize();
-            }
+            FlightGlobals.currentMainBody.pqsController.RebuildSphere();
 
             FlightDriver.SetPause(false);
         }

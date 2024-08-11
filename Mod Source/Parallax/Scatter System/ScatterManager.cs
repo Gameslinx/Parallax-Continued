@@ -32,6 +32,7 @@ namespace Parallax
             GameObject.DontDestroyOnLoad(this);
             PQSStartPatch.onPQSStart += DominantBodyLoaded;
             PQSStartPatch.onPQSUnload += DominantBodyUnloaded;
+            PQSStartPatch.onPQSRestart += DominantBodyRestarted;
         }
         void Start()
         {
@@ -100,6 +101,11 @@ namespace Parallax
                 UnityEngine.Object.Destroy(currentBiomeMap);
             }
         }
+        void DominantBodyRestarted(string bodyName)
+        {
+            DominantBodyUnloaded(bodyName);
+            DominantBodyLoaded(bodyName);
+        }
         // After any world origin shifts
         void LateUpdate()
         {
@@ -126,6 +132,7 @@ namespace Parallax
         {
             PQSStartPatch.onPQSStart -= DominantBodyLoaded;
             PQSStartPatch.onPQSUnload -= DominantBodyUnloaded;
+            PQSStartPatch.onPQSRestart -= DominantBodyRestarted;
         }
     }
 }

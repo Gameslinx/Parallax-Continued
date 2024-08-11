@@ -683,10 +683,10 @@ namespace Parallax
                     ConfigLoader.SaveConfigNode(node, directory + fileName);
                 }
 
-                if (GUILayout.Button("Save Current Planet", HighLogic.Skin.button))
-                {
-
-                }
+                //if (GUILayout.Button("Save Current Planet", HighLogic.Skin.button))
+                //{
+                //
+                //}
             }
         }
         static void ProcessDebug(Scatter scatter)

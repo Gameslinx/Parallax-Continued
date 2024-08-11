@@ -172,7 +172,6 @@ namespace Parallax
 
         void Initialize()
         {
-            Debug.Log("Scatter: " + scatter.scatterName);
             // Create output buffers - Evaluate() function on quads will fill these
             if (!scatter.isShared)
             {
@@ -180,9 +179,9 @@ namespace Parallax
                 int lod1Count = EstimatePerLODMaxCount(scatter.optimizationParams.maxRenderableObjects, scatter.distributionParams.range, scatter.distributionParams.lod2.range * scatter.distributionParams.range);
                 int lod2Count = scatter.optimizationParams.maxRenderableObjects;
 
-                Debug.Log(" - LOD0 Count: " + lod0Count);
-                Debug.Log(" - LOD1 Count: " + lod1Count);
-                Debug.Log(" - LOD2 Count: " + lod2Count);
+                lod0Count = (int)((float)lod0Count * ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier * ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier);
+                lod1Count = (int)((float)lod1Count * ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier * ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier);
+                lod2Count = (int)((float)lod2Count * ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier * ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier);
 
                 outputLOD0 = new ComputeBuffer(lod0Count, TransformData.Size(), ComputeBufferType.Append);
                 outputLOD1 = new ComputeBuffer(lod1Count, TransformData.Size(), ComputeBufferType.Append);
@@ -384,6 +383,14 @@ namespace Parallax
             indirectArgsLOD0?.Dispose();
             indirectArgsLOD1?.Dispose();
             indirectArgsLOD2?.Dispose();
+
+            UnityEngine.Object.Destroy(meshLOD0);
+            UnityEngine.Object.Destroy(meshLOD1);
+            UnityEngine.Object.Destroy(meshLOD2);
+
+            UnityEngine.Object.Destroy(instancedMaterialLOD0);
+            UnityEngine.Object.Destroy(instancedMaterialLOD1);
+            UnityEngine.Object.Destroy(instancedMaterialLOD2);
         }
         public void Disable()
         {

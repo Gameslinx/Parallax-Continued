@@ -222,7 +222,6 @@ namespace Parallax
             parallaxGlobalSettings.debugGlobalSettings.wireframeTerrain = bool.Parse(debugSettingsNode.GetValue("wireframeTerrain"));
 
             ConfigNode objectPoolsNode = config.config.GetNode("ObjectPoolSettings");
-            parallaxGlobalSettings.objectPoolSettings.cachedComputeShaderCount = int.Parse(objectPoolsNode.GetValue("cachedComputeShaderCount"));
             parallaxGlobalSettings.objectPoolSettings.cachedColliderCount = int.Parse(objectPoolsNode.GetValue("cachedColliderCount"));
         }
         public static void InitializeObjectPools(ParallaxSettings settings)
@@ -339,6 +338,9 @@ namespace Parallax
                 foreach (ConfigNode planetNode in nodes)
                 {
                     string planetName = planetNode.GetValue("name");
+
+                    ParallaxDebug.Log("[Terrain] Parsing new body: " + planetName);
+
                     string emissive = planetNode.GetValue("emissive");
                     bool isEmissive = emissive == null ? false : (bool.Parse(emissive) == true ? true : false);
                     
@@ -353,7 +355,6 @@ namespace Parallax
         }
         public static void ParseNewBody(ParallaxTerrainBody body, ConfigNode bodyNode)
         {
-            ParallaxDebug.Log("Parsing new body: " + body.planetName);
             // Grab the template
             body.terrainShaderProperties = shaderPropertiesTemplate.Clone() as ShaderProperties;
 
@@ -368,40 +369,30 @@ namespace Parallax
             foreach (string propertyName in textureProperties)
             {
                 string configValue = bodyNode.GetValue(propertyName);
-                ParallaxDebug.Log("Parsing texture name: " + configValue);
-                ParallaxDebug.Log("Property name: " + propertyName);
                 body.terrainShaderProperties.shaderTextures[propertyName] = configValue;
             }
             foreach (string propertyName in floatProperties)
             {
                 string configValue = bodyNode.GetValue(propertyName);
                 ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(float), out object result);
-                ParallaxDebug.Log("Parsing float name: " + configValue);
-                ParallaxDebug.Log("Property name: " + propertyName);
                 body.terrainShaderProperties.shaderFloats[propertyName] = (float)result;
             }
             foreach (string propertyName in vectorProperties)
             {
                 string configValue = bodyNode.GetValue(propertyName);
                 ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(Vector3), out object result);
-                ParallaxDebug.Log("Parsing vector name: " + configValue);
-                ParallaxDebug.Log("Property name: " + propertyName);
                 body.terrainShaderProperties.shaderVectors[propertyName] = (Vector3)result;
             }
             foreach (string propertyName in colorProperties)
             {
                 string configValue = bodyNode.GetValue(propertyName);
                 ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(Color), out object result);
-                ParallaxDebug.Log("Parsing color name: " + configValue);
-                ParallaxDebug.Log("Property name: " + propertyName);
                 body.terrainShaderProperties.shaderColors[propertyName] = (Color)result;
             }
             foreach (string propertyName in intProperties)
             {
                 string configValue = bodyNode.GetValue(propertyName);
                 ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(int), out object result);
-                ParallaxDebug.Log("Parsing float name: " + configValue);
-                ParallaxDebug.Log("Property name: " + propertyName);
                 body.terrainShaderProperties.shaderFloats[propertyName] = (int)result;
             }
         }
@@ -416,6 +407,9 @@ namespace Parallax
             foreach (UrlDir.UrlConfig rootNode in allRootNodes)
             {
                 string body = rootNode.config.GetValue("body");
+
+                ParallaxDebug.Log("[Scatters] Parsing new body: " + body);
+
                 string configVersion = rootNode.config.GetValue("configVersion");
                 if (configVersion == null)
                 {
@@ -469,11 +463,9 @@ namespace Parallax
                         collideableScatters.Add(scatter);
                     }
 
-                    Debug.Log("Adding scatter: " + scatterName);
                     scatterBody.scatters.Add(scatterName, scatter);
                 }
 
-                Debug.Log("Adding body with name: " + body + " to scatter bodies");
                 scatterBody.fastScatters = scatterBody.scatters.Values.ToArray();
                 scatterBody.collideableScatters = collideableScatters.ToArray();
                 parallaxScatterBodies.Add(body, scatterBody);
