@@ -34,9 +34,10 @@
                 return o;
             }
             
-            void frag (v2f i)
+            fixed4 frag (v2f i) : SV_TARGET
             {
                 discard;
+                return 0;
             }
             ENDCG
         }

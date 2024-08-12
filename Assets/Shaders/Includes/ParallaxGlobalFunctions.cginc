@@ -285,9 +285,9 @@ half4 LightingStandardSpecular_Deferred_Corrected(SurfaceOutputStandardSpecular 
 }
 
 #ifndef UNITY_HDR_ON
-#define SET_OUT_EMISSION(emissionColor) outEmission = float4(exp2(-emissionColor.rgb), 0); 
+#define SET_OUT_EMISSION(emissionColor) outEmission = exp2(-emissionColor); 
 #else
-#define SET_OUT_EMISSION(emissionColor) outEmission = float4(emissionColor.rgb, 0);
+#define SET_OUT_EMISSION(emissionColor) outEmission = emissionColor;
 #endif
 
 SurfaceOutputStandardSpecular GetPBRStruct(float4 albedo, float3 emission, float3 normal, float3 worldPos)
@@ -348,7 +348,7 @@ UnityGIInput GetGIInput(float3 worldPos, float3 viewDir)
 }
 
 #define OUTPUT_GBUFFERS(surfaceOutput, gi) \
-    float3 emissionColor = LightingStandardSpecular_Deferred_Corrected(surfaceOutput, viewDir, gi, outGBuffer0, outGBuffer1, outGBuffer2);  \
+    float4 emissionColor = LightingStandardSpecular_Deferred_Corrected(surfaceOutput, viewDir, gi, outGBuffer0, outGBuffer1, outGBuffer2);  \
     SET_OUT_EMISSION(emissionColor)
 
 #if defined(SHADOWS_SHADOWMASK) && (UNITY_ALLOWED_MRT_COUNT > 4)

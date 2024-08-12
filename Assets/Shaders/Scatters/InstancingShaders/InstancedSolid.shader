@@ -81,13 +81,13 @@ Shader "Custom/ParallaxInstancedSolid"
             CGPROGRAM
 
             // Shader variants
-            #pragma multi_compile      _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
-            #pragma multi_compile      _ WIND
-            #pragma multi_compile      _ TWO_SIDED
-            #pragma multi_compile      _ ALPHA_CUTOFF
-            #pragma multi_compile      _ ALTERNATE_SPECULAR_TEXTURE        REFRACTION
-            #pragma multi_compile      _ DEBUG_FACE_ORIENTATION            DEBUG_SHOW_WIND_TEXTURE
-            #pragma multi_compile      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
+            #pragma multi_compile_local      _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
+            #pragma multi_compile_local      _ WIND
+            #pragma multi_compile_local      _ TWO_SIDED
+            #pragma multi_compile_local      _ ALPHA_CUTOFF
+            #pragma multi_compile_local      _ ALTERNATE_SPECULAR_TEXTURE        REFRACTION
+            #pragma multi_compile_local      _ DEBUG_FACE_ORIENTATION            DEBUG_SHOW_WIND_TEXTURE
+            #pragma multi_compile_local      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
 
             // Skip these, KSP won't use them
             #pragma skip_variants POINT_COOKIE LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING VERTEXLIGHT_ON
@@ -203,9 +203,9 @@ Shader "Custom/ParallaxInstancedSolid"
             CGPROGRAM
         
             // Shader variants
-            #pragma multi_compile      _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
-            #pragma multi_compile      _ WIND
-            #pragma multi_compile      _ ALPHA_CUTOFF
+            #pragma multi_compile_local      _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
+            #pragma multi_compile_local      _ WIND
+            #pragma multi_compile_local      _ ALPHA_CUTOFF
         
             #pragma skip_variants POINT_COOKIE LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING VERTEXLIGHT_ON
 
@@ -278,13 +278,13 @@ Shader "Custom/ParallaxInstancedSolid"
             CGPROGRAM
 
             // Shader variants
-            #pragma multi_compile      _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
-            #pragma multi_compile      _ WIND
-            #pragma multi_compile      _ TWO_SIDED
-            #pragma multi_compile      _ ALPHA_CUTOFF
-            #pragma multi_compile      _ ALTERNATE_SPECULAR_TEXTURE        REFRACTION
-            #pragma multi_compile      _ DEBUG_FACE_ORIENTATION            DEBUG_SHOW_WIND_TEXTURE
-            #pragma multi_compile      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
+            #pragma multi_compile_local      _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
+            #pragma multi_compile_local      _ WIND
+            #pragma multi_compile_local      _ TWO_SIDED
+            #pragma multi_compile_local      _ ALPHA_CUTOFF
+            #pragma multi_compile_local      _ ALTERNATE_SPECULAR_TEXTURE        REFRACTION
+            #pragma multi_compile_local      _ DEBUG_FACE_ORIENTATION            DEBUG_SHOW_WIND_TEXTURE
+            #pragma multi_compile_local      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
 
             #pragma skip_variants POINT_COOKIE LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING VERTEXLIGHT_ON
 
@@ -411,13 +411,15 @@ Shader "Custom/ParallaxInstancedSolid"
             #define PARALLAX_DEFERRED_PASS
 
             // Shader variants
-            #pragma multi_compile      _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
-            #pragma multi_compile      _ WIND
-            #pragma multi_compile      _ TWO_SIDED
-            #pragma multi_compile      _ ALPHA_CUTOFF
-            #pragma multi_compile      _ ALTERNATE_SPECULAR_TEXTURE        REFRACTION
-            #pragma multi_compile      _ DEBUG_FACE_ORIENTATION            DEBUG_SHOW_WIND_TEXTURE
-            #pragma multi_compile      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
+            #pragma multi_compile_local      _ BILLBOARD                         BILLBOARD_USE_MESH_NORMALS
+            #pragma multi_compile_local      _ WIND
+            #pragma multi_compile_local      _ TWO_SIDED
+            #pragma multi_compile_local      _ ALPHA_CUTOFF
+            #pragma multi_compile_local      _ ALTERNATE_SPECULAR_TEXTURE        REFRACTION
+            #pragma multi_compile_local      _ DEBUG_FACE_ORIENTATION            DEBUG_SHOW_WIND_TEXTURE
+            #pragma multi_compile_local      _ SUBSURFACE_SCATTERING             SUBSURFACE_USE_THICKNESS_TEXTURE
+
+            #pragma multi_compile _ UNITY_HDR_ON
 
             #pragma skip_variants POINT_COOKIE LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING VERTEXLIGHT_ON
 

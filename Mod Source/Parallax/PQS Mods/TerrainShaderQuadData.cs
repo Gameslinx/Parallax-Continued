@@ -264,6 +264,20 @@ namespace Parallax
         {
             quadMeshRenderer.probeAnchor = probeTransform;
         }
+
+        /// <summary>
+        /// Called from the GUI if the subdivision level is changed
+        /// </summary>
+        public void UpdateSubdivision(int newLevel, float newRadius)
+        {
+            subdivisionLevel = newLevel;
+            subdivisionRadius = newRadius;
+            if (alreadyInitialized)
+            {
+                subdivisionComponent.maxSubdivisionLevel = subdivisionLevel;
+                subdivisionComponent.subdivisionRange = newRadius;
+            }
+        }
         public void Cleanup()
         {
             if (isMaxLevel)

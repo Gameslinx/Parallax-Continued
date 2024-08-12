@@ -164,7 +164,7 @@ namespace Parallax.Legacy
             public float cullingLimit = -15;
             public bool shared = false;
             public string sharedParent;
-            public int maxObjects = 10000;  //Large memory impact. 10k is a middle ground number
+            public int maxObjects = 10000;
             public bool collideable = false;
             public bool alwaysCollideable = false;
             public string collisionMesh;
@@ -469,13 +469,26 @@ namespace Parallax.Legacy
             {
                 for (int i = 0; i < globalNodes.Length; i++)
                 {
+                    ConfigNode bodyNode = globalNodes[i].config.GetNode("Body");
+
+                    // For future config upgrades, check against the config version itself
+                    if (bodyNode != null && bodyNode.GetValue("configVersion") != null)
+                    {
+                        Debug.Log("SKIPPED");
+                        continue;
+                    }
+
+                    // If bodyName is null, we've hit the root config node in Parallax Continued
                     string bodyName = globalNodes[i].config.GetValue("body");
-                    string minSubdiv = globalNodes[i].config.GetValue("minimumSubdivision");
-                    string configVersion = globalNodes[i].config.GetValue("configVersion");
-                    if (configVersion != null)
+                    if (bodyName == null)
                     {
                         continue;
                     }
+
+                    Debug.Log("[Parallax] [LegacyLoader] Parsing Bodyname: " + bodyName);
+                    string minSubdiv = globalNodes[i].config.GetValue("minimumSubdivision");
+                    
+                    
                     ScatterBody body = new ScatterBody(bodyName, minSubdiv);
                     ScatterBodies.scatterBodies.Add(bodyName, body);
                     ScatterLog.Log("Parsing body: " + bodyName);
@@ -510,14 +523,14 @@ namespace Parallax.Legacy
                 {
                     ConfigNode baseNode = new ConfigNode("ParallaxScatters-UPGRADED");
                     ConfigNode result = baseNode.AddNode("ParallaxScatters-UPGRADED");
+                    ConfigNode bodyNode = result.AddNode("Body");
 
-                    result.AddValue("body", body.Key);
-                    result.AddValue("minimumSubdivision", body.Value.minimumSubdivision);
-                    result.AddValue("configVersion", 2.0f);
+                    bodyNode.AddValue("name", body.Key, "To activate this config, replace ParallaxScatters-UPGRADED with ParallaxScatters");
+                    bodyNode.AddValue("configVersion", 2.0f);
 
                     foreach (LegacyScatter scatter in body.Value.scatters.Values)
                     {
-                        result.AddNode(scatter.ToUpdatedConfigNode());
+                        bodyNode.AddNode(scatter.ToUpdatedConfigNode());
                     }
                     baseNode.Save(KSPUtil.ApplicationRootPath + "GameData/Parallax/Exports/LegacyUpgrades/" + body.Key + ".cfg");
                 }

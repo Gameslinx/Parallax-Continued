@@ -416,6 +416,11 @@ namespace Parallax
         public string planetName;
 
         /// <summary>
+        /// Configs are set up via module manager. When we want to save and overwrite a config we need its exact path to know what to replace.
+        /// </summary>
+        public string configFilePath;
+
+        /// <summary>
         /// Minimum subdivision level for scatters to appear. Initialized at something big.
         /// </summary>
         public int minimumSubdivisionLevel = 100;

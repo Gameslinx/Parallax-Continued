@@ -163,11 +163,6 @@ namespace Parallax
             ParamCreator.ChangeMethod texCallback = body.Reload;
             // Parse shader properties
 
-            //GUILayout.Label("Planet Subdivision Properties: ", HighLogic.Skin.label);
-            //ParamCreator.ChangeMethod pqsCallback = body.UpdateSubdivision;
-            //PQSMod_Parallax pqsMod = FlightGlobals.currentMainBody.pqsController.GetComponentsInChildren<PQSMod>().Where(x => x.GetType() == typeof(PQSMod_Parallax)).FirstOrDefault() as PQSMod_Parallax;
-            //ParamCreator.CreateParam("Subdivision Radius", ref pqsMod.subdivisionRadius, GUIHelperFunctions.IntField, );
-
             GUILayout.Label("Terrain Shader Properties: ", HighLogic.Skin.label);
             GUILayout.Space(15);
             // Process floats
@@ -216,7 +211,20 @@ namespace Parallax
             }
 
             GUILayout.Space(15);
-            GUILayout.Label("Exporter Options");
+            GUILayout.Label("Planet Subdivision Properties: ", HighLogic.Skin.label);
+            GUILayout.Label("Subdivision settings are not saved, you must update the config values manually");
+            PQSMod_Parallax pqsMod = FlightGlobals.currentMainBody.pqsController.GetComponentsInChildren<PQSMod>().Where(x => x.GetType() == typeof(PQSMod_Parallax)).FirstOrDefault() as PQSMod_Parallax;
+            bool subdivisionUpdated = false;
+            subdivisionUpdated |= ParamCreator.CreateParam("Subdivision Radius", ref pqsMod.subdivisionRadius, GUIHelperFunctions.FloatField);
+            subdivisionUpdated |= ParamCreator.CreateParam("Subdivision Level", ref pqsMod.subdivisionLevel, GUIHelperFunctions.IntField);
+
+            if (subdivisionUpdated)
+            {
+                UpdateSubdivision(pqsMod);
+            }
+
+            GUILayout.Space(15);
+            GUILayout.Label("Exporter Options", HighLogic.Skin.label);
             if (GUILayout.Button("Exporter", HighLogic.Skin.button))
             {
                 showTerrainExporter = !showTerrainExporter;
@@ -270,7 +278,7 @@ namespace Parallax
                     }
                     else
                     {
-                        
+                        ScreenMessages.PostScreenMessage("Non-overwriting terrain saving not implemented yet");
                     }
                 }
             }
@@ -646,10 +654,13 @@ namespace Parallax
                     if (saved)
                     {
                         // Used just for file path, really
-                        UrlDir.UrlConfig rootPlanetNode = ConfigLoader.GetPlanetScatterNode(FlightGlobals.currentMainBody.name);
-                        ConfigNode rootPlanetNodeConfig = rootPlanetNode.config;
+                        // "ParallaxScatters"
+                        UrlDir.UrlConfig rootScatterNode = ConfigLoader.GetRootScatterNode(FlightGlobals.currentMainBody.name);
 
-                        ConfigNode originalScatterNode = ConfigLoader.GetScatterConfigNode(FlightGlobals.currentMainBody.name, scatter.scatterName, rootPlanetNode, scatter.isShared);
+                        // "Body"
+                        ConfigNode rootPlanetNodeConfig = ConfigLoader.GetPlanetScatterNode(FlightGlobals.currentMainBody.name);
+
+                        ConfigNode originalScatterNode = ConfigLoader.GetScatterConfigNode(FlightGlobals.currentMainBody.name, scatter.scatterName, rootPlanetNodeConfig, scatter.isShared);
 
                         List<ConfigNode> precedingNodes = new List<ConfigNode>();
                         List<ConfigNode> trailingNodes = new List<ConfigNode>();
@@ -663,8 +674,10 @@ namespace Parallax
                         // Remove original node, add preceding nodes, add new node, add trailing nodes
                         ConfigLoader.OverwriteConfigNode(rootPlanetNodeConfig, newScatterNode, precedingNodes, trailingNodes, "Scatter", "SharedScatter");
 
-                        string path = "GameData/" + rootPlanetNode.url.Replace("/ParallaxScatters", string.Empty) + ".cfg";
-                        ConfigLoader.SaveConfigNode(rootPlanetNodeConfig, path);
+                        Debug.Log("URL: " + rootScatterNode.url);
+
+                        string path = "GameData/" + rootScatterNode.url.Replace("/ParallaxScatters", string.Empty) + ".cfg";
+                        ConfigLoader.SaveConfigNode(rootScatterNode.config, path);
                     }
                 }
                 if (!overwriteOnExport && GUILayout.Button("Save Current Scatter", HighLogic.Skin.button))
@@ -800,6 +813,13 @@ namespace Parallax
                     scatter.renderer.instancedMaterialLOD1.SetColor("_Color", scatter.distributionParams.lod2.materialOverride.shaderProperties.shaderColors["_Color"]);
                     scatter.renderer.instancedMaterialLOD2.SetColor("_Color", scatter.distributionParams.lod2.materialOverride.shaderProperties.shaderColors["_Color"]);
                 }
+            }
+        }
+        static void UpdateSubdivision(PQSMod_Parallax pqsMod)
+        {
+            foreach (TerrainShaderQuadData quadData in PQSMod_Parallax.terrainQuadData.Values)
+            {
+                quadData.UpdateSubdivision(pqsMod.subdivisionLevel, pqsMod.subdivisionRadius);
             }
         }
         static void LogPerformanceStats()

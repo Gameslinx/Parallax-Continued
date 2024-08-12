@@ -92,9 +92,9 @@ Shader "Custom/Parallax"
 
             // For anyone wondering, the _ after multi_compile tells unity the keyword is a toggle, and avoids creating variants "_ON" and "_OFF"
             // I would move this to ParallaxStructs.cginc but as we're on unity 2019 you can't have preprocessor directives in cgincludes. Sigh
-            #pragma multi_compile            PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
-            #pragma multi_compile _          INFLUENCE_MAPPING
-            #pragma multi_compile _          EMISSION
+            #pragma multi_compile_local            PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
+            #pragma multi_compile_local _          INFLUENCE_MAPPING
+            #pragma multi_compile_local _          EMISSION
             #pragma multi_compile_fog
             //#pragma skip_variants POINT_COOKIE LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING VERTEXLIGHT_ON
 
@@ -263,7 +263,7 @@ Shader "Custom/Parallax"
             Tags { "LightMode" = "ShadowCaster" }
             CGPROGRAM
         
-            #pragma multi_compile PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
+            #pragma multi_compile_local PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
             #pragma multi_compile_fog
             #pragma multi_compile_shadowcaster
 
@@ -380,8 +380,8 @@ Shader "Custom/Parallax"
             //BlendOp Add
             CGPROGRAM
         
-            #pragma multi_compile           PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
-            #pragma multi_compile _         INFLUENCE_MAPPING
+            #pragma multi_compile_local           PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
+            #pragma multi_compile_local _         INFLUENCE_MAPPING
             #pragma multi_compile_fog
             #pragma multi_compile_fwdadd
         
@@ -568,10 +568,11 @@ Shader "Custom/Parallax"
 
             // For anyone wondering, the _ after multi_compile tells unity the keyword is a toggle, and avoids creating variants "_ON" and "_OFF"
             // I would move this to ParallaxStructs.cginc but as we're on unity 2019 you can't have preprocessor directives in cgincludes. Sigh
-            #pragma multi_compile            PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
-            #pragma multi_compile _ INFLUENCE_MAPPING
-            #pragma multi_compile _ EMISSION
+            #pragma multi_compile_local            PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
+            #pragma multi_compile_local _          INFLUENCE_MAPPING
+            #pragma multi_compile_local _          EMISSION
             #pragma multi_compile_fog
+            #pragma multi_compile _ UNITY_HDR_ON
 
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
@@ -717,7 +718,7 @@ Shader "Custom/Parallax"
                 NORMAL_FLOAT altitudeNormal = BLEND_TEXTURES(landMask, lowNormal, midNormal, highNormal);
 
                 fixed4 finalDiffuse = lerp(altitudeDiffuse, steepDiffuse, landMask.b);
-                NORMAL_FLOAT finalNormal = lerp(altitudeNormal, steepNormal, landMask.b); 
+                NORMAL_FLOAT finalNormal = lerp(altitudeNormal, steepNormal, landMask.b);
 
                 // Deferred functions
                 SurfaceOutputStandardSpecular surfaceInput = GetPBRStruct(finalDiffuse, GET_EMISSION, finalNormal.xyz, i.worldPos);

@@ -8,7 +8,6 @@ using System.Linq;
 using System.Reflection.Emit;
 using UnityEngine;
 using UnityEngine.Rendering;
-using static Targeting;
 
 //
 // Config upgrade notes:
@@ -119,26 +118,42 @@ namespace Parallax
             }
             return null;
         }
-        public static UrlDir.UrlConfig GetPlanetScatterNode(string planetName)
+        // Gets "ParallaxScatters" node
+        public static UrlDir.UrlConfig GetRootScatterNode(string planetName)
         {
             UrlDir.UrlConfig[] baseConfig = GetConfigsByName("ParallaxScatters");
-            return baseConfig.FirstOrDefault(x => x.config.GetValue("body") == planetName);
+            // "ParallaxScatters"
+            foreach (UrlDir.UrlConfig cfg in baseConfig)
+            {
+                ConfigNode bodyNode = cfg.config.GetNode("Body");
+                if (bodyNode.GetValue("name") == planetName)
+                {
+                    return cfg;
+                }
+            }
+            return null;
+        }
+        // Gets "Body" node
+        public static ConfigNode GetPlanetScatterNode(string planetName)
+        {
+            UrlDir.UrlConfig[] baseConfig = GetConfigsByName("ParallaxScatters");
+            return baseConfig.SelectMany(x => x.config.GetNodes("Body")).FirstOrDefault(bodyNode => bodyNode.GetValue("name") == planetName);
         }
         public static ConfigNode GetScatterConfigNode(string planetName, string scatterName, bool isShared = false)
         {
             return GetScatterConfigNode(planetName, scatterName, GetPlanetScatterNode(planetName), isShared);
         }
-        public static ConfigNode GetScatterConfigNode(string planetName, string scatterName, UrlDir.UrlConfig baseConfig, bool isShared = false)
+        public static ConfigNode GetScatterConfigNode(string planetName, string scatterName, ConfigNode baseConfig, bool isShared = false)
         {
             // Gets the scatter node
             if (!isShared)
             {
                 // Gets the scatter node
-                return baseConfig.config.GetNodes("Scatter").FirstOrDefault(x => (planetName + "-" + x.GetValue("name")) == scatterName);
+                return baseConfig.GetNodes("Scatter").FirstOrDefault(x => (planetName + "-" + x.GetValue("name")) == scatterName);
             }
             else
             {
-                return baseConfig.config.GetNodes("SharedScatter").FirstOrDefault(x => (planetName + "-" + x.GetValue("name")) == scatterName);
+                return baseConfig.GetNodes("SharedScatter").FirstOrDefault(x => (planetName + "-" + x.GetValue("name")) == scatterName);
             }
         }
         // Used to preserve a scatter's position in the config
@@ -328,13 +343,13 @@ namespace Parallax
             }
 
         }
-        public static void LoadTerrainConfigs(UrlDir.UrlConfig[] allRootNodes)
+        public static void LoadTerrainConfigs(UrlDir.UrlConfig[] rootNodes)
         {
             // "ParallaxTerrain"
-            foreach (UrlDir.UrlConfig rootNode in allRootNodes)
+            foreach (UrlDir.UrlConfig rootNode in rootNodes)
             {
                 // "Body"
-                ConfigNode.ConfigNodeList nodes = rootNode.config.nodes;
+                ConfigNode[] nodes = rootNode.config.GetNodes("Body");
                 foreach (ConfigNode planetNode in nodes)
                 {
                     string planetName = planetNode.GetValue("name");
@@ -343,7 +358,7 @@ namespace Parallax
 
                     string emissive = planetNode.GetValue("emissive");
                     bool isEmissive = emissive == null ? false : (bool.Parse(emissive) == true ? true : false);
-                    
+
                     ParallaxTerrainBody body = new ParallaxTerrainBody(planetName);
                     body.emissive = isEmissive;
 
@@ -401,113 +416,127 @@ namespace Parallax
         //  Scatter parsing
         //
 
-        public static void LoadScatterConfigs(UrlDir.UrlConfig[] allRootNodes)
+        public static void LoadScatterConfigs(UrlDir.UrlConfig[] rootNodes)
         {
             // "ParallaxScatters"
-            foreach (UrlDir.UrlConfig rootNode in allRootNodes)
+            foreach (UrlDir.UrlConfig rootNode in rootNodes)
             {
-                string body = rootNode.config.GetValue("body");
-
-                ParallaxDebug.Log("[Scatters] Parsing new body: " + body);
-
-                string configVersion = rootNode.config.GetValue("configVersion");
-                if (configVersion == null)
+                ConfigNode[] bodyNodes = rootNode.config.GetNodes("Body");
+                foreach (ConfigNode bodyNode in bodyNodes)
                 {
-                    ParallaxDebug.LogError("Legacy configs detected for: " + body + ", either configVersion is missing from the file, or your configs are not supported on this version!");
-                    continue;
-                }
+                    string body = bodyNode.GetValue("name");
 
-                ParallaxScatterBody scatterBody = new ParallaxScatterBody(body);
+                    ParallaxDebug.Log("[Scatters] Parsing new body: " + body);
 
-                // The scatters that are collideable, which depends on the collision level of the scatter and the level set in the global config
-                List<Scatter> collideableScatters = new List<Scatter>();
-                int collideableIndex = -1;
-
-                // "Scatter"
-                ConfigNode[] nodes = rootNode.config.GetNodes("Scatter");
-                foreach (ConfigNode node in nodes)
-                {
-                    string scatterName = body + "-" + ConfigUtils.TryGetConfigValue(node, "name");
-                    string model = ConfigUtils.TryGetConfigValue(node, "model");
-                    string collisionLevelString = ConfigUtils.TryGetConfigValue(node, "collisionLevel");
-                    int collisionLevel = (int)ConfigUtils.TryParse(body, "collisionLevel", collisionLevelString, typeof(int));
-
-                    Scatter scatter = new Scatter(scatterName);
-                    scatter.modelPath = model;
-
-                    OptimizationParams optimizationParams = GetOptimizationParams(body, node.GetNode("Optimizations"));
-                    SubdivisionParams subdivisionParams = GetSubdivisionParams(body, node.GetNode("SubdivisionSettings"));
-                    NoiseParams noiseParams = GetNoiseParams(body, node.GetNode("DistributionNoise"));
-                    MaterialParams materialParams = GetMaterialParams(body, node.GetNode("Material"));
-                    DistributionParams distributionParams = GetDistributionParams(body, node.GetNode("Distribution"), materialParams, false);
-                    BiomeBlacklistParams biomeBlacklistParams = GetBiomeBlacklistParams(body, node.GetNode("Distribution"));
-
-                    scatter.optimizationParams = optimizationParams;
-                    scatter.subdivisionParams = subdivisionParams;
-                    scatter.noiseParams = noiseParams;
-                    scatter.materialParams = materialParams;
-                    scatter.distributionParams = distributionParams;
-                    scatter.biomeBlacklistParams = biomeBlacklistParams;
-
-                    PerformNormalisationConversions(scatter);
-                    PerformAdditionalOperations(scatter);
-
-                    scatter.collisionLevel = collisionLevel;
-
-                    // -1 disables colliders
-                    if (parallaxGlobalSettings.scatterGlobalSettings.collisionLevel > -1 && collisionLevel >= parallaxGlobalSettings.scatterGlobalSettings.collisionLevel)
+                    string configVersion = bodyNode.GetValue("configVersion");
+                    if (configVersion == null)
                     {
-                        scatter.collideable = true;
-                        collideableIndex++;
-                        scatter.collideableArrayIndex = collideableIndex;
-                        collideableScatters.Add(scatter);
+                        ParallaxDebug.LogError("Legacy configs detected for: " + body + ", either configVersion is missing from the file, or your configs are not supported on this version!");
+                        continue;
                     }
 
-                    scatterBody.scatters.Add(scatterName, scatter);
-                }
+                    ParallaxScatterBody scatterBody = new ParallaxScatterBody(body);
 
-                scatterBody.fastScatters = scatterBody.scatters.Values.ToArray();
-                scatterBody.collideableScatters = collideableScatters.ToArray();
-                parallaxScatterBodies.Add(body, scatterBody);
+                    // The scatters that are collideable, which depends on the collision level of the scatter and the level set in the global config
+                    List<Scatter> collideableScatters = new List<Scatter>();
+                    int collideableIndex = -1;
+
+                    // "Scatter"
+                    ConfigNode[] nodes = bodyNode.GetNodes("Scatter");
+                    foreach (ConfigNode node in nodes)
+                    {
+                        string scatterName = body + "-" + ConfigUtils.TryGetConfigValue(node, "name");
+
+                        ParallaxDebug.Log("Parsing scatter: " + scatterName);
+
+                        string model = ConfigUtils.TryGetConfigValue(node, "model");
+                        string collisionLevelString = ConfigUtils.TryGetConfigValue(node, "collisionLevel");
+                        int collisionLevel = (int)ConfigUtils.TryParse(body, "collisionLevel", collisionLevelString, typeof(int));
+
+                        Scatter scatter = new Scatter(scatterName);
+                        scatter.modelPath = model;
+
+                        OptimizationParams optimizationParams = GetOptimizationParams(body, node.GetNode("Optimizations"));
+                        SubdivisionParams subdivisionParams = GetSubdivisionParams(body, node.GetNode("SubdivisionSettings"));
+                        NoiseParams noiseParams = GetNoiseParams(body, node.GetNode("DistributionNoise"));
+                        MaterialParams materialParams = GetMaterialParams(body, node.GetNode("Material"));
+                        DistributionParams distributionParams = GetDistributionParams(body, node.GetNode("Distribution"), materialParams, false);
+                        BiomeBlacklistParams biomeBlacklistParams = GetBiomeBlacklistParams(body, node.GetNode("Distribution"));
+
+                        scatter.optimizationParams = optimizationParams;
+                        scatter.subdivisionParams = subdivisionParams;
+                        scatter.noiseParams = noiseParams;
+                        scatter.materialParams = materialParams;
+                        scatter.distributionParams = distributionParams;
+                        scatter.biomeBlacklistParams = biomeBlacklistParams;
+
+                        PerformNormalisationConversions(scatter);
+                        PerformAdditionalOperations(scatter);
+
+                        scatter.collisionLevel = collisionLevel;
+
+                        // -1 disables colliders
+                        if (parallaxGlobalSettings.scatterGlobalSettings.collisionLevel > -1 && collisionLevel >= parallaxGlobalSettings.scatterGlobalSettings.collisionLevel)
+                        {
+                            scatter.collideable = true;
+                            collideableIndex++;
+                            scatter.collideableArrayIndex = collideableIndex;
+                            collideableScatters.Add(scatter);
+                        }
+
+                        scatterBody.scatters.Add(scatterName, scatter);
+                    }
+
+                    scatterBody.fastScatters = scatterBody.scatters.Values.ToArray();
+                    scatterBody.collideableScatters = collideableScatters.ToArray();
+                    parallaxScatterBodies.Add(body, scatterBody);
+                }
             }
         }
-        public static void LoadSharedScatterConfigs(UrlDir.UrlConfig[] allRootNodes)
+        public static void LoadSharedScatterConfigs(UrlDir.UrlConfig[] rootNodes)
         {
-            foreach (UrlDir.UrlConfig rootNode in allRootNodes)
+            foreach (UrlDir.UrlConfig rootNode in rootNodes)
             {
-                string body = rootNode.config.GetValue("body");
-
-                ParallaxScatterBody scatterBody = parallaxScatterBodies[body];
-
-                // Process shared scatters - These are scatters that share distribution data with another, so it doesn't need to be generated again
-
-                ConfigNode[] sharedNodes = rootNode.config.GetNodes("SharedScatter");
-                foreach (ConfigNode node in sharedNodes)
+                ConfigNode[] bodyNodes = rootNode.config.GetNodes("Body");
+                foreach (ConfigNode bodyNode in bodyNodes)
                 {
-                    string scatterName = body + "-" + ConfigUtils.TryGetConfigValue(node, "name");
-                    string parentName = body + "-" + ConfigUtils.TryGetConfigValue(node, "parentName");
-                    string model = ConfigUtils.TryGetConfigValue(node, "model");
+                    string body = bodyNode.GetValue("name");
 
-                    if (!parallaxScatterBodies[body].scatters.ContainsKey(parentName))
+                    ParallaxScatterBody scatterBody = parallaxScatterBodies[body];
+
+                    // Process shared scatters - These are scatters that share distribution data with another, so it doesn't need to be generated again
+
+                    ConfigNode[] sharedNodes = bodyNode.GetNodes("SharedScatter");
+                    foreach (ConfigNode node in sharedNodes)
                     {
-                        ParallaxDebug.LogError("Shared scatter: " + scatterName + " inherits from parent scatter: " + parentName + " but that scatter does not exist!");
-                        break;
+                        string scatterName = body + "-" + ConfigUtils.TryGetConfigValue(node, "name");
+
+                        ParallaxDebug.Log("Parsing shared scatter: " + scatterName);
+
+                        string parentName = body + "-" + ConfigUtils.TryGetConfigValue(node, "parentName");
+                        string model = ConfigUtils.TryGetConfigValue(node, "model");
+
+                        if (!parallaxScatterBodies[body].scatters.ContainsKey(parentName))
+                        {
+                            ParallaxDebug.LogError("Shared scatter: " + scatterName + " inherits from parent scatter: " + parentName + " but that scatter does not exist!");
+                            break;
+                        }
+                        Scatter parentScatter = parallaxScatterBodies[body].scatters[parentName];
+
+                        SharedScatter sharedScatter = new SharedScatter(scatterName, parentScatter);
+                        sharedScatter.modelPath = model;
+
+                        OptimizationParams optimizationParams = GetOptimizationParams(body, node.GetNode("Optimizations"));
+                        MaterialParams materialParams = GetMaterialParams(body, node.GetNode("Material"));
+                        DistributionParams distributionParams = GetDistributionParams(body, node.GetNode("Distribution"), materialParams, true);
+
+                        sharedScatter.optimizationParams = optimizationParams;
+                        sharedScatter.materialParams = materialParams;
+                        sharedScatter.distributionParams = distributionParams;
+
+                        PerformNormalisationConversions(sharedScatter);
+                        scatterBody.scatters.Add(scatterName, sharedScatter);
                     }
-                    Scatter parentScatter = parallaxScatterBodies[body].scatters[parentName];
-
-                    SharedScatter sharedScatter = new SharedScatter(scatterName, parentScatter);
-                    sharedScatter.modelPath = model;
-
-                    OptimizationParams optimizationParams = GetOptimizationParams(body, node.GetNode("Optimizations"));
-                    MaterialParams materialParams = GetMaterialParams(body, node.GetNode("Material"));
-                    DistributionParams distributionParams = GetDistributionParams(body, node.GetNode("Distribution"), materialParams, true);
-
-                    sharedScatter.optimizationParams = optimizationParams;
-                    sharedScatter.materialParams = materialParams;
-                    sharedScatter.distributionParams = distributionParams;
-
-                    PerformNormalisationConversions(sharedScatter);
-                    scatterBody.scatters.Add(scatterName, sharedScatter);
                 }
             }
         }
