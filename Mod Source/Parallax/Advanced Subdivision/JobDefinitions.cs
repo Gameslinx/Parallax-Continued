@@ -32,10 +32,10 @@ namespace Parallax
 
     public static class InterlockedCounters
     {
-        // Create a queue of unique identifiers (0 to 255)
+        // Create a queue of unique identifiers (0 to 1023)
         // And use the identifier to access a unique counter for a specific quad
         // To prevent collisions between multiple quads performing the subdivide jobs (specifically the readback job)
-        public static int[] triangleReadbackCounters = new int[256];
+        public static int[] triangleReadbackCounters = new int[1024];
         public static Queue<int> uniqueQuadIdentifiers = new Queue<int>();
         static InterlockedCounters()
         {
@@ -44,7 +44,7 @@ namespace Parallax
         static void ResetAllInterlockedCounters()
         {
             uniqueQuadIdentifiers.Clear();
-            for (int i = 0; i < 256; i++)
+            for (int i = 0; i < 1024; i++)
             {
                 // MUST start the counter at -3, because triangles are read back in threes
                 // and add 3 to the counter at the start of each iteration, bringing it to 0 initially
@@ -67,7 +67,7 @@ namespace Parallax
 
             if (uniqueQuadIdentifiers.Count - 1 == 0)
             {
-                ParallaxDebug.LogError("Exception: The unique quad identifier queue is empty - subdivision jobs cannot continue. If you see this in your log file, too many quads are trying to subdivide! (Max 32)");
+                ParallaxDebug.LogError("Exception: The unique quad identifier queue is empty - subdivision jobs cannot continue. If you see this in your log file, too many quads are trying to subdivide! (Max 1024)");
                 return 0;
             }
             int identifier = uniqueQuadIdentifiers.Dequeue();

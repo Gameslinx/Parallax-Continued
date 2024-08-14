@@ -5,8 +5,9 @@
 #pragma kernel Distribute NOISEMODE_CELLULAR
 #pragma kernel Distribute NOISEMODE_POLKADOT
 
-// Render             - Kernel 3
+// Render             - Kernels 3, 4
 #pragma kernel Evaluate
+#pragma kernel Evaluate OUTPUT_TERRAIN_COLOR
 
 #include "ScatterStructs.cginc"
 #include "ScatterParams.cginc"
@@ -16,6 +17,10 @@
 StructuredBuffer<int> triangles;
 StructuredBuffer<float3> vertices;
 StructuredBuffer<float3> normals;
+
+#if defined (OUTPUT_TERRAIN_COLOR)
+StructuredBuffer<float4> colors;
+#endif
 
 // UV in xy, allowScatter in z
 StructuredBuffer<float3> uvs;
@@ -226,7 +231,7 @@ void Evaluate(uint3 id : SV_DispatchThreadID)
         return;
     }
     
-    // Get triangle indices for sampling vertices
+    // Get triangle indices for sampling vertices and colours
     
     uint index1 = triangles[pos.index];
     uint index2 = triangles[pos.index + 1];
@@ -242,9 +247,22 @@ void Evaluate(uint3 id : SV_DispatchThreadID)
     float3 avgNormal = normalize(cross(vert2 - vert1, vert3 - vert1));
     avgNormal = mul(_ObjectToWorldMatrix, float4(avgNormal, 0)).xyz;
     
-    // the float3 at the end becomes the terrain average normal
+    #if defined (OUTPUT_TERRAIN_COLOR)
+    
+        float3 color1 = colors[index1].rgb;
+        float3 color2 = colors[index2].rgb;
+        float3 color3 = colors[index3].rgb;
+    
+        float3 avgColor = (color1 + color2 + color3) * 0.333f;
+
+    #endif    
+
+    // Get transformation matrix and optionally transform to the terrain normal
     float4x4 mat = GetTRSMatrix(worldPos, float3(0, pos.rotation, 0), pos.localScale, avgNormal);
 
+    // If we want to output the colour, we need to encode it
+    ENCODE_INSTANCING_DATA(mat)
+    
     TransformData object;
     object.objectToWorld = mat;
 

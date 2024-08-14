@@ -123,6 +123,8 @@ Shader "Custom/ParallaxInstancedSolid"
                 v2f o;
 
                 float4x4 objectToWorld = INSTANCE_DATA.objectToWorld;
+                DECODE_INSTANCE_DATA(objectToWorld, color)
+
                 BILLBOARD_IF_ENABLED(i.vertex, i.normal, i.tangent, objectToWorld);
 
                 o.worldNormal = mul(objectToWorld, float4(i.normal, 0)).xyz;
@@ -135,6 +137,7 @@ Shader "Custom/ParallaxInstancedSolid"
 
                 o.worldPos = worldPos;
                 o.uv = i.uv;
+                o.color = color;
 
                 o.planetNormal = planetNormal;
                 o.viewDir = _WorldSpaceCameraPos - worldPos;
@@ -157,7 +160,8 @@ Shader "Custom/ParallaxInstancedSolid"
                 ALPHA_CLIP(mainTex.a);
                 
                 mainTex.rgb *= _Color;
-                
+                mainTex.rgb *= i.color;
+
                 // Get specular from MainTex or, if ALTERNATE_SPECULAR_TEXTURE is defined, use the specular texture
                 GET_SPECULAR(mainTex, i.uv * _MainTex_ST);
 
@@ -185,7 +189,7 @@ Shader "Custom/ParallaxInstancedSolid"
                 // Calculate lighting from core params, plus potential additional params (worldpos required for subsurface scattering)
                 float3 result = CalculateLighting(BASIC_LIGHTING_PARAMS ADDITIONAL_LIGHTING_PARAMS );
 
-                // Process any enabled debug options that affect the output colour
+                // Process any enabled debug options that affect the output color
                 DEBUG_IF_ENABLED
                 return float4(result, mainTex.a);
             }
@@ -237,6 +241,7 @@ Shader "Custom/ParallaxInstancedSolid"
                 v2f o;
         
                 float4x4 objectToWorld = INSTANCE_DATA.objectToWorld;
+                DECODE_INSTANCE_DATA_SHADOW(objectToWorld)
         
                 BILLBOARD_IF_ENABLED(i.vertex, objectToWorld);
         
@@ -319,6 +324,8 @@ Shader "Custom/ParallaxInstancedSolid"
                 v2f o;
 
                 float4x4 objectToWorld = INSTANCE_DATA.objectToWorld;
+                DECODE_INSTANCE_DATA(objectToWorld, color)
+
                 BILLBOARD_IF_ENABLED(i.vertex, i.normal, i.tangent, objectToWorld);
 
                 o.worldNormal = mul(objectToWorld, float4(i.normal, 0)).xyz;
@@ -331,6 +338,7 @@ Shader "Custom/ParallaxInstancedSolid"
 
                 o.worldPos = worldPos;
                 o.uv = i.uv;
+                o.color = color;
 
                 o.planetNormal = planetNormal;
                 o.viewDir = _WorldSpaceCameraPos - worldPos;
@@ -354,6 +362,7 @@ Shader "Custom/ParallaxInstancedSolid"
                 ALPHA_CLIP(mainTex.a);
                 
                 mainTex.rgb *= _Color;
+                mainTex.rgb *= i.color;
                 
                 // Get specular from MainTex or, if ALTERNATE_SPECULAR_TEXTURE is defined, use the specular texture
                 GET_SPECULAR(mainTex, i.uv * _MainTex_ST);
@@ -383,7 +392,7 @@ Shader "Custom/ParallaxInstancedSolid"
                 float atten = LIGHT_ATTENUATION(i);
                 float3 result = CalculateLighting(BASIC_LIGHTING_PARAMS ADDITIONAL_LIGHTING_PARAMS );
 
-                // Process any enabled debug options that affect the output colour
+                // Process any enabled debug options that affect the output color
                 DEBUG_IF_ENABLED
                 return float4(result, atten);
             }
@@ -454,6 +463,8 @@ Shader "Custom/ParallaxInstancedSolid"
                 v2f o;
 
                 float4x4 objectToWorld = INSTANCE_DATA.objectToWorld;
+                DECODE_INSTANCE_DATA(objectToWorld, color)
+
                 BILLBOARD_IF_ENABLED(i.vertex, i.normal, i.tangent, objectToWorld);
 
                 o.worldNormal = mul(objectToWorld, float4(i.normal, 0)).xyz;
@@ -466,6 +477,7 @@ Shader "Custom/ParallaxInstancedSolid"
 
                 o.worldPos = worldPos;
                 o.uv = i.uv;
+                o.color = color;
 
                 o.planetNormal = planetNormal;
                 o.viewDir = _WorldSpaceCameraPos - worldPos;
@@ -488,6 +500,7 @@ Shader "Custom/ParallaxInstancedSolid"
                 ALPHA_CLIP(mainTex.a);
                 
                 mainTex.rgb *= _Color;
+                mainTex.rgb *= i.color;
                 
                 // Get specular from MainTex or, if ALTERNATE_SPECULAR_TEXTURE is defined, use the specular texture
                 GET_SPECULAR(mainTex, i.uv * _MainTex_ST);
@@ -519,7 +532,7 @@ Shader "Custom/ParallaxInstancedSolid"
                 result *= lerp(0, 1, saturate(dot(i.planetNormal, _WorldSpaceLightPos0) * 5));
 
 
-                // Process any enabled debug options that affect the output colour (emission in this case)
+                // Process any enabled debug options that affect the output color (emission in this case)
                 DEBUG_IF_ENABLED
                 
                 // Deferred functions

@@ -38,7 +38,6 @@ float _SpawnChance;
 float _MaxNormalDeviance;
 
 // The colours of the biomes which this scatter can appear in
-// Max 8
 int _NumberOfBiomes;
 
 //

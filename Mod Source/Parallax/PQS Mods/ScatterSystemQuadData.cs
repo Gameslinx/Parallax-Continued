@@ -47,6 +47,7 @@ namespace Parallax
         Vector3[] vertices;
         Vector3[] normals;
         int[] triangles;
+        Color[] colors;
 
         // UV in xy, allowScatter in z
         Vector3[] uvs;
@@ -62,6 +63,7 @@ namespace Parallax
         public ComputeBuffer sourceVertsBuffer;
         public ComputeBuffer sourceNormalsBuffer;
         public ComputeBuffer sourceTrianglesBuffer;
+        public ComputeBuffer sourceColorsBuffer;
         public ComputeBuffer sourceUVsBuffer;
         public ComputeBuffer sourceDirsFromCenterBuffer;
 
@@ -78,12 +80,11 @@ namespace Parallax
         /// </summary>
         public void Initialize()
         {
-            Profiler.BeginSample("Parallax Scatter System Initialize");
-
             mesh = quad.mesh;
             vertices = mesh.vertices;
             normals = mesh.normals;
             triangles = mesh.triangles;
+            colors = mesh.colors;
 
             // We can estimate this using (float)((2f * Mathf.PI * quad.sphereRoot.radius / 4f) / (Mathf.Pow(2f, quad.subdivision)));
             // But quads do vary in size because of the cube sphere transformation, making this unreliable
@@ -98,12 +99,14 @@ namespace Parallax
             sourceVertsBuffer = new ComputeBuffer(vertices.Length, sizeof(float) * 3, ComputeBufferType.Structured);
             sourceNormalsBuffer = new ComputeBuffer(normals.Length, sizeof(float) * 3, ComputeBufferType.Structured);
             sourceTrianglesBuffer = new ComputeBuffer(triangles.Length, sizeof(int), ComputeBufferType.Structured);
+            sourceColorsBuffer = new ComputeBuffer(colors.Length, sizeof(float) * 4, ComputeBufferType.Structured);
             sourceUVsBuffer = new ComputeBuffer(uvs.Length, sizeof(float) * 3, ComputeBufferType.Structured);
             sourceDirsFromCenterBuffer = new ComputeBuffer(vertices.Length, sizeof(float) * 3, ComputeBufferType.Structured);
 
             sourceVertsBuffer.SetData(vertices);
             sourceNormalsBuffer.SetData(normals);
             sourceTrianglesBuffer.SetData(triangles);
+            sourceColorsBuffer.SetData(colors);
             sourceUVsBuffer.SetData(uvs);
             sourceDirsFromCenterBuffer.SetData(directionsFromCenter);
 
@@ -122,10 +125,7 @@ namespace Parallax
 
             // Get the camera distance now, or we wait an additional frame
             UpdateQuadCameraDistance(ref RuntimeOperations.vectorCameraPos);
-            Profiler.BeginSample("Determine scatters (and generate)");
             DetermineScatters();
-            Profiler.EndSample();
-            Profiler.EndSample();
         }
         /// <summary>
         /// Reinitialize the prerequisite data on this quad that must be refreshed. It does NOT reinitialize all scatters. Use this if regenerating scatters.
@@ -344,6 +344,7 @@ namespace Parallax
             sourceVertsBuffer?.Dispose();
             sourceNormalsBuffer?.Dispose();
             sourceTrianglesBuffer?.Dispose();
+            sourceColorsBuffer.Dispose();
             sourceUVsBuffer?.Dispose();
             sourceDirsFromCenterBuffer.Dispose();
         }

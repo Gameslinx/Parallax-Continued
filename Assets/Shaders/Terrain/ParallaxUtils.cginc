@@ -366,7 +366,7 @@ float4 GetLandMask(float3 worldPos, float3 worldNormal)
         NORMAL_FLOAT normalName = SampleBiplanarNormal(normalSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
 #endif
 
-
+#define BIPLANAR_TEXTURE(texName, texSampler)   fixed4 texName = SampleBiplanarTexture(texSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
 
 #define UNUSED_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)  \
     fixed4 diffuseName = 0;                                                         \
@@ -393,6 +393,12 @@ float4 GetLandMask(float3 worldPos, float3 worldNormal)
     #define DECLARE_HIGH_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler) BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
 #else
     #define DECLARE_HIGH_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler) UNUSED_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
+#endif
+
+#if defined (ADVANCED_BLENDING)
+    #define DECLARE_DISPLACEMENT_TEXTURE(displacementTexName, displacementSampler) BIPLANAR_TEXTURE(displacementTexName, displacementSampler)
+#else
+    #define DECLARE_DISPLACEMENT_TEXTURE(displacementTexName, displacementSampler)
 #endif
 
 // We are always sampling the slope texture

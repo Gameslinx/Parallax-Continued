@@ -319,11 +319,12 @@ namespace Parallax
         {
             // Advance scatter
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Previous Scatter", HighLogic.Skin.button))
+            if (GUILayout.Button("Previous Scatter", HighLogic.Skin.button, GUILayout.Width(214)))
             {
                 currentScatterIndex = DecrementScatterIndex();
             }
-            if (GUILayout.Button("Next Scatter", HighLogic.Skin.button))
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("Next Scatter", HighLogic.Skin.button, GUILayout.Width(214)))
             {
                 currentScatterIndex = IncrementScatterIndex();
             }

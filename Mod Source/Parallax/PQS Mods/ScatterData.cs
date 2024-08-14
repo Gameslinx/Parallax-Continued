@@ -92,7 +92,7 @@ namespace Parallax
             scatterShader.SetMatrix("_WorldToObjectMatrix", parent.quad.meshRenderer.worldToLocalMatrix);
 
             distributeKernel = GetDistributeKernel();
-            evaluateKernel = scatterShader.FindKernel("Evaluate");
+            evaluateKernel = GetEvaluateKernel();
 
             outputScatterDataBuffer = new ComputeBuffer(outputSize, PositionData.Size(), ComputeBufferType.Append);
             scatterShader.SetBuffer(distributeKernel, "transforms", outputScatterDataBuffer);
@@ -134,6 +134,18 @@ namespace Parallax
                     kernel = 2;
                     break;
                 }
+            }
+            return kernel;
+        }
+        //
+        //  Note: PARITY MUST BE MAINTAINED WITH TerrainScatters.compute KERNEL DEFINITIONS
+        //
+        public int GetEvaluateKernel()
+        {
+            int kernel = 3;
+            if (scatter.distributionParams.coloredByTerrain)
+            {
+                kernel = 4;
             }
             return kernel;
         }
@@ -339,6 +351,11 @@ namespace Parallax
 
             scatterShader.SetBuffer(evaluateKernel, "positions", outputScatterDataBuffer);
 
+            if (scatter.distributionParams.coloredByTerrain)
+            {
+                scatterShader.SetBuffer(evaluateKernel, "colors", parent.sourceColorsBuffer);
+            }
+
             scatterShader.SetFloat("_CullRadius", scatter.optimizationParams.frustumCullingIgnoreRadius);
             scatterShader.SetFloat("_CullLimit", scatter.optimizationParams.frustumCullingSafetyMargin);
 
@@ -365,6 +382,11 @@ namespace Parallax
             // Point the scatter's compute shader buffers to this quad's
             scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.parentTrisBufferID, parent.sourceTrianglesBuffer);
             scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.parentVertsBufferID, parent.sourceVertsBuffer);
+
+            if (scatter.distributionParams.coloredByTerrain)
+            {
+                scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.parentColorsBufferID, parent.sourceColorsBuffer);
+            }
 
             scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.lod0BufferID, scatterRenderer.outputLOD0);
             scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.lod1BufferID, scatterRenderer.outputLOD1);

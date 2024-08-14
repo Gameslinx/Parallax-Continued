@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: ParallaxMaterial
   m_Shader: {fileID: 4800000, guid: b9860552776eb2c4f998cf8c4044ee5a, type: 3}
-  m_ShaderKeywords: 
+  m_ShaderKeywords: ADVANCED_BLENDING ENHANCED_BLENDING PARALLAX_DOUBLE_MIDHIGH
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -26,7 +26,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMapHigh:
-        m_Texture: {fileID: 2800000, guid: e4064af15cd4c87418f4a055d2747398, type: 3}
+        m_Texture: {fileID: 2800000, guid: 3d28fd73c3d7e0d4c831e0fcb7909c75, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMapLow:
@@ -58,7 +58,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DisplacementMap:
-        m_Texture: {fileID: 2800000, guid: 761ae1c873e21b146a41bccf9927aeb3, type: 3}
+        m_Texture: {fileID: 2800000, guid: 13cae0d73e57f5f4ba8b3a98a810468d, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _EmissionMap:
@@ -146,8 +146,8 @@ Material:
     - _MaxTessellation: 64
     - _MaxTessellationRange: 30
     - _Metallic: 0
-    - _MidHighBlendEnd: 1.3
-    - _MidHighBlendStart: 0.86
+    - _MidHighBlendEnd: 8.09
+    - _MidHighBlendStart: 4.45
     - _Mode: 0
     - _NormalSpecularInfluence: 1
     - _OcclusionStrength: 1

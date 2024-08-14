@@ -1,4 +1,15 @@
 ﻿#define INSTANCE_DATA _InstanceData[instanceID]
+
+// The object to world transformation matrix (TRS matrix) uses every matrix value except for the first 3 values in the last row
+// This row stores the colour of the terrain at this scatter position
+// This macro separates the matrix into the colour and a clean local to world matrix
+#define DECODE_INSTANCE_DATA(transformAndColorMatrix, outColor)                                                                          \
+    float3 outColor = float3(transformAndColorMatrix[3][0], transformAndColorMatrix[3][1], transformAndColorMatrix[3][2]);               \
+    transformAndColorMatrix[3] = float4(0, 0, 0, transformAndColorMatrix[3][3]);
+
+#define DECODE_INSTANCE_DATA_SHADOW(transformAndColorMatrix)                                                                             \
+    transformAndColorMatrix[3] = float4(0, 0, 0, transformAndColorMatrix[3][3]);
+
 #define WIND_BLUR_KERNEL_SIZE 2
 #define PI 3.1415926
 
@@ -12,19 +23,9 @@ float3 GetTriplanarBlendWeights(float3 worldNormal)
     return blendWeights;
 }
 
-// Super simple box blur with kernel size 2
+// Precision seems fine, but potentially replace with a blur kernel instead (much more expensive though)
 float3 SampleWeighted(sampler2D tex, float2 prevUV, float2 uv, float pixelSize)
 {
-    //float3 accumulation = 0;
-    //for (float i = -WIND_BLUR_KERNEL_SIZE; i <= WIND_BLUR_KERNEL_SIZE; i++)
-    //{
-    //    for (float j = -WIND_BLUR_KERNEL_SIZE; j <= WIND_BLUR_KERNEL_SIZE; j++)
-    //    {
-    //        accumulation += tex2Dlod(_WindMap, float4(uv + float2(i * pixelSize, j * pixelSize), 0, 0)).xyz;
-    //    }
-    //}
-    //float3 sum = accumulation / ((WIND_BLUR_KERNEL_SIZE * 2 + 1) * (WIND_BLUR_KERNEL_SIZE * 2 + 1));
-    //return sum;
     float3 currenttex = tex2Dlod(_WindMap, float4(uv, 0, 0)).xyz;
     float3 prevtex = tex2Dlod(_WindMap, float4(prevUV, 0, 0)).xyz;
     return (currenttex + prevtex) * 0.5;

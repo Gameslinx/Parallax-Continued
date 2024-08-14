@@ -94,6 +94,7 @@ Shader "Custom/Parallax"
             // I would move this to ParallaxStructs.cginc but as we're on unity 2019 you can't have preprocessor directives in cgincludes. Sigh
             #pragma multi_compile_local            PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
             #pragma multi_compile_local _          INFLUENCE_MAPPING
+            #pragma multi_compile_local _          ADVANCED_BLENDING
             #pragma multi_compile_local _          EMISSION
             #pragma multi_compile_fog
             //#pragma skip_variants POINT_COOKIE LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING VERTEXLIGHT_ON
@@ -383,7 +384,7 @@ Shader "Custom/Parallax"
             #pragma multi_compile_local           PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
             #pragma multi_compile_local _         INFLUENCE_MAPPING
             #pragma multi_compile_fog
-            #pragma multi_compile_fwdadd
+            #pragma multi_compile_fwdadd_fullshadows
         
             #pragma vertex Vertex_Shader
             #pragma hull Hull_Shader
@@ -571,6 +572,7 @@ Shader "Custom/Parallax"
             #pragma multi_compile_local            PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
             #pragma multi_compile_local _          INFLUENCE_MAPPING
             #pragma multi_compile_local _          EMISSION
+            #pragma multi_compile_local _          ADVANCED_BLENDING
             #pragma multi_compile_fog
             #pragma multi_compile _ UNITY_HDR_ON
 
@@ -714,11 +716,25 @@ Shader "Custom/Parallax"
                 DECLARE_HIGH_TEXTURE_SET(highDiffuse, highNormal, _MainTexHigh, _BumpMapHigh)
                 DECLARE_STEEP_TEXTURE_SET(steepDiffuse, steepNormal, _MainTexSteep, _BumpMapSteep)
 
+                // Only if displacement blending is enabled
+                DECLARE_DISPLACEMENT_TEXTURE(displacement, _DisplacementMap)
+
+                //#if defined (ADVANCED_BLENDING)
+                //float3 displacementLandMask = float3(lerp(displacement.r, displacement.g, landMask.r), lerp(displacement.g, displacement.b, landMask.g), lerp(displacement.b, displacement.a, landMask.b));
+                //
+                //landMask.rgb = saturate(landMask.rgb + pow(displacementLandMask, 1));
+                //
+                //
+                //#endif
+                
+
                 fixed4 altitudeDiffuse = BLEND_TEXTURES(landMask, lowDiffuse, midDiffuse, highDiffuse);
                 NORMAL_FLOAT altitudeNormal = BLEND_TEXTURES(landMask, lowNormal, midNormal, highNormal);
 
                 fixed4 finalDiffuse = lerp(altitudeDiffuse, steepDiffuse, landMask.b);
                 NORMAL_FLOAT finalNormal = lerp(altitudeNormal, steepNormal, landMask.b);
+
+                //finalDiffuse = displacement;
 
                 // Deferred functions
                 SurfaceOutputStandardSpecular surfaceInput = GetPBRStruct(finalDiffuse, GET_EMISSION, finalNormal.xyz, i.worldPos);
@@ -728,6 +744,10 @@ Shader "Custom/Parallax"
                 
                 OUTPUT_GBUFFERS(surfaceInput, gi)
                 SET_OUT_SHADOWMASK(i)
+
+                //outGBuffer0 = 0;
+
+                //outEmission = displacementLandMask;
             }
             ENDCG
         }

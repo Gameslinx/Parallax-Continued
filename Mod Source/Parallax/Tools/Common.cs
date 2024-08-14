@@ -378,6 +378,7 @@ namespace Parallax
         public bool fixedAltitude;
         public float placementAltitude;
         public int alignToTerrainNormal;
+        public bool coloredByTerrain;
         public LOD lod1;
         public LOD lod2;
         public HashSet<string> biomeBlacklist;

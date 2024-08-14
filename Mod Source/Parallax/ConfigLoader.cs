@@ -614,6 +614,7 @@ namespace Parallax
                 string maxAltitude = ConfigUtils.TryGetConfigValue(node, "maxAltitude");
                 string altitudeFadeRange = ConfigUtils.TryGetConfigValue(node, "altitudeFadeRange");
                 string alignToTerrainNormal = ConfigUtils.TryGetConfigValue(node, "alignToTerrainNormal");
+                string coloredByTerrain = ConfigUtils.TryGetConfigValue(node, "coloredByTerrain");
                 string placementAltitude = ConfigUtils.TryGetConfigValue(node, "placementAltitude", false);
 
                 distributionParams.seed = (float)ConfigUtils.TryParse(planetName, "seed", seed, typeof(float));
@@ -632,6 +633,7 @@ namespace Parallax
                 distributionParams.maxAltitude = (float)ConfigUtils.TryParse(planetName, "maxAltitude", maxAltitude, typeof(float));
                 distributionParams.altitudeFadeRange = (float)ConfigUtils.TryParse(planetName, "altitudeFadeRange", altitudeFadeRange, typeof(float));
                 distributionParams.alignToTerrainNormal = (bool)(ConfigUtils.TryParse(planetName, "alignToTerrainNormal", alignToTerrainNormal, typeof(bool))) ? 1 : 0;
+                distributionParams.coloredByTerrain = (bool)ConfigUtils.TryParse(planetName, "coloredByTerrain", coloredByTerrain, typeof(bool));
 
                 // If distributing to a fixed altitude
                 if (placementAltitude != null)

@@ -91,7 +91,8 @@
                 v2f o;
 
                 float4x4 objectToWorld = INSTANCE_DATA.objectToWorld;
-
+                DECODE_INSTANCE_DATA(objectToWorld, color)
+                
                 o.worldNormal = normalize(mul(objectToWorld, float4(i.normal, 0)).xyz);
                 o.worldTangent = normalize(mul(objectToWorld, float4(i.tangent.xyz, 0)));
                 o.worldBinormal = cross(o.worldTangent, o.worldNormal) * i.tangent.w;
@@ -119,6 +120,7 @@
 
                 o.worldPos = worldPos;
                 o.uv = i.uv;
+                o.color = color;
 
                 o.planetNormal = planetNormal;
                 o.viewDir = _WorldSpaceCameraPos - worldPos;
@@ -178,7 +180,7 @@
                 }
                 color = saturate(color);
 
-                // We don't have access to shadows so we must approximate the sun going down based off of where it is in respect to the planet
+                // We don't have access to shadows so we must approximate the sun going down based off of where it is with respect to the planet
                 float sunIntensity = saturate(dot(i.planetNormal, L));
                 sunIntensity = pow(sunIntensity, 0.25);
                 color *= sunIntensity;

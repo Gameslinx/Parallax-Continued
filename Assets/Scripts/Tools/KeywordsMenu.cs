@@ -43,7 +43,7 @@ public class KeywordsMenu : EditorWindow
         }
         if (lastParallaxMaterial != parallaxMaterial)
         {
-            keywordMethodInfo = typeof(ShaderUtil).GetMethod("GetShaderGlobalKeywords", BindingFlags.Static | BindingFlags.NonPublic);
+            keywordMethodInfo = typeof(ShaderUtil).GetMethod("GetShaderLocalKeywords", BindingFlags.Static | BindingFlags.NonPublic);
             lastParallaxMaterial = parallaxMaterial;
             Shader shader = parallaxMaterial.shader;//AssetDatabase.LoadAssetAtPath<Shader>("Assets/Shaders/Parallax.shader");
             allKeywordNames = (string[])keywordMethodInfo.Invoke(null, new object[] { shader });

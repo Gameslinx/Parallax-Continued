@@ -22,6 +22,7 @@ namespace Parallax
         // Init buffer IDs
         public static int parentTrisBufferID =              Shader.PropertyToID("triangles");
         public static int parentVertsBufferID =             Shader.PropertyToID("vertices");
+        public static int parentColorsBufferID =            Shader.PropertyToID("colors");
         public static int lod0BufferID =                    Shader.PropertyToID("instancingDataLOD0");
         public static int lod1BufferID =                    Shader.PropertyToID("instancingDataLOD1");
         public static int lod2BufferID =                    Shader.PropertyToID("instancingDataLOD2");

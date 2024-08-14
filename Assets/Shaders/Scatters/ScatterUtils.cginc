@@ -6,6 +6,12 @@
 #define DEG2RAD 0.01745329251f
 #define ALLOWED_COLOR_RANGE 0.2f
 
+#if defined (OUTPUT_TERRAIN_COLOR)
+    #define ENCODE_INSTANCING_DATA(transformationMatrix)    transformationMatrix[3] = float4(avgColor, 1);
+#else
+    #define ENCODE_INSTANCING_DATA(transformationMatrix)    transformationMatrix[3] = float4(1, 1, 1, 1);
+#endif
+
 float DegToRad(float deg)
 {
     return DEG2RAD * deg;
