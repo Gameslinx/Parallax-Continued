@@ -659,6 +659,7 @@ namespace Parallax
             node.AddValue("maxAltitude", distributionParams.maxAltitude);
             node.AddValue("altitudeFadeRange", distributionParams.altitudeFadeRange);
             node.AddValue("alignToTerrainNormal", distributionParams.alignToTerrainNormal == 1 ? true : false);
+            node.AddValue("coloredByTerrain", distributionParams.coloredByTerrain);
 
             ConfigNode lodNode = node.AddNode("LODs");
 

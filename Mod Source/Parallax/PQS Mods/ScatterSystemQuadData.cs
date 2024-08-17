@@ -44,10 +44,10 @@ namespace Parallax
 
         // Physical mesh data
         Mesh mesh;
-        Vector3[] vertices;
-        Vector3[] normals;
-        int[] triangles;
-        Color[] colors;
+        public Vector3[] vertices;
+        public Vector3[] normals;
+        public int[] triangles;
+        public Color[] colors;
 
         // UV in xy, allowScatter in z
         Vector3[] uvs;
@@ -80,6 +80,7 @@ namespace Parallax
         /// </summary>
         public void Initialize()
         {
+            Profiler.BeginSample("Init scatter system");
             mesh = quad.mesh;
             vertices = mesh.vertices;
             normals = mesh.normals;
@@ -88,7 +89,7 @@ namespace Parallax
 
             // We can estimate this using (float)((2f * Mathf.PI * quad.sphereRoot.radius / 4f) / (Mathf.Pow(2f, quad.subdivision)));
             // But quads do vary in size because of the cube sphere transformation, making this unreliable
-            sqrQuadWidth = (quad.transform.TransformPoint(vertices[0]) - quad.transform.TransformPoint(vertices[vertices.Length - 1])).sqrMagnitude * 4; 
+            sqrQuadWidth = (quad.transform.TransformPoint(vertices[0]) - quad.transform.TransformPoint(vertices[vertices.Length - 1])).sqrMagnitude * 0.5f;
 
             // Quad has UVs but they're not the right ones - we want planet UVs so we fetch them from here
             uvs = PQSMod_Parallax.quadPlanetUVs[quad];
@@ -125,7 +126,10 @@ namespace Parallax
 
             // Get the camera distance now, or we wait an additional frame
             UpdateQuadCameraDistance(ref RuntimeOperations.vectorCameraPos);
+            Profiler.BeginSample("Determine scatters");
             DetermineScatters();
+            Profiler.EndSample();
+            Profiler.EndSample();
         }
         /// <summary>
         /// Reinitialize the prerequisite data on this quad that must be refreshed. It does NOT reinitialize all scatters. Use this if regenerating scatters.
@@ -292,22 +296,14 @@ namespace Parallax
         public float GetSphereRelativeDensityMult(CelestialBody body)
         {
             // This calculation is wrong, but it surprisingly works much better for KSP
-            UnityEngine.Vector2d latlon = LatLon.GetLatitudeAndLongitude(body.BodyFrame, body.transform.position, quad.PrecisePosition);
+            UnityEngine.Vector2d latlon = LatLon.GetLatitudeAndLongitude(body.BodyFrame, body.gameObject.transform.position, quad.gameObject.transform.position);
 
-            //From -22.5 to 22.5 where 0 we want the highest density and -22.5 we want 1/3 density
-            double lat = Math.Abs(latlon.x) % 45.0 - 22.5;
-            double lon = Math.Abs(latlon.y) % 45.0 - 22.5;   
+            float normalisedDensityMultiplier = 1.0f - BiomeLoader.GetDensityAt(latlon);
 
-            //Now from -1 to 1, with 0 being where we want most density and -1 where we want 1/3
-            lat /= 22.5;
-            lon /= 22.5;    
+            // Square it, as we're working with area
+            normalisedDensityMultiplier = normalisedDensityMultiplier * normalisedDensityMultiplier;
 
-            //Now from 0 to 1. 1 when at a corner
-            lat = Math.Abs(lat);
-            lon = Math.Abs(lon);    
-
-            double factor = (lat + lon) / 2;
-            float multiplier = Mathf.Clamp01(Mathf.Lerp(1.0f, 0.333333f, Mathf.Pow((float)factor, 2)));
+            float multiplier = Mathf.Clamp01(Mathf.Lerp(0.18f, 1.0f, normalisedDensityMultiplier));
 
             return multiplier;
         }
@@ -344,9 +340,9 @@ namespace Parallax
             sourceVertsBuffer?.Dispose();
             sourceNormalsBuffer?.Dispose();
             sourceTrianglesBuffer?.Dispose();
-            sourceColorsBuffer.Dispose();
+            sourceColorsBuffer?.Dispose();
             sourceUVsBuffer?.Dispose();
-            sourceDirsFromCenterBuffer.Dispose();
+            sourceDirsFromCenterBuffer?.Dispose();
         }
     }
 }

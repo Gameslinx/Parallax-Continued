@@ -377,12 +377,7 @@ namespace Parallax
         }
         void Cleanup()
         {
-            outputLOD0?.Dispose();
-            outputLOD1?.Dispose();
-            outputLOD2?.Dispose();
-            indirectArgsLOD0?.Dispose();
-            indirectArgsLOD1?.Dispose();
-            indirectArgsLOD2?.Dispose();
+            ReleaseBuffers();
 
             UnityEngine.Object.Destroy(meshLOD0);
             UnityEngine.Object.Destroy(meshLOD1);
@@ -391,6 +386,15 @@ namespace Parallax
             UnityEngine.Object.Destroy(instancedMaterialLOD0);
             UnityEngine.Object.Destroy(instancedMaterialLOD1);
             UnityEngine.Object.Destroy(instancedMaterialLOD2);
+        }
+        public void ReleaseBuffers()
+        {
+            outputLOD0?.Dispose();
+            outputLOD1?.Dispose();
+            outputLOD2?.Dispose();
+            indirectArgsLOD0?.Dispose();
+            indirectArgsLOD1?.Dispose();
+            indirectArgsLOD2?.Dispose();
         }
         public void Disable()
         {

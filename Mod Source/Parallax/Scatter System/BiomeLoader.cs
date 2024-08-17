@@ -13,10 +13,25 @@ namespace Parallax
     [KSPAddon(KSPAddon.Startup.PSystemSpawn, false)]
     public class BiomeLoader : MonoBehaviour
     {
+        private static float[,] quadDensityData;
         void Start()
         {
             System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
             stopwatch.Start();
+
+            // Get the quad density map
+            Texture2D quadDensityMap = TextureLoader.LoadTexture("Parallax/Textures/PluginData/quadDensityMap.dds", true, false);
+            quadDensityData = new float[quadDensityMap.width, quadDensityMap.height];
+
+            // Copy data from texture to 2d float array for speed
+            for (int i = 0; i < quadDensityMap.width; i++)
+            {
+                for (int j = 0; j < quadDensityMap.height; j++)
+                {
+                    quadDensityData[i, j] = quadDensityMap.GetPixel(i, j).grayscale;
+                }
+            }
+
             // Process all bodies
             foreach (CelestialBody body in FlightGlobals.Bodies)
             {
@@ -62,6 +77,25 @@ namespace Parallax
             stopwatch.Stop();
 
             ParallaxDebug.Log("Biome processing took " + stopwatch.Elapsed.TotalMilliseconds + " ms");
+        }
+
+        public static float GetDensityAt(UnityEngine.Vector2d latlon)
+        {
+            Vector2Int pixelCoords = LatLonToEquirectangularPixelCoord(latlon, quadDensityData.GetLength(0), quadDensityData.GetLength(1));
+            return Mathf.Clamp01(quadDensityData[pixelCoords.x, pixelCoords.y]);
+        }
+
+        // Converts a normalized direction to 2D array indices (x, y)
+        public static Vector2Int LatLonToEquirectangularPixelCoord(UnityEngine.Vector2d latlon, int textureWidth, int textureHeight)
+        {
+            float x = (((float)latlon.y + 180.0f) / 360.0f) * (float)textureWidth;
+            float y = ((90.0f - (float)latlon.x) / 180.0f) * (float)textureHeight;
+
+            // Ensure pixel coordinates are within texture bounds
+            x = Mathf.Clamp(x, 0, textureWidth - 1);
+            y = Mathf.Clamp(y, 0, textureHeight - 1);
+
+            return new Vector2Int((int)x, (int)y);
         }
     }
 }

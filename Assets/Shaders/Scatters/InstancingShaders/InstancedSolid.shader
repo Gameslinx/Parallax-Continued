@@ -132,7 +132,7 @@ Shader "Custom/ParallaxInstancedSolid"
                 o.worldBinormal = cross(o.worldTangent, o.worldNormal) * i.tangent.w;
 
                 float3 worldPos = mul(objectToWorld, i.vertex);
-                float3 planetNormal = normalize(worldPos - _PlanetOrigin);
+                float3 planetNormal = CalculatePlanetNormal(PLANET_NORMAL_INPUT);
                 PROCESS_WIND(i)
 
                 o.worldPos = worldPos;
@@ -248,7 +248,7 @@ Shader "Custom/ParallaxInstancedSolid"
                 float3 worldNormal = mul(objectToWorld, float4(i.normal, 0)).xyz;
                 
                 float3 worldPos = mul(objectToWorld, i.vertex);
-                float3 planetNormal = normalize(worldPos - _PlanetOrigin);
+                float3 planetNormal = CalculatePlanetNormal(PLANET_NORMAL_INPUT);
                 PROCESS_WIND(i)
 
                 o.uv = i.uv;
@@ -333,7 +333,7 @@ Shader "Custom/ParallaxInstancedSolid"
                 o.worldBinormal = cross(o.worldTangent, o.worldNormal) * i.tangent.w;
 
                 float3 worldPos = mul(objectToWorld, i.vertex);
-                float3 planetNormal = normalize(worldPos - _PlanetOrigin);
+                float3 planetNormal = CalculatePlanetNormal(PLANET_NORMAL_INPUT);
                 PROCESS_WIND(i)
 
                 o.worldPos = worldPos;
@@ -472,7 +472,7 @@ Shader "Custom/ParallaxInstancedSolid"
                 o.worldBinormal = cross(o.worldTangent, o.worldNormal) * i.tangent.w;
 
                 float3 worldPos = mul(objectToWorld, i.vertex);
-                float3 planetNormal = normalize(worldPos - _PlanetOrigin);
+                float3 planetNormal = CalculatePlanetNormal(PLANET_NORMAL_INPUT);
                 PROCESS_WIND(i)
 
                 o.worldPos = worldPos;

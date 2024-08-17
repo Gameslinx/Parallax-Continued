@@ -112,11 +112,25 @@ float3 Wind(float3 localPos, float3 worldPos, float3 planetNormal, float4x4 obje
 // Essentially the same as flipping horizontal components only
 // For grass/trees with mostly upward-facing normals, this is useful
 #if defined (TWO_SIDED)
+    #define PLANET_NORMAL_INPUT objectToWorld
+
     #define CORRECT_TWOSIDED_WORLDNORMAL                                                                       \
         float3 unaligned = GetUnalignedVectorComponents(normalize(i.worldNormal), i.planetNormal);             \
         i.worldNormal = normalize(i.worldNormal - unaligned * 2.0f * (facing < 0));
+    
+    // Calculate the terrain normal instead of the planet normal (this is technically wrong, but close enough in most cases) - fixes incorrect flipping
+    float3 CalculatePlanetNormal(float4x4 objectToWorld)
+    {
+        return mul(objectToWorld, float4(0, 1, 0, 0)).xyz;
+    }
 #else
+    #define PLANET_NORMAL_INPUT worldPos    
     #define CORRECT_TWOSIDED_WORLDNORMAL
+
+    float3 CalculatePlanetNormal(float3 worldPos)
+    {
+        return normalize(worldPos - _PlanetOrigin);
+    }
 #endif
 
 // Process wind sway and offset local vertex

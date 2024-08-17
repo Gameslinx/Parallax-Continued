@@ -374,6 +374,7 @@ namespace Parallax.Legacy
                     node.AddValue("maxAltitude", properties.scatterDistribution._MaxAltitude);
                     node.AddValue("altitudeFadeRange", properties.scatterDistribution._AltitudeFadeRange * 2.0f);
                     node.AddValue("alignToTerrainNormal", alignToTerrainNormal);
+                    node.AddValue("coloredByTerrain", false);
                 }
 
                 ConfigNode lodNode = node.AddNode("LODs");

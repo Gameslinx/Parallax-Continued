@@ -128,11 +128,35 @@ namespace Parallax
         {
             return fastScatterRenderers[scatter.parent.scatterName];
         }
+        /// <summary>
+        /// Called when the game is closed. Releases all buffers.
+        /// </summary>
         void OnDestroy()
         {
             PQSStartPatch.onPQSStart -= DominantBodyLoaded;
             PQSStartPatch.onPQSUnload -= DominantBodyUnloaded;
             PQSStartPatch.onPQSRestart -= DominantBodyRestarted;
+
+            int quadsWithColorBuffer = 0;
+            ParallaxDebug.Log("Scatter Manager is being destroyed, cleaning up scatter system");
+            foreach (ScatterSystemQuadData quadData in ScatterComponent.scatterQuadData.Values)
+            {
+                foreach (ScatterData scatterData in quadData.quadScatters)
+                {
+                    if (scatterData.scatter.distributionParams.coloredByTerrain)
+                    {
+                        quadsWithColorBuffer++;
+                    }
+                }
+                quadData.Cleanup();
+            }
+
+            foreach (ScatterRenderer renderer in scatterRenderers)
+            {
+                renderer.ReleaseBuffers();
+            }
+
+            ParallaxDebug.Log("Quads with color buffer: " +  quadsWithColorBuffer);
         }
     }
 }

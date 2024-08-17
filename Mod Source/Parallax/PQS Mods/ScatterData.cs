@@ -45,6 +45,7 @@ namespace Parallax
 
         int numTriangles;
         int outputSize;
+        int maxCount;
 
         // Stores count of distribution output
         int[] count = new int[] { 0, 0, 0 };
@@ -72,15 +73,24 @@ namespace Parallax
             cleaned = false;
             scatterRenderer = ScatterManager.Instance.fastScatterRenderers[scatter.scatterName];
             numTriangles = parent.numMeshTriangles;
+
             outputSize = scatter.distributionParams.populationMultiplier * numTriangles * (int)Mathf.Pow(2, parent.quad.sphereRoot.maxLevel - parent.quad.subdivision);
+            maxCount = outputSize;
+
+            // Scale the output size by the relative density mult and spawn chance, overshoot slightly for safety
+            outputSize = Mathf.CeilToInt((float)outputSize * parent.sphereRelativeDensityMult);
+            if (outputSize > 100 && scatter.distributionParams.spawnChance < 0.95)
+            {
+                outputSize = Mathf.CeilToInt((float)outputSize * (scatter.distributionParams.spawnChance + 0.05f));
+            }
         }
         void InitializeDistribute()
         {
-            scatterShader = scatter.shader; //ConfigLoader.computeShaderPool.Fetch();
+            scatterShader = scatter.shader;
 
             // Required values
             scatterShader.SetFloat("_PlanetRadius", parent.planetRadius);
-            scatterShader.SetInt("_MaxCount", outputSize);
+            scatterShader.SetInt("_MaxCount", maxCount);
             scatterShader.SetInt("_NumberOfBiomes", scatter.biomeCount);
 
             scatterShader.SetVector("_PlanetNormal", parent.planetNormal);
@@ -400,7 +410,7 @@ namespace Parallax
             scatterShader.SetVector(ParallaxScatterShaderProperties.planetNormalPropID, Vector3.Normalize(parent.quad.PrecisePosition - parent.quad.sphereRoot.PrecisePosition));
             scatterShader.SetFloats(ParallaxScatterShaderProperties.cameraFrustumPlanesPropID, RuntimeOperations.floatCameraFrustumPlanes);
             scatterShader.SetVector(ParallaxScatterShaderProperties.worldSpaceCameraPositionPropID, RuntimeOperations.vectorCameraPos);
-            scatterShader.SetInt(   ParallaxScatterShaderProperties.maxCountPropID, outputSize);
+            scatterShader.SetInt(   ParallaxScatterShaderProperties.maxCountPropID, realCount);
 
             scatterShader.DispatchIndirect(evaluateKernel, dispatchArgs, 0);
         }

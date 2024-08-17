@@ -734,8 +734,6 @@ Shader "Custom/Parallax"
                 fixed4 finalDiffuse = lerp(altitudeDiffuse, steepDiffuse, landMask.b);
                 NORMAL_FLOAT finalNormal = lerp(altitudeNormal, steepNormal, landMask.b);
 
-                //finalDiffuse = displacement;
-
                 // Deferred functions
                 SurfaceOutputStandardSpecular surfaceInput = GetPBRStruct(finalDiffuse, GET_EMISSION, finalNormal.xyz, i.worldPos);
                 UnityGI gi = GetUnityGI();

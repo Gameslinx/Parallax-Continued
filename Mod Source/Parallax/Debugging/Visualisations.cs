@@ -1,6 +1,7 @@
 ﻿using Parallax.Debugging;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,11 +19,27 @@ namespace Parallax
         bool showingDensity = false;
         bool showingUVs = false;
 
-        // Not used in release versions
-
         void Update()
         {
-            return;
+            //return;
+
+            if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha1))
+            {
+                ScatterSystemQuadData closest = null;
+                float closestDist = float.MaxValue;
+                foreach (ScatterSystemQuadData quadData in ScatterComponent.scatterQuadData.Values)
+                {
+                    float distance = quadData.cameraDistance;
+                    if (distance < closestDist)
+                    {
+                        closestDist = distance;
+                        closest = quadData;
+                    }
+                }
+
+                float quadWidth = Vector3.Distance(closest.quad.gameObject.transform.TransformPoint(closest.vertices[0]), closest.quad.gameObject.transform.TransformPoint(closest.vertices[14]));
+                Debug.Log("Quad width of closest quad " + quadWidth);
+            }
 
             bool noiseToggle = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha1);
             if (noiseToggle) 
@@ -78,6 +95,7 @@ namespace Parallax
                 ParallaxDiagnostics.LogComputeShaderResourceUsage();
             }
         }
+        
         public static GameObject CreateQuadGameObject(PQ quad, out MeshRenderer meshRenderer, out MeshFilter meshFilter)
         {
             GameObject go = new GameObject(quad.name + "-VISUALISATION");
