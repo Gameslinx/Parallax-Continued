@@ -107,8 +107,30 @@ namespace Parallax
             DominantBodyLoaded(bodyName);
         }
         // After any world origin shifts
+        // Rendering is kicked off from here
         void LateUpdate()
         {
+            // Clear the buffers
+            foreach (ScatterRenderer renderer in activeScatterRenderers)
+            {
+                renderer.PreRender();
+            }
+
+            // Update quad-camera distances
+            // Then dispatch the evaluate compute shaders
+
+            foreach (var data in ScatterComponent.scatterQuadData)
+            {
+                ScatterSystemQuadData quadData = data.Value;
+                if (quadData.quad.isVisible && quadData.quad.meshRenderer.isVisible)
+                {
+                    quadData.UpdateQuadCameraDistance(ref RuntimeOperations.vectorCameraPos);
+                    quadData.EvaluateQuad();
+                }
+            }
+
+            // Schedule drawing instanced data to screen
+
             if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Direct3D11)
             {
                 foreach (ScatterRenderer renderer in activeScatterRenderers)

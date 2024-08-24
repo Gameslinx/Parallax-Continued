@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: ParallaxMaterial
   m_Shader: {fileID: 4800000, guid: b9860552776eb2c4f998cf8c4044ee5a, type: 3}
-  m_ShaderKeywords: ADVANCED_BLENDING ENHANCED_BLENDING PARALLAX_DOUBLE_MIDHIGH
+  m_ShaderKeywords: ENHANCED_BLENDING PARALLAX_SINGLE_MID
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -30,11 +30,11 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMapLow:
-        m_Texture: {fileID: 2800000, guid: 7e5ee1484bd9d234bbe96b103d546095, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMapMid:
-        m_Texture: {fileID: 2800000, guid: 33c6a0fcd0222e24ea25ee8c53650e4d, type: 3}
+        m_Texture: {fileID: 2800000, guid: 673d1f780ea23704094b45f74f2679ff, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMapSteep:
@@ -58,7 +58,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DisplacementMap:
-        m_Texture: {fileID: 2800000, guid: 13cae0d73e57f5f4ba8b3a98a810468d, type: 3}
+        m_Texture: {fileID: 2800000, guid: 9f6a10a5c0616a048811ddd2429538f8, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _EmissionMap:
@@ -66,7 +66,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _InfluenceMap:
-        m_Texture: {fileID: 2800000, guid: 05d5a254f91303a459c15164bae46170, type: 3}
+        m_Texture: {fileID: 2800000, guid: 45551909789df4e40b37813453983633, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
@@ -78,11 +78,11 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTexLow:
-        m_Texture: {fileID: 2800000, guid: 5035656d647b7a242bf6e3099fb0239a, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTexMid:
-        m_Texture: {fileID: 2800000, guid: 5ab818c6d7b3e11459865d71dc5aa990, type: 3}
+        m_Texture: {fileID: 2800000, guid: 117b8bd5bff470643ac154a8dbdac061, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTexSteep:
@@ -121,11 +121,13 @@ Material:
     - PARALLAX_SHADER_VARIANT: 0
     - PARALLAX_SINGLE: 0
     - _BiplanarBlendFactor: 4
+    - _BlendPower: 1
+    - _BlendSmoothness: 0.363
     - _BumpScale: 1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DisplacementOffset: -0.5
-    - _DisplacementScale: 0.207
+    - _DisplacementScale: 0.21
     - _DstBlend: 0
     - _EnvironmentMapFactor: 1
     - _FadeEnd: 9000
@@ -146,8 +148,8 @@ Material:
     - _MaxTessellation: 64
     - _MaxTessellationRange: 30
     - _Metallic: 0
-    - _MidHighBlendEnd: 8.09
-    - _MidHighBlendStart: 4.45
+    - _MidHighBlendEnd: 10
+    - _MidHighBlendStart: 2.14
     - _Mode: 0
     - _NormalSpecularInfluence: 1
     - _OcclusionStrength: 1
@@ -159,8 +161,8 @@ Material:
     - _Shininess: 10
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
-    - _SpecularIntensity: 1.09
-    - _SpecularPower: 3
+    - _SpecularIntensity: 1.2
+    - _SpecularPower: 18
     - _SrcBlend: 1
     - _SteepContrast: 2.62
     - _SteepMidpoint: 0.81
@@ -170,7 +172,7 @@ Material:
     - _TessellationFactor: 1
     - _TessellationMax: 64
     - _TessellationRange: 99
-    - _Tiling: 0.022
+    - _Tiling: 0.028
     - _UVSec: 0
     - _ZWrite: 1
     - _displacement_offset: 0

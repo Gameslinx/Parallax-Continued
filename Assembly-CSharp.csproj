@@ -84,6 +84,7 @@
      <None Include="Assets\Shaders\Scatters\ScatterUtils.cginc" />
      <None Include="Assets\Shaders\Debug\SphericalCoords.shader" />
      <None Include="Assets\Shaders\Debug\ShowNoise.shader" />
+     <None Include="Assets\Shaders\Scatters\InstancingShaders\InstancedBiplanar.shader" />
      <None Include="Assets\Shaders\Scatters\InstancingShaders\InstancedSolid.shader" />
      <None Include="Assets\Shaders\Debug\ShowNormals.shader" />
      <None Include="Assets\Shaders\Debug\ShowBiomeMap.shader" />
@@ -93,6 +94,7 @@
      <None Include="Assets\Shaders\Debug\ShowCubemap.shader" />
      <None Include="Assets\Shaders\Terrain\DiscardAll.shader" />
      <None Include="Assets\Shaders\Scatters\SimplexNoise.cginc" />
+     <None Include="Assets\Shaders\Includes\BiplanarFunctions.cginc" />
      <None Include="Assets\Shaders\Debug\Old Parallax\PF.shader" />
      <None Include="Assets\Shaders\Scatters\ScatterStructs.cginc" />
      <None Include="Assets\Shaders\Debug\Old Parallax\TessellationProper.cginc" />

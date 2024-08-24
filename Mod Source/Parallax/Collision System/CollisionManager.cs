@@ -183,10 +183,6 @@ namespace Parallax
                 // Add job info
                 sqrQuadBounds.Add(data.scatterSystemQuad.sqrQuadWidth);
             }
-            if (incomingData.Count > 0)
-            {
-                Debug.Log("Added queued data, new length: " + collisionData.Length);
-            }
             
             incomingData.Clear();
         }
@@ -202,10 +198,6 @@ namespace Parallax
 
                 data.lastDistances.Dispose();
                 data.quadLocalData.Dispose();
-            }
-            if (outgoingData.Count > 0)
-            {
-                Debug.Log("Removed queued data, new length: " + collisionData.Length);
             }
             outgoingData.Clear();
         }

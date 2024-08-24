@@ -8,6 +8,8 @@
         _DisplacementTex2("Displacement 2", 2D) = "white" {}
         _BlendStart("Blend start", Range(0, 10)) = 1
         _BlendEnd("Blend end", Range(0, 10)) = 2
+
+        _Smoothness("Smoothness", Range(0, 1)) = 1
     }
     SubShader
     {
@@ -43,6 +45,8 @@
             sampler2D _DisplacementTex2;
             float _BlendStart;
             float _BlendEnd;
+            float _BlendPower;
+            float _Smoothness;
             float4 _MainTex_ST;
             
             v2f vert (appdata v)
@@ -60,6 +64,22 @@
                 return saturate((x - lower) / (upper - lower));
             }
 
+            float GetDisplacementLerpFactor(float heightLerp, float displacement1, float displacement2)
+            {
+                displacement2 += (heightLerp);
+                displacement1 *= (1 - heightLerp);
+
+                displacement2 = saturate(displacement2);
+                displacement1 = saturate(displacement1);
+
+                float diff = (displacement2 - displacement1) * heightLerp;
+
+                diff /= _Smoothness;
+                diff = saturate(diff);
+
+                return diff;
+            }
+
             fixed4 frag (v2f i) : SV_Target
             {
                 // Sample the base textures
@@ -67,19 +87,18 @@
                 float4 tex2 = tex2D(_MainTex2, i.uv);
 
                 // Sample the displacement maps
-                float displacement1 = tex2D(_DisplacementTex1, i.uv).b; // Blue channel of DisplacementTex1
-                float displacement2 = tex2D(_DisplacementTex1, i.uv).r; // Red channel of DisplacementTex1
+                float displacement1 = tex2D(_DisplacementTex1, i.uv).r;
+                float displacement2 = tex2D(_DisplacementTex1, i.uv).b;
 
                 // Compute the height-based blend factor
                 float heightLerp = GetPercentageBetween(_BlendStart, _BlendEnd, length(i.worldPos));
 
-                // Adjust the heightLerp using the displacement maps
-                float blendFactor = saturate(-heightLerp + displacement1 * (1 - heightLerp) - displacement2 + heightLerp);
+                float diff = GetDisplacementLerpFactor(heightLerp, displacement1, displacement2);
 
-                // Blend the textures based on the adjusted blend factor
-                float4 blendedColor = lerp(tex1, tex2, blendFactor);
+                float4 result = lerp(tex1, tex2, diff);
 
-                return blendedColor;
+                return result;
+
             }
             ENDCG
         }

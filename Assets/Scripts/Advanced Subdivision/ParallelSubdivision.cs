@@ -43,6 +43,13 @@ public struct SubdividableTriangle
         //  This means we don't have a t junction when two vertices are out of range, but we do when we have one out of range.
         //  And to remove that T junction with 1 vertex out of range, we just need to connect that far vertex to the midpoint of the edge opposite it
         //
+
+        if (IsTriangleCorrupt(subdivisionLevelv1, subdivisionLevelv2, subdivisionLevelv3, level))
+        {
+            tris.Write(this);
+            return;
+        }
+
         if (AreTwoVertsOutOfRange(level, subdivisionLevelv1, subdivisionLevelv2, subdivisionLevelv3))
         {
             tris.Write(this);
@@ -89,6 +96,8 @@ public struct SubdividableTriangle
             tris.Write(this);
             return;
         }
+
+        
 
         // Divide triangle into 4 new triangles
 
@@ -200,6 +209,17 @@ public struct SubdividableTriangle
         {
             return true;
         }
+        return false;
+    }
+    public bool IsTriangleCorrupt(int subdivisionLevelv1, int subdivisionLevelv2, int subdivisionLevelv3, int level)
+    {
+        // If the difference in subdivision levels is greater than 1 level, we'll be introducing a T junction or at worst a gap we don't account for
+        // Fill it - the range needs increasing, this is a fallback
+        if ((level - subdivisionLevelv1) > 1 || (level - subdivisionLevelv2) > 1 || (level - subdivisionLevelv3) > 1)
+        {
+            return true;
+        }
+
         return false;
     }
     public float3 GetVertexBetween(in float3 v1, in float3 v2)

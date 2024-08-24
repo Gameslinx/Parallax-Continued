@@ -34,7 +34,6 @@ namespace Parallax
         public event EvaluateScatters onEvaluateScatters;
         public void Enable()
         {
-            Debug.Log("[Renderer] OnEnable");
             Prerequisites();
             Initialize();
             FirstTimeArgs();
@@ -69,7 +68,6 @@ namespace Parallax
             // Keywords
             foreach (string keyword in materialParams.shaderKeywords)
             {
-                Debug.Log("Enabling shader keyword: " + keyword);
                 material.EnableKeyword(keyword);
                 if (keyword == "ALPHA_CUTOFF")
                 {
@@ -206,7 +204,7 @@ namespace Parallax
             outputLOD1.SetCounterValue(0);
             outputLOD2.SetCounterValue(0);
 
-            rendererBounds = new Bounds(Vector3.zero, Vector3.one * 25000.0f);
+            rendererBounds = new Bounds(Vector3.zero, Vector3.one * 50000.0f);
         }
         /// <summary>
         /// Estimates the number of objects as a portion of maxObjects that will be visible at one time.
@@ -229,7 +227,6 @@ namespace Parallax
 
             float estimation = Mathf.CeilToInt(actualMaxCount * fraction);
 
-            
             return (int)Mathf.Min(actualMaxCount, estimation);
         }
         void FirstTimeArgs()
@@ -262,51 +259,33 @@ namespace Parallax
             indirectArgsLOD2.SetData(argumentsLod2);
         }
         // Called on Update from ScatterManager.cs
-        public void Render()
+        public void PreRender()
         {
             // Hugely important we set the count to 0 or the buffer will keep filling up
             // For shared scatters, this is already done in the parent scatter renderer so we can skip it here
+
             if (!scatter.isShared)
             {
                 outputLOD0.SetCounterValue(0);
                 outputLOD1.SetCounterValue(0);
                 outputLOD2.SetCounterValue(0);
-
-                // Fill the buffer with our instanced data
-                if (onEvaluateScatters != null)
-                {
-                    onEvaluateScatters();
-                }
             }
-
+        }
+        public void Render()
+        {
             // Copy the count from the output buffer to the indirect args for instancing
             ComputeBuffer.CopyCount(outputLOD0, indirectArgsLOD0, 4);
             ComputeBuffer.CopyCount(outputLOD1, indirectArgsLOD1, 4);
             ComputeBuffer.CopyCount(outputLOD2, indirectArgsLOD2, 4);
 
             // Render instanced data
-            Graphics.DrawMeshInstancedIndirect(meshLOD0, 0, instancedMaterialLOD0, rendererBounds, indirectArgsLOD0, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, Camera.main);
-            Graphics.DrawMeshInstancedIndirect(meshLOD1, 0, instancedMaterialLOD1, rendererBounds, indirectArgsLOD1, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, Camera.main);
-            Graphics.DrawMeshInstancedIndirect(meshLOD2, 0, instancedMaterialLOD2, rendererBounds, indirectArgsLOD2, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, Camera.main);
+            Graphics.DrawMeshInstancedIndirect(meshLOD0, 0, instancedMaterialLOD0, rendererBounds, indirectArgsLOD0, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 15, Camera.main);
+            Graphics.DrawMeshInstancedIndirect(meshLOD1, 0, instancedMaterialLOD1, rendererBounds, indirectArgsLOD1, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 15, Camera.main);
+            Graphics.DrawMeshInstancedIndirect(meshLOD2, 0, instancedMaterialLOD2, rendererBounds, indirectArgsLOD2, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 15, Camera.main);
         }
         // Called on Update from ScatterManager.cs, if we're not in DX11
         public void RenderInCameras(params Camera[] cameras)
         {
-            // Hugely important we set the count to 0 or the buffer will keep filling up
-            // For shared scatters, this is already done in the parent scatter renderer so we can skip it here
-            if (!scatter.isShared)
-            {
-                outputLOD0.SetCounterValue(0);
-                outputLOD1.SetCounterValue(0);
-                outputLOD2.SetCounterValue(0);
-
-                // Fill the buffer with our instanced data
-                if (onEvaluateScatters != null)
-                {
-                    onEvaluateScatters();
-                }
-            }
-
             // Copy the count from the output buffer to the indirect args for instancing
             ComputeBuffer.CopyCount(outputLOD0, indirectArgsLOD0, 4);
             ComputeBuffer.CopyCount(outputLOD1, indirectArgsLOD1, 4);
@@ -315,9 +294,9 @@ namespace Parallax
             foreach (Camera cam in cameras)
             {
                 // Render instanced data
-                Graphics.DrawMeshInstancedIndirect(meshLOD0, 0, instancedMaterialLOD0, rendererBounds, indirectArgsLOD0, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, cam);
-                Graphics.DrawMeshInstancedIndirect(meshLOD1, 0, instancedMaterialLOD1, rendererBounds, indirectArgsLOD1, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, cam);
-                Graphics.DrawMeshInstancedIndirect(meshLOD2, 0, instancedMaterialLOD2, rendererBounds, indirectArgsLOD2, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 0, cam);
+                Graphics.DrawMeshInstancedIndirect(meshLOD0, 0, instancedMaterialLOD0, rendererBounds, indirectArgsLOD0, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 15, cam);
+                Graphics.DrawMeshInstancedIndirect(meshLOD1, 0, instancedMaterialLOD1, rendererBounds, indirectArgsLOD1, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 15, cam);
+                Graphics.DrawMeshInstancedIndirect(meshLOD2, 0, instancedMaterialLOD2, rendererBounds, indirectArgsLOD2, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, 15, cam);
             }
         }
 

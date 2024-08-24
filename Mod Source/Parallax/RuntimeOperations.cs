@@ -44,7 +44,7 @@ namespace Parallax
         {
             flightProbeObject = GameObject.Find("Reflection Probe");
             FlightReflectionProbe probeComponent = flightProbeObject.GetComponent<FlightReflectionProbe>();
-            probeComponent.probeComponent.size = Vector3.one * 10000;
+            probeComponent.probeComponent.size = Vector3.one * 100000.0f;
             if (onFlightReflectionProbeReady != null)
             { 
                 onFlightReflectionProbeReady(flightProbeObject.transform);
@@ -82,15 +82,6 @@ namespace Parallax
             {
                 vectorCameraPos = Vector3.zero;
                 cameraPos = float3.zero;
-            }
-
-            // Update quad-camera distances
-            foreach (var data in ScatterComponent.scatterQuadData)
-            {
-                if (data.Value.quad.isVisible && data.Value.quad.meshRenderer.isVisible)
-                {
-                    data.Value.UpdateQuadCameraDistance(ref vectorCameraPos);
-                }
             }
         }
 

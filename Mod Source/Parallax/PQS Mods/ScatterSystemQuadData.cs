@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -80,7 +81,6 @@ namespace Parallax
         /// </summary>
         public void Initialize()
         {
-            Profiler.BeginSample("Init scatter system");
             mesh = quad.mesh;
             vertices = mesh.vertices;
             normals = mesh.normals;
@@ -89,7 +89,7 @@ namespace Parallax
 
             // We can estimate this using (float)((2f * Mathf.PI * quad.sphereRoot.radius / 4f) / (Mathf.Pow(2f, quad.subdivision)));
             // But quads do vary in size because of the cube sphere transformation, making this unreliable
-            sqrQuadWidth = (quad.transform.TransformPoint(vertices[0]) - quad.transform.TransformPoint(vertices[vertices.Length - 1])).sqrMagnitude * 0.5f;
+            sqrQuadWidth = GetSqrQuadWidth(vertices);
 
             // Quad has UVs but they're not the right ones - we want planet UVs so we fetch them from here
             uvs = PQSMod_Parallax.quadPlanetUVs[quad];
@@ -126,10 +126,7 @@ namespace Parallax
 
             // Get the camera distance now, or we wait an additional frame
             UpdateQuadCameraDistance(ref RuntimeOperations.vectorCameraPos);
-            Profiler.BeginSample("Determine scatters");
             DetermineScatters();
-            Profiler.EndSample();
-            Profiler.EndSample();
         }
         /// <summary>
         /// Reinitialize the prerequisite data on this quad that must be refreshed. It does NOT reinitialize all scatters. Use this if regenerating scatters.
@@ -167,32 +164,58 @@ namespace Parallax
                 }
             }
         }
+        /// <summary>
+        /// Calculate the max bound on this quad
+        /// </summary>
+        public float GetSqrQuadWidth(Vector3[] verts)
+        {
+            // Quad corners are indices 0, 14, 210, 224
+            // Find longest diag, divide by sqrt 2
+            float width1 = (quad.transform.TransformPoint(verts[0]) - quad.transform.TransformPoint(verts[verts.Length - 1])).sqrMagnitude;
+            float width2 = (quad.transform.TransformPoint(verts[210]) - quad.transform.TransformPoint(verts[14])).sqrMagnitude;
+
+            return Mathf.Max(width1, width2) * 0.5f;
+        }
         // Get the square distance from the quad to the camera
         public void UpdateQuadCameraDistance(ref Vector3 cameraPos)
         {
             cameraDistance = ((Vector3)quad.meshRenderer.localToWorldMatrix.GetColumn(3) - cameraPos).sqrMagnitude;
-
-            // Warning - bugged - Especially on GUI refreshes
-            // Intention is to clean up quads that are out of range completely to save some VRAM and reduce compute shader usage...
-            // Commented out for now 
-
-            //foreach (ScatterData scatter in quadScatters)
-            //{
-            //    if (cameraDistance > scatter.scatter.distributionParams.range * scatter.scatter.distributionParams.range + sqrQuadWidth)
-            //    { 
-            //        scatter.Cleanup(); 
-            //    }
-            //    else
-            //    {
-            //        if (scatter.cleaned)
-            //        {
-            //            ReinitializeScatters(scatter);
-            //        }
-            //    }
-            //}
+        }
+        bool alreadyReinitializedThisFrame = false;
+        /// <summary>
+        /// Generate the instanced transform data on this quad
+        /// </summary>
+        public void EvaluateQuad()
+        {
+            foreach (ScatterData scatter in quadScatters)
+            {
+                // Scatter out of range and active? Pause
+                if (cameraDistance > scatter.scatter.distributionParams.range * scatter.scatter.distributionParams.range + sqrQuadWidth)
+                { 
+                    if (!scatter.cleaned)
+                    {
+                        scatter.Pause();
+                    }
+                }
+                else
+                {
+                    // Scatter in range and needs initializing? Reinit quad data and start
+                    if (scatter.cleaned)
+                    {
+                        if (!alreadyReinitializedThisFrame)
+                        {
+                            Reinitialize();
+                            alreadyReinitializedThisFrame = true;
+                        }
+                        scatter.Resume();
+                    }
+                }
+                scatter.Evaluate();
+            }
+            alreadyReinitializedThisFrame = false;
         }
         /// <summary>
-        /// Determines what scatters appear on this quad with some optimization to skip scatters that aren't eligible.
+        /// Determines what scatters appear on this quad
         /// </summary>
         public void DetermineScatters()
         {
@@ -203,8 +226,28 @@ namespace Parallax
                 {
                     ScatterData data = new ScatterData(this, body.fastScatters[i]);
                     quadScatters.Add(data);
-                    data.Start();
+                    StartScatter(data);
                 }
+            }
+        }
+        /// <summary>
+        /// Starts the scatter, or initializes it in a paused state
+        /// </summary>
+        /// <param name="data"></param>
+        public void StartScatter(ScatterData data)
+        {
+            // Update camera distance to this quad
+            UpdateQuadCameraDistance(ref RuntimeOperations.vectorCameraPos);
+
+            if (data.CollidersEligible() && cameraDistance > data.scatter.distributionParams.range * data.scatter.distributionParams.range + sqrQuadWidth)
+            {
+                // We're out of range, and colliders won't be generated
+                data.Pause();
+            }
+            else
+            {
+                // We're in range, or colliders will be generated
+                data.Start();
             }
         }
         /// <summary>

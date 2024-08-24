@@ -37,6 +37,7 @@ namespace Parallax
         bool alreadyInitialized = false;
         bool materialCreated = false;
 
+        bool probeEventAdded = false;
         public TerrainShaderQuadData(PQ quad, int subdivisionLevel, float subdivisionRadius, bool isMaxLevel)
         {
             this.quad = quad;
@@ -47,7 +48,6 @@ namespace Parallax
         // Get all required properties on the planet
         public void Initialize()
         {
-            Profiler.BeginSample("Parallax Terrain Initialize");
             body = ConfigLoader.parallaxTerrainBodies[quad.sphereRoot.name];
 
             blendLowMidStart = body.terrainShaderProperties.shaderFloats["_LowMidBlendStart"];
@@ -56,9 +56,14 @@ namespace Parallax
             blendMidHighEnd = body.terrainShaderProperties.shaderFloats["_MidHighBlendEnd"];
 
             quadMaterial = DetermineMaterial();
+            
             if (body.emissive)
             {
                 quadMaterial.EnableKeyword("EMISSION");
+            }
+            if (ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.advancedTextureBlending)
+            {
+                quadMaterial.EnableKeyword("ADVANCED_BLENDING");
             }
 
             quadMeshRenderer = quad.gameObject.GetComponent<MeshRenderer>();
@@ -66,9 +71,7 @@ namespace Parallax
             if (isMaxLevel)
             {
                 // Sadly a requirement or quad meshes become corrupt
-                Profiler.BeginSample("Parallax Instantiate");
                 mesh = new Mesh();
-                Profiler.EndSample();
                 
                 quadWidth = (float)((2f * Mathf.PI * quad.sphereRoot.radius / 4f) / (Mathf.Pow(2f, quad.sphereRoot.maxLevel)));
                 quadWidth *= quadWidth;
@@ -84,13 +87,13 @@ namespace Parallax
             // Quads can build before the flight scene is ready. Quads built after will call this fine, but quads built before need to rely on the event
             if (RuntimeOperations.flightProbeObject != null)
             {
-                SetReflectionProbeAnchor(RuntimeOperations.flightProbeObject.transform);
+                //SetReflectionProbeAnchor(RuntimeOperations.flightProbeObject.transform);
             }
             else
             {
-                RuntimeOperations.onFlightReflectionProbeReady += SetReflectionProbeAnchor;
+                //RuntimeOperations.onFlightReflectionProbeReady += SetReflectionProbeAnchor;
+                probeEventAdded = true;
             }
-            Profiler.EndSample();
         }
         // Params to avoid garbage gen
         Vector3 worldOrigin = Vector3.zero;
@@ -130,7 +133,6 @@ namespace Parallax
         }
         public void RangeCheck()
         {
-            Profiler.BeginSample("Parallax Terrain RangeCheck");
             dist = GetSqrQuadCameraDistance(quad.PrecisePosition, RuntimeOperations.vectorCameraPos);
             // We're within range
             if (dist < quadWidth)
@@ -162,7 +164,6 @@ namespace Parallax
                 SwapMaterial(false);
                 materialCreated = true;
             }
-            Profiler.EndSample();
         }
         // We can't edit the meshrenderer or meshfilter on the quad, or everything will disintigrate spectacularly
         // So we need to make a fake visual quad and hide the real one
@@ -291,6 +292,11 @@ namespace Parallax
             {
                 subdivisionComponent.Cleanup();
                 subdivisionComponent = null;
+            }
+            if (probeEventAdded)
+            {
+                probeEventAdded = false;
+                //RuntimeOperations.onFlightReflectionProbeReady -= SetReflectionProbeAnchor;
             }
         }
     }

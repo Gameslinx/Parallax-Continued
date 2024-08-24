@@ -46,13 +46,12 @@ namespace Parallax
         public void Awake()
         {
             ParallaxDebug.Log("Starting!");
-            System.Reflection.Assembly assembly = System.Reflection.Assembly.GetAssembly(typeof(AsyncGPUReadbackRequest));
-            Debug.Log(assembly.Location);
         }
         // Entry point
         public static void ModuleManagerPostLoad()
         {
             ParallaxDebug.Log("Beginning config load");
+            System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
 
             // Get system information
             ParallaxSystemInfo.ReadInfo();
@@ -77,7 +76,23 @@ namespace Parallax
 
             transparentMaterial = new Material(AssetBundleLoader.parallaxTerrainShaders["Custom/DiscardAll"]);
             wireframeMaterial = new Material(AssetBundleLoader.parallaxTerrainShaders["Custom/Wireframe"]);
+
+            sw.Stop();
+            ParallaxDebug.Log("Loading took " + sw.Elapsed.TotalSeconds.ToString("F2") + " seconds");
+
+            CheckSettings();
         }
+
+        private static void CheckSettings()
+        {
+            // If the terrain detail is not maxed out
+            if (PQSCache.PresetList.presetIndex != PQSCache.PresetList.presets.Count - 1)
+            {
+                PopupDialog dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f,0.5f), new Vector2(0.5f,0.5f), "Parallax Error", "Parallax Error",
+                                     "Parallax Installation Error: Your 'Terrain Detail' setting is not set to 'High'. You must set this correctly in the main menu graphics settings!", "I'll change this!", true, HighLogic.UISkin);
+            }
+        }
+
         public static UrlDir.UrlConfig[] GetConfigsByName(string name)
         {
             return GameDatabase.Instance.GetConfigs(name);
@@ -222,6 +237,7 @@ namespace Parallax
             parallaxGlobalSettings.terrainGlobalSettings.maxTessellation = float.Parse(terrainSettingsNode.GetValue("maxTessellation"));
             parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength = float.Parse(terrainSettingsNode.GetValue("tessellationEdgeLength"));
             parallaxGlobalSettings.terrainGlobalSettings.maxTessellationRange = float.Parse(terrainSettingsNode.GetValue("maxTessellationRange"));
+            parallaxGlobalSettings.terrainGlobalSettings.advancedTextureBlending = bool.Parse(terrainSettingsNode.GetValue("useAdvancedTextureBlending"));
 
             ConfigNode scatterSettingsNode = config.config.GetNode("ScatterSystemSettings");
             parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier = float.Parse(scatterSettingsNode.GetValue("densityMultiplier"));
@@ -286,7 +302,7 @@ namespace Parallax
                             // This keyword is overridden by another keyword. Now check if that keyword is enabled on the shader (linear search)
                             if (keywords.Contains(supersededBy))
                             {
-                                ParallaxDebug.Log("This keyword is superseded by " + supersededBy + ", skipping!");
+                                ParallaxDebug.Log("[Warning] This keyword (" + keyword + " ) on a scatter material is superseded by " + supersededBy + ", skipping!");
                                 keywordsToRemove.Add(keyword);
                                 continue;
                             }
@@ -353,8 +369,12 @@ namespace Parallax
                 foreach (ConfigNode planetNode in nodes)
                 {
                     string planetName = planetNode.GetValue("name");
-
-                    ParallaxDebug.Log("[Terrain] Parsing new body: " + planetName);
+                    ParallaxDebug.Log("Parsing new terrain body: " + planetName);
+                    if (parallaxTerrainBodies.ContainsKey(planetName))
+                    {
+                        ParallaxDebug.LogError("Parallax Terrain config for " + planetName + " already exists, skipping!");
+                        continue;
+                    }
 
                     string emissive = planetNode.GetValue("emissive");
                     bool isEmissive = emissive == null ? false : (bool.Parse(emissive) == true ? true : false);
@@ -425,8 +445,13 @@ namespace Parallax
                 foreach (ConfigNode bodyNode in bodyNodes)
                 {
                     string body = bodyNode.GetValue("name");
+                    ParallaxDebug.Log("Parsing new scatter body: " + body);
 
-                    ParallaxDebug.Log("[Scatters] Parsing new body: " + body);
+                    if (parallaxScatterBodies.ContainsKey(body))
+                    {
+                        ParallaxDebug.LogError("Parallax Scatter config for " + body + " already exists, skipping!");
+                        continue;
+                    }
 
                     string configVersion = bodyNode.GetValue("configVersion");
                     if (configVersion == null)
@@ -446,8 +471,13 @@ namespace Parallax
                     foreach (ConfigNode node in nodes)
                     {
                         string scatterName = body + "-" + ConfigUtils.TryGetConfigValue(node, "name");
+                        ParallaxDebug.Log("Parsing new scatter: " + scatterName);
 
-                        ParallaxDebug.Log("Parsing scatter: " + scatterName);
+                        if (scatterBody.scatters.ContainsKey(scatterName))
+                        {
+                            ParallaxDebug.LogError("Scatter " + scatterName + " already exists on " + body + ", skipping!");
+                            continue;
+                        }
 
                         string model = ConfigUtils.TryGetConfigValue(node, "model");
                         string collisionLevelString = ConfigUtils.TryGetConfigValue(node, "collisionLevel");
@@ -502,6 +532,14 @@ namespace Parallax
                 {
                     string body = bodyNode.GetValue("name");
 
+                    ParallaxDebug.Log("[Shared Scatter Pass] Searching for scatter body: " + body);
+
+                    if (!parallaxScatterBodies.ContainsKey(body))
+                    {
+                        ParallaxDebug.LogError("Trying to parse a shared scatter on " + body + ", but this planet doesn't exist. Skipping!");
+                        continue;
+                    }
+
                     ParallaxScatterBody scatterBody = parallaxScatterBodies[body];
 
                     // Process shared scatters - These are scatters that share distribution data with another, so it doesn't need to be generated again
@@ -511,15 +549,18 @@ namespace Parallax
                     {
                         string scatterName = body + "-" + ConfigUtils.TryGetConfigValue(node, "name");
 
-                        ParallaxDebug.Log("Parsing shared scatter: " + scatterName);
+                        ParallaxDebug.Log("[Shared Scatter Pass] Parsing new shared scatter: " + scatterName);
 
                         string parentName = body + "-" + ConfigUtils.TryGetConfigValue(node, "parentName");
+
+                        ParallaxDebug.Log("[Shared Scatter Pass] - Searching for Parent Scatter: " + parentName);
+
                         string model = ConfigUtils.TryGetConfigValue(node, "model");
 
                         if (!parallaxScatterBodies[body].scatters.ContainsKey(parentName))
                         {
-                            ParallaxDebug.LogError("Shared scatter: " + scatterName + " inherits from parent scatter: " + parentName + " but that scatter does not exist!");
-                            break;
+                            ParallaxDebug.LogError("Shared scatter: " + scatterName + " inherits from parent scatter: " + parentName + " but that scatter does not exist. Skipping!");
+                            continue;
                         }
                         Scatter parentScatter = parallaxScatterBodies[body].scatters[parentName];
 

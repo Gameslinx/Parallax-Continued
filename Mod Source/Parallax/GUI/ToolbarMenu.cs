@@ -80,10 +80,12 @@ namespace Parallax
             // Terrain shader settings
             GUILayout.Label("Terrain Shader Settings", HighLogic.Skin.label);
             ParamCreator.ChangeMethod terrainCallback = UpdateTerrainMaterials;
+            ParamCreator.ChangeMethod terrainKeywordCallback = UpdateTerrainKeywords;
 
             ParamCreator.CreateParam("Max Tessellation",         ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.maxTessellation,         GUIHelperFunctions.FloatField, terrainCallback);
             ParamCreator.CreateParam("Tessellation Edge Length", ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength,  GUIHelperFunctions.FloatField, terrainCallback);
             ParamCreator.CreateParam("Tessellation Range",       ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.maxTessellationRange,    GUIHelperFunctions.FloatField, terrainCallback);
+            ParamCreator.CreateParam("Use Advanced Blending", ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.advancedTextureBlending,    GUIHelperFunctions.BoolField, terrainKeywordCallback);
 
             GUILayout.Space(15);
             // Scatter system settings
@@ -133,6 +135,20 @@ namespace Parallax
                 body.parallaxMaterials.SetAll("_MaxTessellation", ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.maxTessellation);
                 body.parallaxMaterials.SetAll("_TessellationEdgeLength", ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength);
                 body.parallaxMaterials.SetAll("_MaxTessellationRange", ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.maxTessellationRange);
+            }
+        }
+        static void UpdateTerrainKeywords()
+        {
+            foreach (TerrainShaderQuadData data in PQSMod_Parallax.terrainQuadData.Values)
+            {
+                if (ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.advancedTextureBlending)
+                {
+                    data.quadMaterial.EnableKeyword("ADVANCED_BLENDING");
+                }
+                else
+                {
+                    data.quadMaterial.DisableKeyword("ADVANCED_BLENDING");
+                }
             }
         }
 

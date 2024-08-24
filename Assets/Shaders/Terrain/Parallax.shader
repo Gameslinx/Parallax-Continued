@@ -192,8 +192,12 @@ Shader "Custom/Parallax"
                 VertexBiplanarParams params;
                 GET_VERTEX_BIPLANAR_PARAMS(params, worldUVs, o.worldNormal);
 
+                // Do advanced blending
+                float4 displacementTex = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, o.worldNormal, texLevelBlend);
+                CALCULATE_ADVANCED_BLENDING_FACTORS(landMask, displacementTex)
+
                 // Defines 'displacedWorldPos'
-                CALCULATE_VERTEX_DISPLACEMENT(o, landMask);
+                CALCULATE_VERTEX_DISPLACEMENT(o, landMask, displacementTex);
                 o.pos = UnityWorldToClipPos(displacedWorldPos);
             
                 TRANSFER_VERTEX_TO_FRAGMENT(o);
@@ -239,6 +243,31 @@ Shader "Custom/Parallax"
                 DECLARE_MID_TEXTURE_SET(midDiffuse, midNormal, _MainTexMid, _BumpMapMid)
                 DECLARE_HIGH_TEXTURE_SET(highDiffuse, highNormal, _MainTexHigh, _BumpMapHigh)
                 DECLARE_STEEP_TEXTURE_SET(steepDiffuse, steepNormal, _MainTexSteep, _BumpMapSteep)
+
+                //
+                //  Displacement Based Texture Blending
+                //
+
+                #if defined (ADVANCED_BLENDING)
+
+                // Only if displacement blending is enabled
+                DECLARE_DISPLACEMENT_TEXTURE(displacement, _DisplacementMap)
+
+                // Get displacement based blend factors
+
+                float lowMidDisplacementFactor = GetDisplacementLerpFactor(landMask.r, displacement.r, displacement.g, logDistance);
+                float midHighDisplacementFactor = GetDisplacementLerpFactor(landMask.g, displacement.g, displacement.b, logDistance);
+
+                // Blend displacements - required for slope based displacement blending
+                float blendedDisplacements = BLEND_CHANNELS_IN_TEX(landMask, displacement);
+                float displacementSteepBlendFactor = GetDisplacementLerpFactor(landMask.b, blendedDisplacements, displacement.a, logDistance);
+
+                // Scale interpolants by blend factors
+                landMask.r = lowMidDisplacementFactor;
+                landMask.g = midHighDisplacementFactor;
+                landMask.b = displacementSteepBlendFactor;
+
+                #endif
 
                 fixed4 altitudeDiffuse = BLEND_TEXTURES(landMask, lowDiffuse, midDiffuse, highDiffuse);
                 NORMAL_FLOAT altitudeNormal = BLEND_TEXTURES(landMask, lowNormal, midNormal, highNormal);
@@ -349,8 +378,12 @@ Shader "Custom/Parallax"
                 VertexBiplanarParams params;
                 GET_VERTEX_BIPLANAR_PARAMS(params, worldUVs, v.worldNormal);
                 
+                // Do advanced blending
+                float4 displacementTex = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, v.worldNormal, texLevelBlend);
+                CALCULATE_ADVANCED_BLENDING_FACTORS(landMask, displacementTex)
+
                 // Defines 'displacedWorldPos'
-                CALCULATE_VERTEX_DISPLACEMENT(v, landMask)
+                CALCULATE_VERTEX_DISPLACEMENT(v, landMask, displacementTex)
         
                 v.pos = ParallaxClipSpaceShadowCasterPos(displacedWorldPos, v.worldNormal);
                 v.pos = UnityApplyLinearShadowBias(v.pos);
@@ -479,9 +512,13 @@ Shader "Custom/Parallax"
         
                 VertexBiplanarParams params;
                 GET_VERTEX_BIPLANAR_PARAMS(params, worldUVs, v.worldNormal);
+
+                // Do advanced blending
+                float4 displacementTex = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, v.worldNormal, texLevelBlend);
+                CALCULATE_ADVANCED_BLENDING_FACTORS(landMask, displacementTex)
         
                 // Defines 'displacedWorldPos' 
-                CALCULATE_VERTEX_DISPLACEMENT(v, landMask)
+                CALCULATE_VERTEX_DISPLACEMENT(v, landMask, displacementTex)
                 //TRANSFER_SHADOW(o);
                 v.pos = UnityWorldToClipPos(displacedWorldPos); 
                 
@@ -528,6 +565,31 @@ Shader "Custom/Parallax"
                 DECLARE_MID_TEXTURE_SET(midDiffuse, midNormal, _MainTexMid, _BumpMapMid)
                 DECLARE_HIGH_TEXTURE_SET(highDiffuse, highNormal, _MainTexHigh, _BumpMapHigh)
                 DECLARE_STEEP_TEXTURE_SET(steepDiffuse, steepNormal, _MainTexSteep, _BumpMapSteep)
+
+                //
+                //  Displacement Based Texture Blending
+                //
+
+                #if defined (ADVANCED_BLENDING)
+
+                // Only if displacement blending is enabled
+                DECLARE_DISPLACEMENT_TEXTURE(displacement, _DisplacementMap)
+
+                // Get displacement based blend factors
+
+                float lowMidDisplacementFactor = GetDisplacementLerpFactor(landMask.r, displacement.r, displacement.g, logDistance);
+                float midHighDisplacementFactor = GetDisplacementLerpFactor(landMask.g, displacement.g, displacement.b, logDistance);
+
+                // Blend displacements - required for slope based displacement blending
+                float blendedDisplacements = BLEND_CHANNELS_IN_TEX(landMask, displacement);
+                float displacementSteepBlendFactor = GetDisplacementLerpFactor(landMask.b, blendedDisplacements, displacement.a, logDistance);
+
+                // Scale interpolants by blend factors
+                landMask.r = lowMidDisplacementFactor;
+                landMask.g = midHighDisplacementFactor;
+                landMask.b = displacementSteepBlendFactor;
+
+                #endif
 
                 fixed4 altitudeDiffuse = BLEND_TEXTURES(landMask, lowDiffuse, midDiffuse, highDiffuse);
                 float3 altitudeNormal = BLEND_TEXTURES(landMask, lowNormal, midNormal, highNormal);
@@ -668,8 +730,12 @@ Shader "Custom/Parallax"
                 VertexBiplanarParams params;
                 GET_VERTEX_BIPLANAR_PARAMS(params, worldUVs, o.worldNormal);
 
+                // Do advanced blending
+                float4 displacementTex = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, o.worldNormal, texLevelBlend);
+                CALCULATE_ADVANCED_BLENDING_FACTORS(landMask, displacementTex)
+
                 // Defines 'displacedWorldPos'
-                CALCULATE_VERTEX_DISPLACEMENT(o, landMask);
+                CALCULATE_VERTEX_DISPLACEMENT(o, landMask, displacementTex);
                 o.pos = UnityWorldToClipPos(displacedWorldPos);
             
                 TRANSFER_VERTEX_TO_FRAGMENT(o);
@@ -718,15 +784,7 @@ Shader "Custom/Parallax"
 
                 // Only if displacement blending is enabled
                 DECLARE_DISPLACEMENT_TEXTURE(displacement, _DisplacementMap)
-
-                //#if defined (ADVANCED_BLENDING)
-                //float3 displacementLandMask = float3(lerp(displacement.r, displacement.g, landMask.r), lerp(displacement.g, displacement.b, landMask.g), lerp(displacement.b, displacement.a, landMask.b));
-                //
-                //landMask.rgb = saturate(landMask.rgb + pow(displacementLandMask, 1));
-                //
-                //
-                //#endif
-                
+                CALCULATE_ADVANCED_BLENDING_FACTORS(landMask, displacement)
 
                 fixed4 altitudeDiffuse = BLEND_TEXTURES(landMask, lowDiffuse, midDiffuse, highDiffuse);
                 NORMAL_FLOAT altitudeNormal = BLEND_TEXTURES(landMask, lowNormal, midNormal, highNormal);
@@ -742,10 +800,6 @@ Shader "Custom/Parallax"
                 
                 OUTPUT_GBUFFERS(surfaceInput, gi)
                 SET_OUT_SHADOWMASK(i)
-
-                //outGBuffer0 = 0;
-
-                //outEmission = displacementLandMask;
             }
             ENDCG
         }

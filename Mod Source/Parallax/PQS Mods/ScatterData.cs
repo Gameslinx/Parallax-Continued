@@ -40,9 +40,6 @@ namespace Parallax
         private ComputeBuffer dispatchArgs;
         private ComputeBuffer objectLimits;
 
-        // Distribution params that don't require a full reinitialization
-        public bool requiresFullRestart = false;
-
         int numTriangles;
         int outputSize;
         int maxCount;
@@ -65,7 +62,6 @@ namespace Parallax
         {
             Initialize();
             InitializeDistribute();
-            InitializeEvaluate();
             Distribute();
         }
         void Initialize()
@@ -89,33 +85,33 @@ namespace Parallax
             scatterShader = scatter.shader;
 
             // Required values
-            scatterShader.SetFloat("_PlanetRadius", parent.planetRadius);
-            scatterShader.SetInt("_MaxCount", maxCount);
-            scatterShader.SetInt("_NumberOfBiomes", scatter.biomeCount);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.planetRadiusID, parent.planetRadius);
+            scatterShader.SetInt(ParallaxScatterShaderProperties.maxCountID, maxCount);
+            scatterShader.SetInt(ParallaxScatterShaderProperties.numberOfBiomesID, scatter.biomeCount);
 
-            scatterShader.SetVector("_PlanetNormal", parent.planetNormal);
-            scatterShader.SetVector("_LocalPlanetNormal", parent.localPlanetNormal);
-            scatterShader.SetVector("_PlanetOrigin", parent.planetOrigin);
+            scatterShader.SetVector(ParallaxScatterShaderProperties.planetNormalID, parent.planetNormal);
+            scatterShader.SetVector(ParallaxScatterShaderProperties.localPlanetNormalID, parent.localPlanetNormal);
+            scatterShader.SetVector(ParallaxScatterShaderProperties.planetOriginID, parent.planetOrigin);
 
 
-            scatterShader.SetMatrix("_ObjectToWorldMatrix", parent.quad.meshRenderer.localToWorldMatrix);
-            scatterShader.SetMatrix("_WorldToObjectMatrix", parent.quad.meshRenderer.worldToLocalMatrix);
+            scatterShader.SetMatrix(ParallaxScatterShaderProperties.objectToWorldMatrixID, parent.quad.meshRenderer.localToWorldMatrix);
+            scatterShader.SetMatrix(ParallaxScatterShaderProperties.worldToObjectMatrixID, parent.quad.meshRenderer.worldToLocalMatrix);
 
             distributeKernel = GetDistributeKernel();
             evaluateKernel = GetEvaluateKernel();
 
             outputScatterDataBuffer = new ComputeBuffer(outputSize, PositionData.Size(), ComputeBufferType.Append);
-            scatterShader.SetBuffer(distributeKernel, "transforms", outputScatterDataBuffer);
-            scatterShader.SetBuffer(evaluateKernel, "positions", outputScatterDataBuffer);
+            scatterShader.SetBuffer(distributeKernel, ParallaxScatterShaderProperties.transformsBufferID, outputScatterDataBuffer);
+            scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.positionsBufferID, outputScatterDataBuffer);
 
-            scatterShader.SetBuffer(distributeKernel, "vertices", parent.sourceVertsBuffer);
-            scatterShader.SetBuffer(distributeKernel, "normals", parent.sourceNormalsBuffer);
-            scatterShader.SetBuffer(distributeKernel, "triangles", parent.sourceTrianglesBuffer);
-            scatterShader.SetBuffer(distributeKernel, "uvs", parent.sourceUVsBuffer);
-            scatterShader.SetBuffer(distributeKernel, "directionsFromCenter", parent.sourceDirsFromCenterBuffer);
+            scatterShader.SetBuffer(distributeKernel, ParallaxScatterShaderProperties.parentVertsBufferID, parent.sourceVertsBuffer);
+            scatterShader.SetBuffer(distributeKernel, ParallaxScatterShaderProperties.parentNormalsBufferID, parent.sourceNormalsBuffer);
+            scatterShader.SetBuffer(distributeKernel, ParallaxScatterShaderProperties.parentTrisBufferID, parent.sourceTrianglesBuffer);
+            scatterShader.SetBuffer(distributeKernel, ParallaxScatterShaderProperties.parentUVsBufferID, parent.sourceUVsBuffer);
+            scatterShader.SetBuffer(distributeKernel, ParallaxScatterShaderProperties.parentDirsBufferID, parent.sourceDirsFromCenterBuffer);
             
-            scatterShader.SetTexture(distributeKernel, "biomeMap", ScatterManager.currentBiomeMap);
-            scatterShader.SetTexture(distributeKernel, "scatterBiomes", scatter.biomeControlMap);
+            scatterShader.SetTexture(distributeKernel, ParallaxScatterShaderProperties.biomeMapTextureID, ScatterManager.currentBiomeMap);
+            scatterShader.SetTexture(distributeKernel, ParallaxScatterShaderProperties.scatterBiomesTextureID, scatter.biomeControlMap);
 
             SetDistributionVars();
         }
@@ -162,38 +158,42 @@ namespace Parallax
         public void SetDistributionVars()
         {
             // Values from config
-            scatterShader.SetInt("_PopulationMultiplier", scatter.distributionParams.populationMultiplier * (int)Mathf.Pow(2, parent.quad.sphereRoot.maxLevel - parent.quad.subdivision));
-            scatterShader.SetFloat("_SpawnChance", scatter.distributionParams.spawnChance * parent.sphereRelativeDensityMult);
-            scatterShader.SetInt("_AlignToTerrainNormal", scatter.distributionParams.alignToTerrainNormal);
-            scatterShader.SetFloat("_MaxNormalDeviance", scatter.distributionParams.maxNormalDeviance);
-            scatterShader.SetFloat("_Seed", scatter.distributionParams.seed);
+            scatterShader.SetInt(ParallaxScatterShaderProperties.populationMultiplierID, scatter.distributionParams.populationMultiplier * (int)Mathf.Pow(2, parent.quad.sphereRoot.maxLevel - parent.quad.subdivision));
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.spawnChanceID, scatter.distributionParams.spawnChance * parent.sphereRelativeDensityMult);
+            scatterShader.SetInt(ParallaxScatterShaderProperties.alignToTerrainNormalID, scatter.distributionParams.alignToTerrainNormal);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.maxNormalDevianceID, scatter.distributionParams.maxNormalDeviance);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.seedID, scatter.distributionParams.seed);
 
-            scatterShader.SetVector("_MinScale", scatter.distributionParams.minScale);
-            scatterShader.SetVector("_MaxScale", scatter.distributionParams.maxScale);
-            scatterShader.SetFloat("_ScaleRandomness", scatter.distributionParams.scaleRandomness);
+            scatterShader.SetVector(ParallaxScatterShaderProperties.minScaleID, scatter.distributionParams.minScale);
+            scatterShader.SetVector(ParallaxScatterShaderProperties.maxScaleID, scatter.distributionParams.maxScale);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.scaleRandomnessID, scatter.distributionParams.scaleRandomness);
 
-            scatterShader.SetInt("_InvertNoise", scatter.noiseParams.inverted ? 1 : 0);
-            scatterShader.SetInt("_NoiseOctaves", scatter.noiseParams.octaves);
-            scatterShader.SetFloat("_NoiseFrequency", scatter.noiseParams.frequency);
-            scatterShader.SetFloat("_NoiseLacunarity", scatter.noiseParams.lacunarity);
-            scatterShader.SetInt("_NoiseSeed", scatter.noiseParams.seed);
-            scatterShader.SetFloat("_NoiseCutoffThreshold", scatter.distributionParams.noiseCutoff);
+            scatterShader.SetInt(ParallaxScatterShaderProperties.invertNoiseID, scatter.noiseParams.inverted ? 1 : 0);
+            scatterShader.SetInt(ParallaxScatterShaderProperties.noiseOctavesID, scatter.noiseParams.octaves);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.noiseFrequencyID, scatter.noiseParams.frequency);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.noiseLacunarityID, scatter.noiseParams.lacunarity);
+            scatterShader.SetInt(ParallaxScatterShaderProperties.noiseSeedID, scatter.noiseParams.seed);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.noiseCutoffThresholdID, scatter.distributionParams.noiseCutoff);
 
-            scatterShader.SetFloat("_SteepPower", scatter.distributionParams.steepPower);
-            scatterShader.SetFloat("_SteepContrast", scatter.distributionParams.steepContrast);
-            scatterShader.SetFloat("_SteepMidpoint", scatter.distributionParams.steepMidpoint);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.steepPowerID, scatter.distributionParams.steepPower);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.steepContrastID, scatter.distributionParams.steepContrast);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.steepMidpointID, scatter.distributionParams.steepMidpoint);
 
-            scatterShader.SetFloat("_MinAltitude", scatter.distributionParams.minAltitude);
-            scatterShader.SetFloat("_MaxAltitude", scatter.distributionParams.maxAltitude);
-            scatterShader.SetFloat("_AltitudeFadeRange", scatter.distributionParams.altitudeFadeRange);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.minAltitudeID, scatter.distributionParams.minAltitude);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.maxAltitudeID, scatter.distributionParams.maxAltitude);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.altitudeFadeRangeID, scatter.distributionParams.altitudeFadeRange);
 
-            scatterShader.SetFloat("_RangeFadeStart", ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.fadeOutStartRange);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.rangeFadeStartID, ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.fadeOutStartRange);
 
             // If we're distributing to a fixed altitude
             if (scatter.distributionParams.fixedAltitude)
             {
-                scatterShader.SetInt("_DistributeFixedAltitude", 1);
-                scatterShader.SetFloat("_FixedAltitude", scatter.distributionParams.placementAltitude);
+                scatterShader.SetInt(ParallaxScatterShaderProperties.distributeFixedAltitudeID, 1);
+                scatterShader.SetFloat(ParallaxScatterShaderProperties.fixedAltitudeID, scatter.distributionParams.placementAltitude);
+            }
+            else
+            {
+                scatterShader.SetInt(ParallaxScatterShaderProperties.distributeFixedAltitudeID, 0);
             }
         }
         public void Distribute()
@@ -216,7 +216,7 @@ namespace Parallax
             objectLimits.SetData(indirectArgs);
 
             // Read count from AppendStructuredBuffer to the objectlimits, used in the early return check from evaluate - can't process more data than exists
-            scatterShader.SetBuffer(evaluateKernel, "objectLimits", objectLimits);
+            scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.objectLimitsBufferID, objectLimits);
             ComputeBuffer.CopyCount(outputScatterDataBuffer, objectLimits, 0);
 
             // Read this back to construct indirect dispatch args
@@ -240,7 +240,8 @@ namespace Parallax
             realCount = count[0];
             // Process collider data, if this scatter is collideable
             // Todo: Make this a GetData if initializing the scene for the first time so all colliders are here on time
-            if (CollidersEligible())
+            // If we're paused, the colliders already exist
+            if (CollidersEligible() && !collidersAdded)
             {
                 AsyncGPUReadback.Request(outputScatterDataBuffer, OnColliderReadbackComplete);
             }
@@ -277,7 +278,8 @@ namespace Parallax
 
             // Process collider data, if this scatter is collideable
             // Todo: Make this a GetData if initializing the scene for the first time so all colliders are here on time
-            if (CollidersEligible())
+            // If we're paused, the colliders already exist
+            if (CollidersEligible() && !collidersAdded)
             {
                 if (SystemInfo.supportsAsyncGPUReadback)
                 {
@@ -308,7 +310,7 @@ namespace Parallax
         // Request the output buffer for collider processing
         public void OnColliderReadbackComplete(AsyncGPUReadbackRequest req)
         {
-            if (cleaned)
+            if (cleaned || collidersAdded)
             {
                 return;
             }
@@ -350,31 +352,9 @@ namespace Parallax
             CollisionManager.QueueIncomingData(collisionData);
             collidersAdded = true;
         }
-        public void InitializeEvaluate()
-        {
-            scatterShader.SetBuffer(evaluateKernel, "triangles", parent.sourceTrianglesBuffer);
-            scatterShader.SetBuffer(evaluateKernel, "vertices", parent.sourceVertsBuffer);
-
-            scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD0", scatterRenderer.outputLOD0);
-            scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD1", scatterRenderer.outputLOD1);
-            scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD2", scatterRenderer.outputLOD2);
-
-            scatterShader.SetBuffer(evaluateKernel, "positions", outputScatterDataBuffer);
-
-            if (scatter.distributionParams.coloredByTerrain)
-            {
-                scatterShader.SetBuffer(evaluateKernel, "colors", parent.sourceColorsBuffer);
-            }
-
-            scatterShader.SetFloat("_CullRadius", scatter.optimizationParams.frustumCullingIgnoreRadius);
-            scatterShader.SetFloat("_CullLimit", scatter.optimizationParams.frustumCullingSafetyMargin);
-
-            scatterShader.SetFloat("_MaxRange", scatter.distributionParams.range);
-            scatterShader.SetFloat("_Lod01Split", scatter.distributionParams.lod1.range);
-            scatterShader.SetFloat("_Lod12Split", scatter.distributionParams.lod2.range);
-        }
         // Evaluate which objects are in range, what LODs to show, and frustum cull them
         // This is called very often, every frame. All calls combined take around 0.4 to 0.5ms CPU
+        public bool paused = false;
         public void Evaluate()
         {
             // There aren't any of this scatter on this quad
@@ -384,7 +364,12 @@ namespace Parallax
             if (!parent.quad.meshRenderer.isVisible) { return; }
 
             // Quad is out of range
-            if (parent.cameraDistance > scatter.distributionParams.range * scatter.distributionParams.range + parent.sqrQuadWidth) { return; }
+            if (parent.cameraDistance > scatter.distributionParams.range * scatter.distributionParams.range + parent.sqrQuadWidth)
+            {
+                return;
+            }
+
+            if (paused) { return; }
 
             // Not finished distributing yet
             if (!eventAdded) { return; }
@@ -406,11 +391,21 @@ namespace Parallax
             scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.positionsBufferID, outputScatterDataBuffer);
 
             // Update runtime shader vars
-            scatterShader.SetMatrix(ParallaxScatterShaderProperties.objectToWorldMatrixPropID, parent.quad.meshRenderer.localToWorldMatrix);
-            scatterShader.SetVector(ParallaxScatterShaderProperties.planetNormalPropID, Vector3.Normalize(parent.quad.PrecisePosition - parent.quad.sphereRoot.PrecisePosition));
-            scatterShader.SetFloats(ParallaxScatterShaderProperties.cameraFrustumPlanesPropID, RuntimeOperations.floatCameraFrustumPlanes);
-            scatterShader.SetVector(ParallaxScatterShaderProperties.worldSpaceCameraPositionPropID, RuntimeOperations.vectorCameraPos);
-            scatterShader.SetInt(   ParallaxScatterShaderProperties.maxCountPropID, realCount);
+            scatterShader.SetMatrix(ParallaxScatterShaderProperties.objectToWorldMatrixID, parent.quad.meshRenderer.localToWorldMatrix);
+            scatterShader.SetVector(ParallaxScatterShaderProperties.planetNormalID, Vector3.Normalize(parent.quad.PrecisePosition - parent.quad.sphereRoot.PrecisePosition));
+            scatterShader.SetFloats(ParallaxScatterShaderProperties.cameraFrustumPlanesID, RuntimeOperations.floatCameraFrustumPlanes);
+            scatterShader.SetVector(ParallaxScatterShaderProperties.worldSpaceCameraPositionID, RuntimeOperations.vectorCameraPos);
+            scatterShader.SetInt(   ParallaxScatterShaderProperties.maxCountID, realCount);
+
+            // Update the culling and lod params
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.cullRadiusID, scatter.optimizationParams.frustumCullingIgnoreRadius);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.cullLimitID, scatter.optimizationParams.frustumCullingSafetyMargin);
+
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.maxRangeID, scatter.distributionParams.range);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.lod01SplitID, scatter.distributionParams.lod1.range);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.lod12SplitID, scatter.distributionParams.lod2.range);
+
+            //Debug.Log("E" + scatter.scatterName);
 
             scatterShader.DispatchIndirect(evaluateKernel, dispatchArgs, 0);
         }
@@ -418,9 +413,44 @@ namespace Parallax
         /// Returns true if the scatter is collideable and the quad is fully subdivided
         /// </summary>
         /// <returns></returns>
-        bool CollidersEligible()
+        public bool CollidersEligible()
         {
             return scatter.collideable && parent.quad.subdivision == parent.quad.sphereRoot.maxLevel && realCount > 0;
+        }
+        /// <summary>
+        /// Pause all operations on this ScatterData. Frees buffers but keeps colliders
+        /// </summary>
+        public void Pause()
+        {
+            if (!paused)
+            {
+                outputScatterDataBuffer?.Dispose();
+                dispatchArgs?.Dispose();
+                objectLimits?.Dispose();
+
+                paused = true;
+                cleaned = true;
+
+                if (eventAdded)
+                {
+                    scatterRenderer.onEvaluateScatters -= Evaluate;
+                    eventAdded = false;
+                }
+            }
+        }
+        /// <summary>
+        /// Reactivate this ScatterData after pausing
+        /// </summary>
+        public void Resume()
+        {
+            if (paused)
+            {
+                parent.Reinitialize();
+                cleaned = false;
+                
+                Start();
+                paused = false;
+            }
         }
         public void Cleanup()
         {

@@ -39,6 +39,7 @@ namespace Parallax
             terrainShaderSettingsNode.AddValue("maxTessellation", terrainGlobalSettings.maxTessellation);
             terrainShaderSettingsNode.AddValue("tessellationEdgeLength", terrainGlobalSettings.tessellationEdgeLength);
             terrainShaderSettingsNode.AddValue("maxTessellationRange", terrainGlobalSettings.maxTessellationRange);
+            terrainShaderSettingsNode.AddValue("useAdvancedTextureBlending", terrainGlobalSettings.advancedTextureBlending);
 
             scatterSystemSettingsNode.AddValue("densityMultiplier", scatterGlobalSettings.densityMultiplier);
             scatterSystemSettingsNode.AddValue("rangeMultiplier", scatterGlobalSettings.rangeMultiplier);
@@ -67,6 +68,7 @@ namespace Parallax
         public float maxTessellation;
         public float tessellationEdgeLength;
         public float maxTessellationRange;
+        public bool advancedTextureBlending;
     }
     public struct ScatterGlobalSettings
     {
@@ -537,6 +539,7 @@ namespace Parallax
         /// <returns></returns>
         public float CalculateSqrLargestBound(string modelPath)
         {
+            Debug.Log("Searching for model at " + modelPath);
             Mesh mesh = GameDatabase.Instance.GetModel(modelPath).GetComponent<MeshFilter>().mesh;
             if (mesh == null || mesh.vertexCount == 0)
             {

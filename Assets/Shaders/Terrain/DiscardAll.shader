@@ -1,5 +1,7 @@
 ﻿Shader "Custom/DiscardAll"
 {
+    // Invisible shader
+    // Until I find a way to get quad mesh renderers to turn off without breaking the entire game, we're using this stupid thing
     Properties
     {
 
@@ -8,7 +10,8 @@
     {
         Tags {"Queue"="AlphaTest" "IgnoreProjector"="True" "RenderType"="TransparentCutout"}
         LOD 200
-
+        ZWrite Off
+        Cull Front
         Pass
         {
             CGPROGRAM
@@ -17,20 +20,18 @@
             
             #include "UnityCG.cginc"
 
-            struct appdata
-            {
-                float4 vertex : POSITION;
-            };
-
             struct v2f
             {
                 float4 vertex : SV_POSITION;
             };
             
-            v2f vert (appdata v)
+            v2f vert ()
             {
                 v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
+
+                // move triangle off screen, create degen triangle, skipped by gpu
+                o.vertex.xyz = float3(-10000, -10000, -10000);
+                o.vertex.w = 1;
                 return o;
             }
             
