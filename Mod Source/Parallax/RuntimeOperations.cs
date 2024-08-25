@@ -59,7 +59,12 @@ namespace Parallax
                 Shader.SetGlobalVector(planetOriginID, FlightGlobals.currentMainBody.transform.position);
                 Shader.SetGlobalVector(shaderOffsetID, (Vector3)FloatingOrigin.TerrainShaderOffset);
                 Shader.SetGlobalFloat(planetRadiusID, (float)FlightGlobals.currentMainBody.Radius);
-                Shader.SetGlobalFloat(planetOpacityID, FlightGlobals.currentMainBody.pqsController.surfaceMaterial.GetFloat(planetOpacityID));
+
+                // Handle the case where we orbit a gas giant or a star
+                if (FlightGlobals.currentMainBody.pqsController != null)
+                {
+                    Shader.SetGlobalFloat(planetOpacityID, FlightGlobals.currentMainBody.pqsController.surfaceMaterial.GetFloat(planetOpacityID));
+                }
             }
             if (FlightGlobals.currentMainBody != null)
             {
