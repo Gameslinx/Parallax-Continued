@@ -1,5 +1,5 @@
 # Parallax Continued
-Available in Early Access at https://www.patreon.com/linx_
+Available in Early Access at [Linx's Patreon](https://www.patreon.com/linx_)
 
 ## List of Supported Planet Packs
 |Planet Pack Name|Compatibility Status
