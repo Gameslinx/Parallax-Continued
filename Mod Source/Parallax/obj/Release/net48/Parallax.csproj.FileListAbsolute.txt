@@ -81,6 +81,7 @@ E:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\Release\net48\P
 E:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\Release\net48\Parallax.AssemblyInfoInputs.cache
 E:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\Release\net48\Parallax.AssemblyInfo.cs
 E:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\Release\net48\Parallax.csproj.CoreCompileInputs.cache
-E:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\Release\net48\Parallax.csproj.CopyComplete
 E:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\Release\net48\Parallax.dll
 E:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\Release\net48\Parallax.pdb
+C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\Parallax\Plugins\Parallax.dll
+C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\Parallax\Plugins\Parallax.pdb

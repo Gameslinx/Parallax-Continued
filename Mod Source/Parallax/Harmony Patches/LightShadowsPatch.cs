@@ -29,4 +29,25 @@ namespace Parallax.Harmony_Patches
             }
         }
     }
+
+    [HarmonyPatch(typeof(KerbalEVA))]
+    [HarmonyPatch("ToggleLamp")]
+    public class KerbalEVALightPatch
+    {
+        static void Prefix(KerbalEVA __instance)
+        {
+            if (ConfigLoader.parallaxGlobalSettings.lightingGlobalSettings.lightShadows)
+            {
+                Light headlamp = __instance.headLamp.GetComponent<Light>();
+                if (headlamp != null)
+                {
+                    headlamp.lightShadowCasterMode = LightShadowCasterMode.Everything;
+                    headlamp.shadows = LightShadows.Soft;
+                    headlamp.shadowResolution = ConfigLoader.parallaxGlobalSettings.lightingGlobalSettings.lightShadowsQuality;
+                    headlamp.shadowBias = 0.02f;
+                    headlamp.shadowNormalBias = 0.15f;
+                }
+            }
+        }
+    }
 }

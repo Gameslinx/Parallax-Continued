@@ -6,7 +6,8 @@
         <DebugSymbols>true</DebugSymbols>
         <DebugType>portable</DebugType>
         <Optimize>false</Optimize>
-        <OutputPath>Temp\bin\Debug\</OutputPath>
+        <GameDataPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\</GameDataPath>
+        <OutDir>$(GameDataPath)$(AssemblyName)\Plugins\</OutDir>
         <ErrorReport>prompt</ErrorReport>
         <WarningLevel>4</WarningLevel>
         <NoWarn>0169</NoWarn>
@@ -16,7 +17,8 @@
       <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
         <DebugType>pdbonly</DebugType>
         <Optimize>true</Optimize>
-        <OutputPath>Temp\bin\Release\</OutputPath>
+        <GameDataPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\</GameDataPath>
+        <OutDir>$(GameDataPath)$(AssemblyName)\Plugins\</OutDir>
         <ErrorReport>prompt</ErrorReport>
         <WarningLevel>4</WarningLevel>
         <NoWarn>0169</NoWarn>
@@ -31,71 +33,93 @@
     <ItemGroup>
       <Reference Include="0Harmony">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\000_Harmony\0Harmony.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="Assembly-CSharp">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\Assembly-CSharp.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="Assembly-CSharp-firstpass">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="Kopernicus">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\Kopernicus\Plugins\Kopernicus.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="Kopernicus.Parser">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\Kopernicus\Plugins\Kopernicus.Parser.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="KSPBurst">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\000_KSPBurst\Plugins\KSPBurst.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="Microsoft.Extensions.FileSystemGlobbing">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\000_KSPBurst\Plugins\Microsoft.Extensions.FileSystemGlobbing.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="System.IO.Compression" />
       <Reference Include="System.Runtime" />
       <Reference Include="System.Runtime.CompilerServices.Unsafe">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\000_KSPBurst\Plugins\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="Unity.Burst">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\000_KSPBurst\Plugins\Unity.Burst.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="Unity.Burst.Unsafe">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\000_KSPBurst\Plugins\Unity.Burst.Unsafe.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="Unity.Collections">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\000_KSPBurst\Plugins\Unity.Collections.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="Unity.Jobs">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\000_KSPBurst\Plugins\Unity.Jobs.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="Unity.Mathematics">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\000_KSPBurst\Plugins\Unity.Mathematics.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="UnityEngine">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\UnityEngine.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="UnityEngine.AnimationModule">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="UnityEngine.AssetBundleModule">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\UnityEngine.AssetBundleModule.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="UnityEngine.CoreModule">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="UnityEngine.ImageConversionModule">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="UnityEngine.IMGUIModule">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="UnityEngine.InputLegacyModule">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="UnityEngine.PhysicsModule">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="UnityEngine.TextRenderingModule">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+        <Private>false</Private>
       </Reference>
 
       <!-- Publicizer-->

@@ -189,6 +189,23 @@ namespace Parallax
         {
             foreach (Vessel v in FlightGlobals.VesselsLoaded)
             {
+                if (v.parts.Count > 0)
+                {
+                    if (v.parts[0].isKerbalEVA())
+                    {
+                        KerbalEVA headlamp = v.parts[0].Modules.GetModule<KerbalEVA>();
+                        if (headlamp != null)
+                        {
+                            Light headLight = headlamp.headLamp.GetComponent<Light>();
+                            if (headLight != null)
+                            {
+                                headLight.shadows = ConfigLoader.parallaxGlobalSettings.lightingGlobalSettings.lightShadows ? LightShadows.Soft : LightShadows.None;
+                                headLight.shadowResolution = ConfigLoader.parallaxGlobalSettings.lightingGlobalSettings.lightShadowsQuality;
+                                headLight.lightShadowCasterMode = ConfigLoader.parallaxGlobalSettings.lightingGlobalSettings.lightShadows ? LightShadowCasterMode.Everything : LightShadowCasterMode.Default;
+                            }
+                        }
+                    }
+                }
                 foreach (Part p in v.Parts)
                 {
                     PartModule lightModule = p.Modules.GetModule("ModuleLight");

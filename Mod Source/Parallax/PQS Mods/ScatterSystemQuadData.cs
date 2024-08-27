@@ -56,7 +56,8 @@ namespace Parallax
         // Density multiplier based on the quad's position on the sphere
         public float sphereRelativeDensityMult = 1.0f;
 
-        string[] cornerBiomes = new string[4];
+        // Corners in 0 to 3, center in 4
+        string[] cornerBiomes = new string[5];
 
         public int numMeshTriangles = 0;
 
@@ -275,20 +276,17 @@ namespace Parallax
                 return false;
             }
 
-            // Is the scatter in an eligible biome?
-            if (scatter.biomeBlacklistParams.fastBlacklistedBiomes.Contains(cornerBiomes[0]))
+            int numBiomesIneligible = 0;
+            foreach (string biome in cornerBiomes)
             {
-                return false;
+                if (scatter.biomeBlacklistParams.fastBlacklistedBiomes.Contains(biome))
+                {
+                    numBiomesIneligible++;
+                }
             }
-            if (scatter.biomeBlacklistParams.fastBlacklistedBiomes.Contains(cornerBiomes[1]))
-            {
-                return false;
-            }
-            if (scatter.biomeBlacklistParams.fastBlacklistedBiomes.Contains(cornerBiomes[2]))
-            {
-                return false;
-            }
-            if (scatter.biomeBlacklistParams.fastBlacklistedBiomes.Contains(cornerBiomes[3]))
+
+            // The biome doesn't appear on this quad
+            if (numBiomesIneligible == 5)
             {
                 return false;
             }
@@ -308,17 +306,20 @@ namespace Parallax
             Vector3 corner2 = quad.gameObject.transform.TransformPoint(vertices[14]);
             Vector3 corner3 = quad.gameObject.transform.TransformPoint(vertices[224]);
             Vector3 corner4 = quad.gameObject.transform.TransformPoint(vertices[210]);
+            Vector3 center = quad.gameObject.transform.TransformPoint(vertices[112]);
 
             // Uses a dictionary, at least...
             CBAttributeMapSO.MapAttribute attribute1 = Kopernicus.Utility.GetBiome(body, corner1);
             CBAttributeMapSO.MapAttribute attribute2 = Kopernicus.Utility.GetBiome(body, corner2);
             CBAttributeMapSO.MapAttribute attribute3 = Kopernicus.Utility.GetBiome(body, corner3);
             CBAttributeMapSO.MapAttribute attribute4 = Kopernicus.Utility.GetBiome(body, corner4);
+            CBAttributeMapSO.MapAttribute attribute5 = Kopernicus.Utility.GetBiome(body, center);
 
             cornerBiomes[0] = attribute1.name;
             cornerBiomes[1] = attribute2.name;
             cornerBiomes[2] = attribute3.name;
             cornerBiomes[3] = attribute4.name;
+            cornerBiomes[4] = attribute5.name;
         }
         public Vector3[] GetDirectionsFromCenter(Vector3[] vertices, Vector3 planetCenter)
         {

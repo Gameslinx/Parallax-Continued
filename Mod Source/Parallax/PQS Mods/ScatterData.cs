@@ -74,10 +74,14 @@ namespace Parallax
             maxCount = outputSize;
 
             // Scale the output size by the relative density mult and spawn chance, overshoot slightly for safety
-            outputSize = Mathf.CeilToInt((float)outputSize * parent.sphereRelativeDensityMult);
-            if (outputSize > 100 && scatter.distributionParams.spawnChance < 0.95)
+            if (parent.sphereRelativeDensityMult < 0.92)
             {
-                outputSize = Mathf.CeilToInt((float)outputSize * (scatter.distributionParams.spawnChance + 0.05f));
+                outputSize = Mathf.CeilToInt((float)outputSize * (parent.sphereRelativeDensityMult + 0.08f));
+            }
+            
+            if (outputSize > 100 && scatter.distributionParams.spawnChance < 0.92)
+            {
+                outputSize = Mathf.CeilToInt((float)outputSize * (scatter.distributionParams.spawnChance + 0.08f));
             }
         }
         void InitializeDistribute()
@@ -319,14 +323,22 @@ namespace Parallax
             // Use slices to get the data we're interested in
             // When stuff like grass is set to collideable this can take a few ms, otherwise pretty quick
             NativeArray<PositionData> data = req.GetData<PositionData>();
-            NativeArray<PositionData> realData = new NativeArray<PositionData>(realCount, Allocator.Persistent);
 
-            NativeSlice<PositionData> slice1 = new NativeSlice<PositionData>(data, 0, realCount);
+            // If we estimated the buffer size incorrectly, the buffer count is higher than the maximum buffer length
+            // And we should appropriately account for it
+            if (realCount > data.Length)
+            {
+                ParallaxDebug.Log("Warning: Received data count was greater than the buffer length. Not serious, but worth reporting as an error.");
+            }
+            int colliderDataCount = Mathf.Min(realCount, data.Length);
+
+            NativeArray<PositionData> realData = new NativeArray<PositionData>(colliderDataCount, Allocator.Persistent);
+
+            NativeSlice<PositionData> slice1 = new NativeSlice<PositionData>(data, 0, colliderDataCount);
             NativeSlice<PositionData> slice2 = new NativeSlice<PositionData>(realData);
 
             slice2.CopyFrom(slice1);
             data.Dispose();
-
 
             collisionData = new ScatterColliderData(parent, realData, scatter.collideableArrayIndex);
             CollisionManager.QueueIncomingData(collisionData);
