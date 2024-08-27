@@ -21,7 +21,7 @@ namespace Parallax
 
         void Update()
         {
-            return;
+            //return;
 
             if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha1))
             {
