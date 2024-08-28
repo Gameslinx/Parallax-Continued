@@ -12,5 +12,6 @@ Available in Early Access at [Linx's Patreon](https://www.patreon.com/linx_)
 |Beyond Home|Maintainer Contacted
 |Kcalbeloh|Author Contacted
 |Techno's Stock Planet Revamp|Author Contacted
+|KSRSS Reborn|Author Contacted
 |JNSQ|No
 |Galileo's Planet Pack|No
