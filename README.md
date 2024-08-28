@@ -8,7 +8,7 @@ Available in Early Access at [Linx's Patreon](https://www.patreon.com/linx_)
 |Stock Planetary System|Fully supported
 |Stock Planetary System (Rescaled)|Almost Complete
 |RSS Reborn|Almost Complete
-|OPM|I'm working on OPM now
+|OPM|[Download](https://drive.google.com/file/d/1X9nvz8yWvSaV5RFyLSRP-Jy3EdwAt6PG/view?usp=drive_link)
 |Beyond Home|Maintainer Contacted
 |Kcalbeloh|Author Contacted
 |Techno's Stock Planet Revamp|Author Contacted
