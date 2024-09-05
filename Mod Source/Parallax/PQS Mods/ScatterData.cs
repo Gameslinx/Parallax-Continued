@@ -1,14 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine.Rendering;
+﻿using UnityEngine.Rendering;
 using UnityEngine;
-using static Parallax.Legacy.LegacyConfigLoader;
-using UnityEngine.Profiling;
 using Unity.Collections;
-using Parallax.Tools;
 
 namespace Parallax
 {

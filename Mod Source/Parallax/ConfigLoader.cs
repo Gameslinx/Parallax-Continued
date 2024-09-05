@@ -15,6 +15,8 @@ using UnityEngine.Rendering;
 // 2. Vars now need to be named according to the ShaderPropertiesTemplate.cfg
 
 [assembly: KSPAssembly("Parallax", 1, 0)]
+[assembly: KSPAssemblyDependency("Kopernicus", 1, 0)]
+[assembly: KSPAssemblyDependency("KSPBurst", 1, 0)]
 namespace Parallax
 {
     [KSPAddon(KSPAddon.Startup.Instantly, true)]

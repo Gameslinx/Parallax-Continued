@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using static Parallax.Legacy.LegacyConfigLoader;
+using static Parallax.Legacy.LegacyScatterConfigLoader;
 
 namespace Parallax
 {
