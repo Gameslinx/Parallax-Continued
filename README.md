@@ -1,6 +1,10 @@
 # Parallax Continued
 Available in Early Access at [Linx's Patreon](https://www.patreon.com/linx_)
 
+## License
+All Rights Reserved
+ - Excludes bingus.dds
+
 ## List of Supported Planet Packs
 "Author Contacted" means not currently supported, but I've reached out to the author to help get upgrading existing configs started
 |Planet Pack Name|Compatibility Status
