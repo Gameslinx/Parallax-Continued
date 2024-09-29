@@ -16,6 +16,6 @@ All Rights Reserved
 |Beyond Home|Maintainer Contacted
 |Kcalbeloh|[Download](https://drive.google.com/file/d/1Ro2ISf7bjELoKu6axteYUYqEz627aggO/view?usp=sharing)
 |Techno's Stock Planet Revamp|Author Contacted
-|KSRSS Reborn|Author Contacted
+|KSRSS Reborn|[Download](https://forum.kerbalspaceprogram.com/topic/225981-paralaxcontinued-ksrss-sdi/)
 |JNSQ|No
 |Galileo's Planet Pack|No
