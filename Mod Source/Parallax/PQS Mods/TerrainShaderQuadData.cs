@@ -65,6 +65,10 @@ namespace Parallax
             {
                 quadMaterial.EnableKeyword("ADVANCED_BLENDING");
             }
+            if (ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.ambientOcclusion)
+            {
+                quadMaterial.EnableKeyword("AMBIENT_OCCLUSION");
+            }
 
             quadMeshRenderer = quad.gameObject.GetComponent<MeshRenderer>();
 
@@ -202,6 +206,13 @@ namespace Parallax
             double quadLowAltitude = quad.meshVertMin;
             double quadHighAltitude = quad.meshVertMax;
 
+            // This quad uses all three textures
+            if (quadLowAltitude < blendLowMidEnd && quadHighAltitude > blendMidHighStart)
+            {
+                body.parallaxMaterials.parallaxFull.EnableKeyword("PARALLAX_FULL");
+                return body.parallaxMaterials.parallaxFull;
+            }
+
             // This quad uses entirely 'High' texture
             if (quadLowAltitude > blendMidHighEnd)
             {
@@ -239,7 +250,7 @@ namespace Parallax
                 return body.parallaxMaterials.parallaxMidHigh;
             }
 
-            // This quad uses all three textures
+            // This quad uses all three textures - fallback to this
             body.parallaxMaterials.parallaxFull.EnableKeyword("PARALLAX_FULL");
             return body.parallaxMaterials.parallaxFull;
         }

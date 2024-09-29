@@ -14,6 +14,12 @@ sampler2D _BumpMapSteep;
 sampler2D _DisplacementMap;
 sampler2D _InfluenceMap;
 
+#if defined (AMBIENT_OCCLUSION)
+
+sampler2D _OcclusionMap;
+
+#endif
+
 float2 _MainTex_ST;
 
 float _BiplanarBlendFactor;

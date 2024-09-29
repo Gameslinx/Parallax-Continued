@@ -68,6 +68,7 @@ namespace Parallax
         public float tessellationEdgeLength;
         public float maxTessellationRange;
         public bool advancedTextureBlending;
+        public bool ambientOcclusion;
     }
     public struct ScatterGlobalSettings
     {

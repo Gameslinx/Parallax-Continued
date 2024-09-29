@@ -62,6 +62,10 @@ namespace Parallax
             scatterRenderer = ScatterManager.Instance.fastScatterRenderers[scatter.scatterName];
             numTriangles = parent.numMeshTriangles;
 
+            CalculateOutputSize();
+        }
+        void CalculateOutputSize()
+        {
             outputSize = scatter.distributionParams.populationMultiplier * numTriangles * (int)Mathf.Pow(2, parent.quad.sphereRoot.maxLevel - parent.quad.subdivision);
             maxCount = outputSize;
 
@@ -70,7 +74,7 @@ namespace Parallax
             {
                 outputSize = Mathf.CeilToInt((float)outputSize * (parent.sphereRelativeDensityMult + 0.08f));
             }
-            
+
             if (outputSize > 100 && scatter.distributionParams.spawnChance < 0.92)
             {
                 outputSize = Mathf.CeilToInt((float)outputSize * (scatter.distributionParams.spawnChance + 0.08f));
@@ -224,6 +228,7 @@ namespace Parallax
             {
                 ImmediateReadback();
             }
+
         }
         public void OnDistributeComplete(AsyncGPUReadbackRequest request)
         {
@@ -234,6 +239,13 @@ namespace Parallax
             }
             count = request.GetData<int>().ToArray(); //Creates garbage, unfortunate
             realCount = count[0];
+
+            // Kill this scatter on this quad, nothing was generated
+            if (realCount == 0)
+            {
+                parent.KillChild(this);
+            }
+
             // Process collider data, if this scatter is collideable
             // Todo: Make this a GetData if initializing the scene for the first time so all colliders are here on time
             // If we're paused, the colliders already exist
@@ -271,6 +283,12 @@ namespace Parallax
             count = new int[3];
             objectLimits.GetData(count);
             realCount = count[0];
+
+            // Kill this scatter on this quad, nothing was generated
+            if (realCount == 0)
+            {
+                parent.KillChild(this);
+            }
 
             // Process collider data, if this scatter is collideable
             // Todo: Make this a GetData if initializing the scene for the first time so all colliders are here on time

@@ -370,6 +370,15 @@ namespace Parallax
             return quad.meshRenderer.localToWorldMatrix.MultiplyVector(localNormal);
         }
         /// <summary>
+        /// Called when this quad generated nothing for this scatter
+        /// </summary>
+        /// <param name="data"></param>
+        public void KillChild(ScatterData data)
+        {
+            data.Cleanup();
+            quadScatters.Remove(data);
+        }
+        /// <summary>
         /// Releases all memory consumed by this quad. Called when a quad is unloaded, or has a subdivision level below this.
         /// </summary>
         public void Cleanup()

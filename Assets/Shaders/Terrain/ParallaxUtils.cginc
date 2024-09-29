@@ -248,6 +248,12 @@ float GetDisplacementLerpFactor(float heightLerp, float displacement1, float dis
     #define DECLARE_DISPLACEMENT_TEXTURE(displacementTexName, displacementSampler)
 #endif
 
+#if defined (AMBIENT_OCCLUSION)
+    #define DECLARE_AMBIENT_OCCLUSION_TEXTURE(occlusionTexName, occlusionSampler) BIPLANAR_TEXTURE(occlusionTexName, occlusionSampler)
+#else
+    #define DECLARE_AMBIENT_OCCLUSION_TEXTURE(occlusionTexName, occlusionSampler)
+#endif
+
 // We are always sampling the slope texture
 #define DECLARE_STEEP_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler) BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)
 
@@ -296,4 +302,12 @@ float GetDisplacementLerpFactor(float heightLerp, float displacement1, float dis
     // No keywords defined, fallback to low - But because of unused texture set, this will be black
     #define BLEND_TEXTURES(landMask, lowTex, midTex, highTex)          lowTex
     #define BLEND_CHANNELS_IN_TEX(landMask, tex)                       tex.r
+#endif
+
+#if defined (AMBIENT_OCCLUSION)
+    #define BLEND_OCCLUSION(landMask, occlusion)                                    \
+        fixed4 altitudeOcclusion = BLEND_CHANNELS_IN_TEX(landMask, occlusion);      \
+        fixed4 finalOcclusion = lerp(altitudeOcclusion, occlusion.a, landMask.b);
+#else
+    #define BLEND_OCCLUSION(landMask, occlusion)
 #endif

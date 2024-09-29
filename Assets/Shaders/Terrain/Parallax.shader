@@ -35,6 +35,7 @@ Shader "Custom/Parallax"
         [Space(10)]
         _InfluenceMap("Influence Map", 2D) = "white" {}
         _DisplacementMap("Displacement Map", 2D) = "black" {}
+        _OcclusionMap("Occlusion Map", 2D) = "white" {}
 
         [Space(10)]
         [Header(Texture Parameters)]
@@ -635,6 +636,7 @@ Shader "Custom/Parallax"
             #pragma multi_compile_local _          INFLUENCE_MAPPING
             #pragma multi_compile_local _          EMISSION
             #pragma multi_compile_local _          ADVANCED_BLENDING
+            #pragma multi_compile_local _          AMBIENT_OCCLUSION
             #pragma multi_compile_fog
             #pragma multi_compile _ UNITY_HDR_ON
 
@@ -782,6 +784,8 @@ Shader "Custom/Parallax"
                 DECLARE_HIGH_TEXTURE_SET(highDiffuse, highNormal, _MainTexHigh, _BumpMapHigh)
                 DECLARE_STEEP_TEXTURE_SET(steepDiffuse, steepNormal, _MainTexSteep, _BumpMapSteep)
 
+                DECLARE_AMBIENT_OCCLUSION_TEXTURE(occlusion, _OcclusionMap)
+
                 // Only if displacement blending is enabled
                 DECLARE_DISPLACEMENT_TEXTURE(displacement, _DisplacementMap)
                 CALCULATE_ADVANCED_BLENDING_FACTORS(landMask, displacement)
@@ -792,8 +796,10 @@ Shader "Custom/Parallax"
                 fixed4 finalDiffuse = lerp(altitudeDiffuse, steepDiffuse, landMask.b);
                 NORMAL_FLOAT finalNormal = lerp(altitudeNormal, steepNormal, landMask.b);
 
+                BLEND_OCCLUSION(landMask, occlusion)
+
                 // Deferred functions
-                SurfaceOutputStandardSpecular surfaceInput = GetPBRStruct(finalDiffuse, GET_EMISSION, finalNormal.xyz, i.worldPos);
+                SurfaceOutputStandardSpecular surfaceInput = GetPBRStruct(finalDiffuse, GET_EMISSION, finalNormal.xyz, i.worldPos ADDITIONAL_PBR_PARAMS);
                 UnityGI gi = GetUnityGI();
                 UnityGIInput giInput = GetGIInput(i.worldPos, viewDir);
                 LightingStandardSpecular_GI(surfaceInput, giInput, gi);

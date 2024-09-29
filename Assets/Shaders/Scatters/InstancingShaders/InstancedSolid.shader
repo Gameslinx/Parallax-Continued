@@ -536,7 +536,7 @@ Shader "Custom/ParallaxInstancedSolid"
                 DEBUG_IF_ENABLED
                 
                 // Deferred functions
-                SurfaceOutputStandardSpecular surfaceInput = GetPBRStruct(mainTex, result, worldNormal.xyz, i.worldPos);
+                SurfaceOutputStandardSpecular surfaceInput = GetPBRStruct(mainTex, result, worldNormal.xyz, i.worldPos ADDITIONAL_PBR_PARAMS);
                 UnityGI gi = GetUnityGI();
                 UnityGIInput giInput = GetGIInput(i.worldPos, viewDir);
                 LightingStandardSpecular_GI(surfaceInput, giInput, gi);

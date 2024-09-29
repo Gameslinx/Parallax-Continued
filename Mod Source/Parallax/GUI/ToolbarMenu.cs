@@ -82,10 +82,11 @@ namespace Parallax
             ParamCreator.ChangeMethod terrainCallback = UpdateTerrainMaterials;
             ParamCreator.ChangeMethod terrainKeywordCallback = UpdateTerrainKeywords;
 
-            ParamCreator.CreateParam("Max Tessellation",         ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.maxTessellation,         GUIHelperFunctions.FloatField, terrainCallback);
-            ParamCreator.CreateParam("Tessellation Edge Length", ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength,  GUIHelperFunctions.FloatField, terrainCallback);
-            ParamCreator.CreateParam("Tessellation Range",       ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.maxTessellationRange,    GUIHelperFunctions.FloatField, terrainCallback);
-            ParamCreator.CreateParam("Use Advanced Blending", ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.advancedTextureBlending,    GUIHelperFunctions.BoolField, terrainKeywordCallback);
+            ParamCreator.CreateParam("Max Tessellation",         ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.maxTessellation,             GUIHelperFunctions.FloatField, terrainCallback);
+            ParamCreator.CreateParam("Tessellation Edge Length", ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength,      GUIHelperFunctions.FloatField, terrainCallback);
+            ParamCreator.CreateParam("Tessellation Range",       ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.maxTessellationRange,        GUIHelperFunctions.FloatField, terrainCallback);
+            ParamCreator.CreateParam("Use Advanced Blending",    ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.advancedTextureBlending,     GUIHelperFunctions.BoolField, terrainKeywordCallback);
+            ParamCreator.CreateParam("Ambient Occlusion",        ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.ambientOcclusion,            GUIHelperFunctions.BoolField, terrainKeywordCallback);
 
             GUILayout.Space(15);
             // Scatter system settings
@@ -141,6 +142,7 @@ namespace Parallax
         {
             foreach (TerrainShaderQuadData data in PQSMod_Parallax.terrainQuadData.Values)
             {
+                // Advanced blending
                 if (ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.advancedTextureBlending)
                 {
                     data.quadMaterial.EnableKeyword("ADVANCED_BLENDING");
@@ -148,6 +150,16 @@ namespace Parallax
                 else
                 {
                     data.quadMaterial.DisableKeyword("ADVANCED_BLENDING");
+                }
+
+                // Ambient Occlusion
+                if (ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.ambientOcclusion)
+                {
+                    data.quadMaterial.EnableKeyword("AMBIENT_OCCLUSION");
+                }
+                else
+                {
+                    data.quadMaterial.DisableKeyword("AMBIENT_OCCLUSION");
                 }
             }
         }

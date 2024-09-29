@@ -113,6 +113,7 @@
      <None Include="Assets\Shaders\Debug\ShowWind.shader" />
      <None Include="Assets\Shaders\Includes\ParallaxGlobalFunctions.cginc" />
      <None Include="Assets\Shaders\Debug\ShowDensity.shader" />
+     <None Include="Assets\Shaders\Debug\TriplanarRotationTest.shader" />
      <None Include="Assets\Shaders\Scatters\TerrainScatters.compute" />
      <None Include="Assets\Shaders\Terrain\Wireframe.shader" />
      <None Include="Assets\Shaders\Terrain\ParallaxStructs.cginc" />

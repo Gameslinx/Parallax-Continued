@@ -67,8 +67,6 @@ namespace Parallax
             harmony.PatchAll();
             ParallaxDebug.Log("Harmony patching complete");
 
-            // Initialize the shader template - holds the names of textures, floats, etc and initializes their defaults
-            shaderPropertiesTemplate = new ShaderProperties();
             InitializeTemplateConfig(GetConfigByName("ParallaxShaderProperties").config, shaderPropertiesTemplate);
 
             LoadTerrainConfigs(GetConfigsByName("ParallaxTerrain"));
@@ -240,6 +238,7 @@ namespace Parallax
             parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength = float.Parse(terrainSettingsNode.GetValue("tessellationEdgeLength"));
             parallaxGlobalSettings.terrainGlobalSettings.maxTessellationRange = float.Parse(terrainSettingsNode.GetValue("maxTessellationRange"));
             parallaxGlobalSettings.terrainGlobalSettings.advancedTextureBlending = bool.Parse(terrainSettingsNode.GetValue("useAdvancedTextureBlending"));
+            parallaxGlobalSettings.terrainGlobalSettings.ambientOcclusion = bool.Parse(terrainSettingsNode.GetValue("useAmbientOcclusion"));
 
             ConfigNode scatterSettingsNode = config.config.GetNode("ScatterSystemSettings");
             parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier = float.Parse(scatterSettingsNode.GetValue("densityMultiplier"));
@@ -269,10 +268,10 @@ namespace Parallax
         public static ShaderProperties LookupTemplateConfig(UrlDir.UrlConfig config, string shaderName, List<string> keywords)
         {
             // Config starts at 'ParallaxScatterShaderProperties'
-            // 'ParallaxShader'
             ShaderProperties shaderProperties = new ShaderProperties();
             List<string> keywordsToRemove = new List<string>();
 
+            // 'ParallaxShader'
             ConfigNode[] allShaders = config.config.GetNodes("ParallaxShader");
             foreach (ConfigNode node in allShaders)
             {
@@ -406,6 +405,12 @@ namespace Parallax
             foreach (string propertyName in textureProperties)
             {
                 string configValue = bodyNode.GetValue(propertyName);
+                if (configValue == null)
+                {
+                    // Default to this texture if the requested texture couldn't be found
+                    Debug.Log("No texture (" + propertyName + ") found on " + body.planetName + ", setting it to default white");
+                    configValue = "Parallax/white.dds";
+                }
                 body.terrainShaderProperties.shaderTextures[propertyName] = configValue;
             }
             foreach (string propertyName in floatProperties)

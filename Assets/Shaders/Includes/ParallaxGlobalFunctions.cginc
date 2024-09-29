@@ -290,7 +290,15 @@ half4 LightingStandardSpecular_Deferred_Corrected(SurfaceOutputStandardSpecular 
 #define SET_OUT_EMISSION(emissionColor) outEmission = emissionColor;
 #endif
 
-SurfaceOutputStandardSpecular GetPBRStruct(float4 albedo, float3 emission, float3 normal, float3 worldPos)
+#if defined (AMBIENT_OCCLUSION)
+    #define PBR_INPUT float4 albedo, float3 emission, float3 normal, float3 worldPos, float occlusion
+    #define ADDITIONAL_PBR_PARAMS , finalOcclusion
+#else
+    #define PBR_INPUT float4 albedo, float3 emission, float3 normal, float3 worldPos
+    #define ADDITIONAL_PBR_PARAMS
+#endif
+
+SurfaceOutputStandardSpecular GetPBRStruct(PBR_INPUT)
 {
     float smoothness = 0;
     float3 specular = 0;
@@ -301,7 +309,11 @@ SurfaceOutputStandardSpecular GetPBRStruct(float4 albedo, float3 emission, float
 	o.Normal = normal.xyz;   
 	o.Emission = emission;
 	o.Smoothness = smoothness;
-	o.Occlusion = 1;
+    #if defined (AMBIENT_OCCLUSION)
+	o.Occlusion = occlusion;
+    #else
+    o.Occlusion = 1;
+    #endif
 	o.Alpha = 1;
     
     return o;
@@ -331,7 +343,7 @@ UnityGIInput GetGIInput(float3 worldPos, float3 viewDir)
     giInput.probeHDR[0] = unity_SpecCube0_HDR;
     giInput.probeHDR[1] = unity_SpecCube1_HDR;
 
-    #if defined(UNITY_SPECCUBE_BLENDING) || defined(UNITY_SPECCUBE_BOX_PROJECTION)
+#if defined(UNITY_SPECCUBE_BLENDING) || defined(UNITY_SPECCUBE_BOX_PROJECTION)
     giInput.boxMin[0] = unity_SpecCube0_BoxMin;
     #endif
 
