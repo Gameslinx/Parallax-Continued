@@ -1,14 +1,8 @@
 ﻿using Parallax.Tools;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Profiling;
-using static KSP.UI.Screens.RDNode;
 
 namespace Parallax
 {
@@ -121,7 +115,7 @@ namespace Parallax
             planetOrigin = body.transform.position;
             planetRadius = (float)body.Radius;
 
-            sphereRelativeDensityMult = GetSphereRelativeDensityMult(body);
+            sphereRelativeDensityMult = BiomeLoader.GetSphereRelativeDensityMult(body, quad);
 
             GetCornerBiomes(body);
 
@@ -143,7 +137,7 @@ namespace Parallax
             directionsFromCenter = GetDirectionsFromCenter(vertices, quad.sphereRoot.gameObject.transform.position);
             sourceDirsFromCenterBuffer.SetData(directionsFromCenter);
 
-            sphereRelativeDensityMult = GetSphereRelativeDensityMult(body);
+            sphereRelativeDensityMult = BiomeLoader.GetSphereRelativeDensityMult(body, quad);
         }
         /// <summary>
         /// Reinitializes an amount of scatters. Refreshes prerequisite data and regenerates the scatters specified.
@@ -332,25 +326,7 @@ namespace Parallax
 
             return directions;
         }
-        /// <summary>
-        /// PQS is a subdivided cube-sphere. At the corners, the vertices are much closer together. This function accounts for that by approximating an appropriate reduction in density
-        /// </summary>
-        /// <param name="directionFromCenter"></param>
-        /// <returns></returns>
-        public float GetSphereRelativeDensityMult(CelestialBody body)
-        {
-            // This calculation is wrong, but it surprisingly works much better for KSP
-            UnityEngine.Vector2d latlon = LatLon.GetLatitudeAndLongitude(body.BodyFrame, body.gameObject.transform.position, quad.gameObject.transform.position);
-
-            float normalisedDensityMultiplier = 1.0f - BiomeLoader.GetDensityAt(latlon);
-
-            // Square it, as we're working with area
-            normalisedDensityMultiplier = normalisedDensityMultiplier * normalisedDensityMultiplier;
-
-            float multiplier = Mathf.Clamp01(Mathf.Lerp(0.18f, 1.0f, normalisedDensityMultiplier));
-
-            return multiplier;
-        }
+        
         /// <summary>
         /// Returns the non-smoothed terrain normal at a given index in the normals buffer
         /// </summary>

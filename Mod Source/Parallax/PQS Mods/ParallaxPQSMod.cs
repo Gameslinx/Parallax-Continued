@@ -24,7 +24,7 @@ namespace Parallax
         /// </summary>
         public static Dictionary<PQ, Vector3[]> quadPlanetUVs = new Dictionary<PQ, Vector3[]>();
 
-        Vector3[] uvCache;
+        Vector3[] uvCache = new Vector3[225];
 
         bool hasTerrainShader = false;
         public override void OnSetup()
@@ -52,11 +52,6 @@ namespace Parallax
                 }
                 ConfigLoader.parallaxScatterBodies[sphere.name].SetSubdivisionRequirements(sphere.subdivisionThresholds, thresholdMultiplier, sphere.maxLevel);
             }
-        }
-        // Occurs before vertex build - Get quad data here
-        public override void OnQuadPreBuild(PQ quad)
-        {
-            uvCache = new Vector3[225];
         }
         public override void OnQuadBuilt(PQ quad)
         {

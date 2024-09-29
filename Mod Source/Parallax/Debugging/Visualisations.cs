@@ -232,7 +232,7 @@ namespace Parallax
                     meshFilter.mesh = mesh;
                     meshRenderer.sharedMaterial = new Material(Shader.Find("Standard"));
 
-                    float density = quadData.Value.GetSphereRelativeDensityMult(FlightGlobals.currentMainBody);
+                    float density = BiomeLoader.GetSphereRelativeDensityMult(FlightGlobals.currentMainBody, quad);
                     meshRenderer.sharedMaterial.SetColor("_Color", Color.white * density);
 
                     objectDisplays.Add(go);

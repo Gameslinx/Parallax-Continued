@@ -49,6 +49,7 @@ namespace Parallax
         public void Initialize()
         {
             body = ConfigLoader.parallaxTerrainBodies[quad.sphereRoot.name];
+            subdivisionLevel = BiomeLoader.GetSphereRelativeSubdivisionLevel(FlightGlobals.GetBodyByName(quad.sphereRoot.name), quad, subdivisionLevel);
 
             blendLowMidStart = body.terrainShaderProperties.shaderFloats["_LowMidBlendStart"];
             blendLowMidEnd = body.terrainShaderProperties.shaderFloats["_LowMidBlendEnd"];
