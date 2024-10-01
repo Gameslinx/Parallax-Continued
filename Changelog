@@ -1,0 +1,224 @@
+# Parallax Continued Changelog
+
+## Release 2.0
+
+Features / Improvements
+ - Added Ambient Occlusion maps for all planet terrain textures (Deferred only)
+ - Replaced most planet surface textures to finalize the revamp that began in Release 1.0
+
+GUI / Accessibility / QoL
+ - Added Ambient Occlusion setting toggle in the Parallax GUI. The performance impact is minimal, but allows the option to disable it to squeeze out more
+
+Terrain
+ - Added Ambient Occlusion maps for all planets
+ 
+ - Moho
+ - - Main surface texture is now huge hexagonal metal formations covered entirely by dust, tying it in with the surface scatters
+ - - Slopes now better represent a rocky surface
+
+ - Eve
+ - - Eve was already revamped in 1.0
+
+ - Gilly
+ - - Surface texture no longer looks muddy, and aligns more with what we might expect to see for an asteroid of its size
+
+ - Kerbin
+ - - Kerbin was already revamped in 1.0
+
+ - Mun
+ - - The Mun was already revamped in 1.0
+
+ - Minmus
+ - - Lowlands are now completely icy/glassy and reflect the surrounding hills as well as the sunlight intensely
+ - - Midlands are dusty and reminiscent of the vanilla Minmus texture
+ - - Slopes are dusty mixed with jagged rock poking through
+ - - Highlands are rocky now instead of some weird sand material
+ - - Revamped Minmus' orbit texture
+
+- Duna
+- - Lowland areas no longer have very striking and unrealistic sand dunes - from afar they looked odd - and now has a more appropriate sand texture
+- - Cliffs are now sandy instead of rocky cliffs that appeared in places cliffs wouldn't normally appear
+- - Added a new jagged rocky texture for the highlands
+
+- Ike
+- - Surface texture is now much more representative of a rocky/dusty hybrid moon
+- - Slopes are now formed of smooth marble instead of dark stone
+
+- Dres
+- - Surface and slope textures revamped, but are mostly similar to before
+
+- Laythe
+- - No change besides ambient occlusion maps
+
+- Vall
+- - Massively improved the icy surface texture
+- - Slopes are now rough ice
+- - Highlands are now rough stone
+
+- Tylo
+- - Surface and slope textures revamped, but are mostly similar to before
+- - Brightened the slopes and reduced their contrast to make them fit in better with the surrounding terrain
+
+- Bop
+- - Bop was already revamped in 1.0
+- - Revamped Bop's orbit texture (in Release 1, but is relevant to the other orbit texture changes in Release 2)
+
+- Pol
+- - Lowland ice is now much more representative of an icy surface
+- - Remastered midlands, highlands and cliff textures
+- - Revamped Pol's orbit texture to better represent the surface
+
+- Eeloo
+- - Added a new lowland texture to approximate the appearance of tholins up close
+- - Remastered the ice surface texture
+
+Scatters - General
+ - Adjuted some scatters to match their updated terrain
+
+For Mod Authors
+ - No changes required for base functionality - Ambient Occlusion texture will default to white (no occlusion) for planets that don't have maps
+ - There is a Parallax Texture Compositor tool that might be useful for authoring displacement and occlusion maps, available here: https://github.com/Gameslinx/ParallaxTextureCompositor/releases/tag/1.0.0
+ - To support ambient occlusion maps, add "_OcclusionMap = [filepath].[extension]" to your Parallax Terrain config. They are set up similarly to displacement and influence maps (RGBA = low/mid/high/steep)
+
+Bug Fixes
+ - Fixed interaction with TUFX HDR causing black quadrants of the screen (fixed in a Release 1 patch)
+ - Fixed NRE spam when crafts are around the sun (fixed in a Release 1 patch)
+ - For mod authors - Errors are now slightly more verbose in the log file when configs are set up improperly
+ - Plus some extra minor fixes that I haven't been tracking
+
+## Release 1.0
+
+Overview
+ - The mod has been rewritten from the ground up, almost every line of code is new - expect massively improved quality, performance and reliability
+ - Long time users of the mod will be very pleased to see the fixes section
+
+Features / Improvements
+
+GUI / Accessibility / Quality of Life
+ - Added new GUI button in the space center and flight that lets you customise the mod's settings in-game
+ - Added a new GUI keybind (Ctrl + P) which opens the terrain shader and scatter editor
+ - Added a new setting "Show Collideable Scatters" in the settings GUI which highlights which scatters your craft can collide with - I am looking into a version of this that shows Breaking Ground surface objects
+ - Added a new setting "Use Advanced Blending" which toggles the new terrain texture blending quality setting
+ - Added a new setting "Light Shadows" which toggles vessel light shadow casting
+ - Added a new setting "Light Shadows Quality"
+ - Added a new setting "Fade Out Start Range" which controls the despawn start radius for scatters
+ - Added a new setting "Collision Level" which controls how small an object can be to be considered collideable, allowing you to set the difficulty accordingly
+ - Added various debug options to both the GUI and global config
+
+Terrain - General
+ - All planets: Improved the terrain displacement to reduce visually floating/sinking objects
+ - Kerbin: New terrain textures
+ - Mun: New terrain textures
+ - Eve: New terrain textures
+ - Bop: New terrain and scaled space textures
+ - Terrain will now cast shadows from all light sources, unless this option is disabled
+
+Terrain - Shader
+ - Textures are now blended using displacement rather than just using a fade
+ - Shader tessellation and displacement quality hugely increased
+ - Shader reflection probe environment lighting now supported in forward rendering
+ - Displacement can now affect all texture levels
+ - Displacement range can now be set to any value
+ - Improved specular/gloss calculation in forward rendering
+ - Improved tessellation range falloff and edge length calculation
+ - Improved displacement falloff calculation
+
+Scatters - General
+  - Scatters now show in the KSC
+  - Reworked the wind system
+  - All scatters are now persistent, including small scale scatters such as foliage or small rocks
+  - Scatter LOD processing and frustum culling now updates every frame
+  - Scatter default render distance increased
+  - Improved scatter render distance radius - it is no longer a hard cutoff
+  - Render distance is now computed from the camera position rather than the craft position
+  - Improved scatter altitude based density falloff
+  - Scatter densities now properly account for the quad density distribution differences caused as a result of the cube-sphere transformation
+  - Improved the appearance of the cutoff between biomes
+  - All planets: Changed the random distribution of all scatters
+  - Kerbin: Grass now takes on the terrain colour beneath rather than being a constant colour
+  - Kerbin: Improved grass cutoff at the edge of the render distance
+  - Kerbin: Updated oak tree scatter models and textures
+  - Kerbin: Updated daisy scatter models and textures
+  - Kerbin: Updated grass and tall grass LOD2 (furthest LOD) model and textures
+  - Kerbin: Updated iceberg textures
+  - Eve: Added rocks and slabs to the surface
+  - Minmus: Replaced highland ice scatters with metallic minerals
+  - Gilly: Significantly reduced the number of rocks
+  - Ike: Improved the lighting dynamics for the crystal scatters
+  - Laythe: Adjusted the grass colour to better match the terrain it appears on
+  - Laythe: Improved the mushroom tree LOD2 (furthest LOD) texture
+  - Vall: Updated ice slab scatter models and textures
+  - Vall: Updated ice crystal scatter models and textures
+  - Bop: Updated rock scatter models and textures
+  - Eeloo: Updated ice slab scatter models and textures
+
+Scatters - Collisions
+  - Added new Collision Level setting which allows you to control which scatters are collideable
+  - Trees are now collideable by default. Have fun!
+  - Colliders are significantly more reliable
+  - Colliders are now persistent
+
+Scatters - Shaders
+  - Added subsurface scattering
+  - Added refraction
+  - Added ability for scatters to be coloured by the terrain
+  - Added more random distribution noise types
+  - Improved scatter lighting in vessel lights
+  - Improved the lighting of the bubble shader
+  - Improved the distortion of the bubble shader
+  - Unified lighting calculations across different scatter types
+
+Performance
+
+Terrain Shader / System
+  - Massively optimized terrain tessellation performance
+  - Massively optimized the performance of additional lights in Forward and Deferred rendering
+  - Parallax terrain subdivision is now multithreaded using Burst Jobs, and is non-blocking
+  - Optimized terrain pixel shader texture bandwidth
+  - Quad build times as a result of Parallax are hugely reduced
+  
+Scatter System
+  - Collider processing is now multithreaded using Burst Jobs, and is non-blocking
+  - Removed the reliance on PQSMods for determining scatter biomes - this is done on the GPU now
+  - Removed the reliance on PQSMods for generating scatter distribution noise - this is done on the GPU now
+  - Optimized scatter generation times
+  - Optimized scatter compute shaders
+  - Stutters related to the scatter system are now largely (if not completely) gone
+  - Massively reduced the VRAM usage of the scatter system
+  - Massively reduced the RAM usage of the scatter system
+  - Only one compute shader is needed per scatter, instead of one per quad per scatter
+  - Fixed common and large stutters when generating colliders
+
+Bug Fixes
+
+Terrain System
+  - Fixed texture seams that would appear on a planet as a result of applying the terrain textures before quad normals updated
+  - Fixed terrain texture "flicker" that would happen when the camera passes a certain altitude
+  - Fixed a calculation the tessellation shader stage that resulted in tessellation cutting off abruptly
+
+Scatter System
+  - hoo boy
+  - Fixed interaction with Waterfall where both mods use the background texture, causing a conflict - Parallax now uses refraction approximation and no longer samples the background texture
+  - Refractive scatters now render in Deferred as they are no longer technically transparent
+  - Fixed scatters becoming disconnected from the ground - this will never happen now
+  - Fixed scatter textures not loading
+  - Fixed scatters displaying the wrong textures
+  - Fixed scatters appearing too dark
+  - Fixed scatter lighting when lit up by vessel lights
+  - Fixed scatters flickering when the craft is destroyed (or otherwise)
+  - Fixed scatter frustum culling stopping when the game is paused, HUD is hidden, and camera is rotated
+  - Fixed occasional holes in shadows
+  - Fixed shadow acne/banding effect in scatter shadows
+  - Fixed billboarding shader lighting
+  - Fixed occasional random intense blooming effect on scatters with high specular/gloss values
+  - Fixed scatter specular/gloss calculation
+  - Fixed scatter shader normal mapping for world space texture coordinates
+  - Fixed colliders not closely matching the visual geometry
+  - Fixed colliders disappearing on scene reload
+  - Fixed being able to fall through colliders at random points (mainly on icebergs)
+  - Fixed incorrect craft bound calculation causing colliders to despawn too soon while they were in range
+  - Fixed incorrect scatter bound calculation causing collider ranges to be computed from the largest scatter bound, which reduced performance
+  - Fixed colliders not respecting the world origin shift and becoming disconnected from the visual geometry when moving around
+  - Fixed scatter system breaking seemingly randomly when flying around
+  - Fixed scatter system breaking when teleporting to another body
+  - Fixed a calculation in the distribution code that caused too many objects to be generated, and would generate at a fixed position with random rotation, causing lag when in the view frustum
