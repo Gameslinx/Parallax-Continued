@@ -15,6 +15,7 @@ All Rights Reserved
 |OPM|[Download](https://drive.google.com/file/d/1X9nvz8yWvSaV5RFyLSRP-Jy3EdwAt6PG/view?usp=drive_link)
 |Beyond Home|Maintainer Contacted
 |Kcalbeloh|[Download](https://drive.google.com/file/d/1Ro2ISf7bjELoKu6axteYUYqEz627aggO/view?usp=sharing)
+|Celestial Harmony|[Download](https://github.com/ProximaCentauri-star/Celestial-Harmony/releases)
 |Techno's Stock Planet Revamp|Author Contacted
 |KSRSS Reborn|[Download](https://forum.kerbalspaceprogram.com/topic/225981-paralaxcontinued-ksrss-sdi/)
 |JNSQ|No
