@@ -216,22 +216,21 @@ namespace Parallax
                 foreach (KeyValuePair<string, string> textureValue in terrainShaderProperties.shaderTextures)
                 {
                     Debug.Log("Attempting load: " + textureValue.Key + " at " + textureValue.Value);
+                    Texture2D tex;
                     if (loadedTextures.ContainsKey(textureValue.Key))
                     {
-                        if (loadedTextures[textureValue.Key] != null)
-                        {
-                            Debug.Log("This texture is already loaded!");
-                            continue;
-                        }
-                        else
-                        {
-                            Debug.Log("The key exists, but the texture is null");
-                        }
+                        tex = loadedTextures[textureValue.Key];
+                    }
+                    else
+                    {
+                        bool linear = TextureUtils.IsLinear(textureValue.Key);
+                        tex = TextureLoader.LoadTexture(textureValue.Value, linear);
+
+                        // Add to active textures
+                        loadedTextures.Add(textureValue.Key, tex);
                     }
                     // Bump maps need to be linear, while everything else sRGB
                     // This could be handled better, tbh, but at least we're accounting for linear textures this time around
-                    bool linear = TextureUtils.IsLinear(textureValue.Key);
-                    Texture2D tex = TextureLoader.LoadTexture(textureValue.Value, linear);
 
                     parallaxMaterials.parallaxLow.SetTexture(textureValue.Key, tex);
                     parallaxMaterials.parallaxMid.SetTexture(textureValue.Key, tex);
@@ -241,12 +240,23 @@ namespace Parallax
                     parallaxMaterials.parallaxMidHigh.SetTexture(textureValue.Key, tex);
 
                     parallaxMaterials.parallaxFull.SetTexture(textureValue.Key, tex);
-
-                    // Add to active textures
-                    loadedTextures.Add(textureValue.Key, tex);
                 }
             }
             loaded = true;
+        }
+        public static Texture2D LoadTexIfUnloaded(ParallaxTerrainBody body, string path, string key)
+        {
+            if (!body.loadedTextures.ContainsKey(key))
+            {
+                bool linear = TextureUtils.IsLinear(key);
+                Texture2D tex = TextureLoader.LoadTexture(path, linear);
+                body.loadedTextures.Add(key, tex);
+                return tex;
+            }
+            else
+            {
+                return body.loadedTextures[key];
+            }
         }
         /// <summary>
         /// Used by the GUI to load textures on texture changes

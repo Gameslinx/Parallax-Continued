@@ -30,9 +30,9 @@ namespace Parallax
         public static Vector3 vectorCameraPos = Vector3.zero;
 
         int planetOpacityID = Shader.PropertyToID("_PlanetOpacity");
-        int planetOriginID = Shader.PropertyToID("_PlanetOrigin");
-        int shaderOffsetID = Shader.PropertyToID("_TerrainShaderOffset");
-        int planetRadiusID = Shader.PropertyToID("_PlanetRadius");
+        int planetOriginID =  Shader.PropertyToID("_PlanetOrigin");
+        int shaderOffsetID =  Shader.PropertyToID("_TerrainShaderOffset");
+        int planetRadiusID =  Shader.PropertyToID("_PlanetRadius");
 
         // Used in most shaders
         /// <summary>
@@ -42,6 +42,7 @@ namespace Parallax
         Plane[] planes;
         public void Start()
         {
+            // Fixup reflection probe (TODO: Delete when Deferred improves reflection probe implementation / alternative reflection method
             flightProbeObject = GameObject.Find("Reflection Probe");
             FlightReflectionProbe probeComponent = flightProbeObject.GetComponent<FlightReflectionProbe>();
             probeComponent.probeComponent.size = Vector3.one * 100000.0f;
@@ -49,6 +50,48 @@ namespace Parallax
             { 
                 onFlightReflectionProbeReady(flightProbeObject.transform);
             }
+
+            //
+            //  Block: KSC terrain replacement
+            //  Still in progress, not included in the build for now
+            //
+
+            // Find and replace ksc shader
+            //if (FlightGlobals.currentMainBody == FlightGlobals.GetHomeBody() && ConfigLoader.parallaxTerrainBodies.ContainsKey(FlightGlobals.GetHomeBody().name))
+            //{
+            //    ParallaxTerrainBody body = ConfigLoader.parallaxTerrainBodies[FlightGlobals.GetHomeBody().name];
+            //    Material[] materials = Resources.FindObjectsOfTypeAll<Material>().Where(m => (m.shader.name.Contains("Ground KSC"))).ToArray();
+            //    for (int i = 0; i < materials.Length; i++)
+            //    {
+            //        Material material = materials[i];
+            //        ParallaxDebug.Log("material name: " + material.name);
+            //        ParallaxDebug.Log("material shader: " + material.shader.name);
+            //        if (material.name.Contains("exterior_terrain_grass"))
+            //        {
+            //            if (ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.ambientOcclusion)
+            //            {
+            //                material.EnableKeyword("AMBIENT_OCCLUSION");
+            //            }
+            //            material.shader = AssetBundleLoader.parallaxTerrainShaders["Custom/ParallaxKSCTerrain"];
+            //
+            //            // calc ksc altitude and determine texture to use
+            //
+            //            material.SetTexture("_MainTexLow", ParallaxTerrainBody.LoadTexIfUnloaded(body, body.terrainShaderProperties.shaderTextures["_MainTexMid"], "_MainTexMid"));
+            //            material.SetTexture("_BumpMapLow", ParallaxTerrainBody.LoadTexIfUnloaded(body, body.terrainShaderProperties.shaderTextures["_BumpMapMid"], "_BumpMapMid"));
+            //            material.SetTexture("_InfluenceMap", ParallaxTerrainBody.LoadTexIfUnloaded(body, body.terrainShaderProperties.shaderTextures["_InfluenceMap"], "_InfluenceMap"));
+            //            material.SetTexture("_OcclusionMap", ParallaxTerrainBody.LoadTexIfUnloaded(body, body.terrainShaderProperties.shaderTextures["_OcclusionMap"], "_OcclusionMap"));
+            //
+            //            material.SetFloat("_Tiling", body.terrainShaderProperties.shaderFloats["_Tiling"]);
+            //
+            //            material.SetFloat("_SpecularPower", body.terrainShaderProperties.shaderFloats["_SpecularPower"]);
+            //            material.SetFloat("_SpecularIntensity", body.terrainShaderProperties.shaderFloats["_SpecularIntensity"]);
+            //            material.SetFloat("_FresnelPower", body.terrainShaderProperties.shaderFloats["_FresnelPower"]);
+            //            material.SetFloat("_EnvironmentMapFactor", body.terrainShaderProperties.shaderFloats["_EnvironmentMapFactor"]);
+            //            material.SetFloat("_Hapke", body.terrainShaderProperties.shaderFloats["_Hapke"]);
+            //            material.SetFloat("_BumpScale", body.terrainShaderProperties.shaderFloats["_BumpScale"]);
+            //        }
+            //    }
+            //}
         }
         public void Update()
         {

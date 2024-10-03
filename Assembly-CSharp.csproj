@@ -96,6 +96,7 @@
      <None Include="Assets\Shaders\Scatters\SimplexNoise.cginc" />
      <None Include="Assets\Shaders\Includes\BiplanarFunctions.cginc" />
      <None Include="Assets\Shaders\Debug\Old Parallax\PF.shader" />
+     <None Include="Assets\Shaders\Terrain\KSCTerrain.shader" />
      <None Include="Assets\Shaders\Scatters\ScatterStructs.cginc" />
      <None Include="Assets\Shaders\Debug\Old Parallax\TessellationProper.cginc" />
      <None Include="Assets\Shaders\Terrain\ParallaxVariables.cginc" />

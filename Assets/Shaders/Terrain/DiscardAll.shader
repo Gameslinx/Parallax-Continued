@@ -26,7 +26,7 @@
             };
             
             v2f vert ()
-            {
+            { 
                 v2f o;
 
                 // move triangle off screen, create degen triangle, skipped by gpu
