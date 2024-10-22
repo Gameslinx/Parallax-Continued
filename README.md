@@ -37,7 +37,7 @@ Any issues? You can reach me on Discord (linked in my Patreon description) or th
 |Kcalbeloh|[Download](https://drive.google.com/file/d/1Ro2ISf7bjELoKu6axteYUYqEz627aggO/view?usp=sharing)
 |Celestial Harmony|[Download](https://github.com/ProximaCentauri-star/Celestial-Harmony/releases)
 |Techno's Stock Planet Revamp|Author Contacted
-|KSRSS Reborn|[Download]([https://forum.kerbalspaceprogram.com/topic/225981-paralaxcontinued-ksrss-sdi/](https://github.com/Sheepdog2142/ParalaxContinued-KSRSS-SDI))
+|KSRSS Reborn|[Download](https://github.com/Sheepdog2142/ParalaxContinued-KSRSS-SDI)
 |JNSQ|No
 |Galileo's Planet Pack|No
 
