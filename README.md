@@ -32,7 +32,7 @@ Any issues? You can reach me on Discord (linked in my Patreon description) or th
 |Stock Planetary System|Fully supported
 |Stock Planetary System (Rescaled)|[Download](https://drive.google.com/file/d/1qFMQlvmI6M2HdJLgLyz1jRCGos-_YOTP/view?usp=drive_link)
 |RSS Reborn|Almost Complete
-|OPM|[Download](https://drive.google.com/file/d/1X9nvz8yWvSaV5RFyLSRP-Jy3EdwAt6PG/view?usp=drive_link)
+|OPM|[Download](https://drive.google.com/file/d/127yJZ46sTaIcGmdCondYquETtWzfGXZy/view?usp=drive_link)
 |Beyond Home|Maintainer Contacted
 |Kcalbeloh|[Download](https://drive.google.com/file/d/1Ro2ISf7bjELoKu6axteYUYqEz627aggO/view?usp=sharing)
 |Celestial Harmony|[Download](https://github.com/ProximaCentauri-star/Celestial-Harmony/releases)
