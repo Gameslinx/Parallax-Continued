@@ -33,17 +33,17 @@ Mods that are fully compatible with and enhance the visual experience when insta
 
 ## List of Supported Planet Packs
 "Author Contacted" means not currently supported, but I've reached out to the author to help get upgrading existing configs started
-|Planet Pack Name|Compatibility Status
-|----|----
-|Stock Planetary System|Fully supported
-|Stock Planetary System (Rescaled)|[Download](https://drive.google.com/file/d/1qFMQlvmI6M2HdJLgLyz1jRCGos-_YOTP/view?usp=drive_link)
-|RSS Reborn|Almost Complete
-|OPM|[Download](https://drive.google.com/file/d/127yJZ46sTaIcGmdCondYquETtWzfGXZy/view?usp=drive_link)
+|Planet Pack Name|Compatibility Status|Last Updated
+|----|----|----
+|Stock Planetary System|Fully supported|/
+|Stock Planetary System (Rescaled)|[Download](https://drive.google.com/file/d/1qFMQlvmI6M2HdJLgLyz1jRCGos-_YOTP/view?usp=drive_link)|Not been updated yet
+|RSS Reborn|Almost Complete|/
+|OPM|[Download](https://drive.google.com/file/d/127yJZ46sTaIcGmdCondYquETtWzfGXZy/view?usp=drive_link)|11/11/2024
 |Beyond Home|Maintainer Contacted
-|Kcalbeloh|[Download](https://drive.google.com/file/d/1Ro2ISf7bjELoKu6axteYUYqEz627aggO/view?usp=sharing)
-|Celestial Harmony|[Download](https://github.com/ProximaCentauri-star/Celestial-Harmony/releases)
+|Kcalbeloh|[Download](https://drive.google.com/file/d/1Ou24R74Ys2InsBXi5Mq8R37ckLfjywVh/view?usp=drive_link)|11/11/2024
+|Celestial Harmony|[Download](https://github.com/ProximaCentauri-star/Celestial-Harmony/releases)|Not maintained by me
 |Techno's Stock Planet Revamp|Author Contacted
-|KSRSS Reborn|[Download](https://github.com/Sheepdog2142/ParalaxContinued-KSRSS-SDI)
+|KSRSS Reborn|[Download](https://github.com/Sheepdog2142/ParalaxContinued-KSRSS-SDI)|Not maintained by me
 |JNSQ|In progress
 |Galileo's Planet Pack|No
 
