@@ -25,6 +25,12 @@ Available in Early Access at [Linx's Patreon](https://www.patreon.com/linx_)
 
 Any issues? You can reach me on Discord (linked in my Patreon description) or the KSP forums as 'Gameslinx'. I go by 'Linx' anywhere else.
 
+## Recommended Mods
+Mods that are fully compatible with and enhance the visual experience when installed with Parallax:
+ - Deferred (Improves surface reflections)
+ - Scatterer (Atmospheric scattering)
+ - Environmental Visual Enhancements (EVE) or EVE Volumetrics (Clouds, rain)
+
 ## List of Supported Planet Packs
 "Author Contacted" means not currently supported, but I've reached out to the author to help get upgrading existing configs started
 |Planet Pack Name|Compatibility Status
