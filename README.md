@@ -38,7 +38,7 @@ Any issues? You can reach me on Discord (linked in my Patreon description) or th
 |Celestial Harmony|[Download](https://github.com/ProximaCentauri-star/Celestial-Harmony/releases)
 |Techno's Stock Planet Revamp|Author Contacted
 |KSRSS Reborn|[Download](https://github.com/Sheepdog2142/ParalaxContinued-KSRSS-SDI)
-|JNSQ|No
+|JNSQ|In progress
 |Galileo's Planet Pack|No
 
 ## License
