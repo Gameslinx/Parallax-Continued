@@ -38,7 +38,8 @@ Mods that are fully compatible with and enhance the visual experience when insta
 |Stock Planetary System|Fully supported|/
 |Stock Planetary System (Rescaled)|[Download](https://drive.google.com/file/d/1qFMQlvmI6M2HdJLgLyz1jRCGos-_YOTP/view?usp=drive_link)|Not been updated yet
 |RSS Reborn|Almost Complete|/
-|OPM|[Download](https://drive.google.com/file/d/127yJZ46sTaIcGmdCondYquETtWzfGXZy/view?usp=drive_link)|11/11/2024
+|OPM and MPE - Jthero Configs|[Download](https://github.com/jthero3/OuterParallax/releases/tag/0.0.1-beta)|Not maintained by me
+|OPM - Old Configs|[Download](https://drive.google.com/file/d/127yJZ46sTaIcGmdCondYquETtWzfGXZy/view?usp=drive_link)|11/11/2024
 |Beyond Home|Maintainer Contacted
 |Kcalbeloh|[Download](https://drive.google.com/file/d/1Ou24R74Ys2InsBXi5Mq8R37ckLfjywVh/view?usp=drive_link)|11/11/2024
 |Celestial Harmony|[Download](https://github.com/ProximaCentauri-star/Celestial-Harmony/releases)|Not maintained by me
