@@ -23,6 +23,7 @@ Available in Early Access at [Linx's Patreon](https://www.patreon.com/linx_)
 
 9. **IMPORTANT - In the main menu, click 'Settings', then 'Graphics', and set 'Terrain Detail' to 'High'**
 
+NOTE: If you use Deferred, you might need to install Deferred manually (not via CKAN) if CKAN reports a conflict!
 Any issues? You can reach me on Discord (linked in my Patreon description) or the KSP forums as 'Gameslinx'. I go by 'Linx' anywhere else.
 
 ## Recommended Mods
