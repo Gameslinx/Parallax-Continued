@@ -42,7 +42,7 @@ namespace Parallax
                 activeButton.hover.textColor = HighLogic.Skin.label.normal.textColor * 1.25f;
 
                 // Create toolbar button
-                Texture buttonTexture = GameDatabase.Instance.GetTexture("Parallax/Textures/button", false);
+                Texture buttonTexture = GameDatabase.Instance.GetTexture("ParallaxContinued/Textures/button", false);
                 button = ApplicationLauncher.Instance.AddModApplication(ShowToolbarGUI, HideToolbarGUI, IncrementBingus, Nothing, Nothing, Nothing, ApplicationLauncher.AppScenes.ALWAYS, buttonTexture);
                 buttonAdded = true;
 
@@ -243,11 +243,11 @@ namespace Parallax
             bingusCount++;
             if (bingusCount % 10 == 0 && bingusCount > 0)
             {
-                button.SetTexture(GameDatabase.Instance.GetTexture("Parallax/Textures/bingus", false));
+                button.SetTexture(GameDatabase.Instance.GetTexture("ParallaxContinued/Textures/bingus", false));
             }
             else
             {
-                button.SetTexture(GameDatabase.Instance.GetTexture("Parallax/Textures/button", false));
+                button.SetTexture(GameDatabase.Instance.GetTexture("ParallaxContinued/Textures/button", false));
             }
         }
 

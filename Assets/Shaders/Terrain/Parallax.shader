@@ -462,7 +462,7 @@ Shader "Custom/Parallax"
                 o.landMask = GetLandMask(o.worldPos, o.worldNormal);
                 return o;
             }
-        
+
             TessellationFactors PatchConstantFunction(InputPatch<TessellationControlPoint, 3> patch) 
             {
                 TessellationFactors f;

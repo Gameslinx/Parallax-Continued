@@ -58,7 +58,7 @@ namespace Parallax
             globalNode.AddNode(debugSettingsNode);
             globalNode.AddNode(objectPoolSettingsNode);
 
-            rootNode.Save(KSPUtil.ApplicationRootPath + "GameData/Parallax/Config/ParallaxGlobalSettings2.cfg");
+            rootNode.Save(KSPUtil.ApplicationRootPath + "GameData/ParallaxContinued/Config/ParallaxGlobalSettings2.cfg");
 
         }
     }

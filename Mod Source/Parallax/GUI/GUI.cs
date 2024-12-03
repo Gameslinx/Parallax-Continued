@@ -233,11 +233,11 @@ namespace Parallax
             {
                 if (overwriteOnExport)
                 {
-                    GUILayout.Label("Existing config will be backed up to GameData/Parallax/Exports/Backups");
+                    GUILayout.Label("Existing config will be backed up to GameData/ParallaxContinued/Exports/Backups");
                 }
                 else
                 {
-                    GUILayout.Label("Configs will be exported to GameData/Parallax/Exports/Configs");
+                    GUILayout.Label("Configs will be exported to GameData/ParallaxContinued/Exports/Configs");
                     GUILayout.Label("To apply them, you must copy the contents of the .cfg to the active .cfg");
                 }
                 ParamCreator.CreateParam("Overwrite Existing Configs", ref overwriteOnExport, GUIHelperFunctions.BoolField);
@@ -249,7 +249,7 @@ namespace Parallax
                         ConfigNode currentNode = ConfigLoader.GetPlanetTerrainNode(FlightGlobals.currentMainBody.name);
                         if (currentNode != null)
                         {
-                            bool saved = ConfigLoader.SaveConfigNode(currentNode, KSPUtil.ApplicationRootPath + "GameData/Parallax/Exports/Backups/ParallaxTerrain-" + FlightGlobals.currentMainBody.name + ".cfg");
+                            bool saved = ConfigLoader.SaveConfigNode(currentNode, KSPUtil.ApplicationRootPath + "GameData/ParallaxContinued/Exports/Backups/ParallaxTerrain-" + FlightGlobals.currentMainBody.name + ".cfg");
                             // Backup created, now overwrite
                             if (saved)
                             {
@@ -637,11 +637,11 @@ namespace Parallax
             {
                 if (overwriteOnExport)
                 {
-                    GUILayout.Label("Existing config will be backed up to GameData/Parallax/Exports/Backups");
+                    GUILayout.Label("Existing config will be backed up to GameData/ParallaxContinued/Exports/Backups");
                 }
                 else
                 {
-                    GUILayout.Label("Configs will be exported to GameData/Parallax/Exports/Configs");
+                    GUILayout.Label("Configs will be exported to GameData/ParallaxContinued/Exports/Configs");
                     GUILayout.Label("To apply them, you must copy the contents of the .cfg to the active .cfg");
                 }
                 ParamCreator.CreateParam("Overwrite Existing Configs", ref overwriteOnExport, GUIHelperFunctions.BoolField);
@@ -651,7 +651,7 @@ namespace Parallax
                     ConfigLoader.GetScatterConfigNode(FlightGlobals.currentMainBody.name, scatter.scatterName, scatter.isShared).CopyTo(currentNode);
                     currentNode.name = "Scatter-Backup";
                     // Removes body name from the start of the scatter's name
-                    bool saved = ConfigLoader.SaveConfigNode(currentNode, KSPUtil.ApplicationRootPath + "GameData/Parallax/Exports/Backups/" + scatter.scatterName.Split('-')[1] + ".cfg");
+                    bool saved = ConfigLoader.SaveConfigNode(currentNode, KSPUtil.ApplicationRootPath + "GameData/ParallaxContinued/Exports/Backups/" + scatter.scatterName.Split('-')[1] + ".cfg");
 
                     // Backup created, now overwrite
                     if (saved)
@@ -691,7 +691,7 @@ namespace Parallax
                     node.name = node.name + "-EXPORTED";
 
                     // Export to Exports/Configs/PlanetName/ScatterName.cfg
-                    string directory = "GameData/Parallax/Exports/Configs/" + scatter.scatterName.Split('-')[0] + "/";
+                    string directory = "GameData/ParallaxContinued/Exports/Configs/" + scatter.scatterName.Split('-')[0] + "/";
                     string fileName = scatter.scatterName.Split('-')[1] + "-Exported.cfg";
 
                     // Create directory and save to it

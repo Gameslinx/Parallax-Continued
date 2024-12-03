@@ -4,6 +4,7 @@ using Parallax.Debugging;
 using Smooth.Collections;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection.Emit;
 using UnityEngine;
@@ -409,7 +410,11 @@ namespace Parallax
                 {
                     // Default to this texture if the requested texture couldn't be found
                     Debug.Log("No texture (" + propertyName + ") found on " + body.planetName + ", setting it to default white");
-                    configValue = "Parallax/white.dds";
+                    configValue = "ParallaxContinued/white.dds";
+                }
+                if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + configValue))
+                {
+                    Debug.Log("Exception: This texture file doesn't exist: " + configValue + " on planet: " + body.planetName);
                 }
                 body.terrainShaderProperties.shaderTextures[propertyName] = configValue;
             }
@@ -916,6 +921,20 @@ namespace Parallax
         }
         static void PerformAdditionalOperations(Scatter scatter)
         {
+            // Check if the models actually exist
+            if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + scatter.modelPath + ".mu"))
+            {
+                Debug.Log("[Exception] This model file doesn't exist: " + scatter.modelPath + " on scatter: " + scatter.scatterName);
+            }
+            if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + scatter.distributionParams.lod1.modelPathOverride + ".mu"))
+            {
+                Debug.Log("[Exception] This model file doesn't exist: " + scatter.distributionParams.lod1.modelPathOverride + " on scatter: " + scatter.scatterName);
+            }
+            if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + scatter.distributionParams.lod2.modelPathOverride + ".mu"))
+            {
+                Debug.Log("[Exception] This model file doesn't exist: " + scatter.distributionParams.lod2.modelPathOverride + " on scatter: " + scatter.scatterName);
+            }
+
             // Cube the normal deviance, as it gives better results and becomes more sensitive to larger values
             scatter.distributionParams.maxNormalDeviance = scatter.distributionParams.maxNormalDeviance * scatter.distributionParams.maxNormalDeviance * scatter.distributionParams.maxNormalDeviance;
 

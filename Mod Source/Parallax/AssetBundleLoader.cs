@@ -17,10 +17,10 @@ namespace Parallax
         public static Dictionary<string, Shader> parallaxDebugShaders = new Dictionary<string, Shader>();
         public static void Initialize()
         {
-            string terrainShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "Parallax/Shaders/ParallaxTerrain");
-            string scatterShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "Parallax/Shaders/ParallaxScatters");
-            string computeShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "Parallax/Shaders/ParallaxCompute");
-            string debugShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "Parallax/Shaders/ParallaxDebug");
+            string terrainShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "ParallaxContinued/Shaders/ParallaxTerrain");
+            string scatterShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "ParallaxContinued/Shaders/ParallaxScatters");
+            string computeShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "ParallaxContinued/Shaders/ParallaxCompute");
+            string debugShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "ParallaxContinued/Shaders/ParallaxDebug");
 
             terrainShaderFilePath = DeterminePlatform(terrainShaderFilePath);
             scatterShaderFilePath = DeterminePlatform(scatterShaderFilePath);

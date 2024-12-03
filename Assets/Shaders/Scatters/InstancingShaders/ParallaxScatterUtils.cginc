@@ -194,7 +194,11 @@ void Billboard(BILLBOARD_INPUT)
     float3 local = vertex.xyz;
                 
     float3 upVector = float3(0, 1, 0);
+#if !defined (PARALLAX_SHADOW_CASTER_PASS )
     float3 forwardVector = mul(UNITY_MATRIX_IT_MV[2].xyz, mat);
+#else
+    float3 forwardVector = mul(_WorldSpaceLightPos0, mat);
+#endif
     float3 rightVector = normalize(cross(forwardVector, upVector));
              
     float3 position = local.x * rightVector + local.y * upVector + local.z * forwardVector;

@@ -22,9 +22,9 @@ namespace Parallax.Tools
             bool flag = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha9);
             if (flag)
             {
-                ParallaxDebug.Log("Exporting all models to GameData/Parallax/Exports/Models... ");
+                ParallaxDebug.Log("Exporting all models to GameData/ParallaxContinued/Exports/Models... ");
                 // Now parse ALL scatter configs
-                string basePath = KSPUtil.ApplicationRootPath + "GameData/Parallax/Exports/Models/";
+                string basePath = KSPUtil.ApplicationRootPath + "GameData/ParallaxContinued/Exports/Models/";
                 foreach (ParallaxScatterBody body in ConfigLoader.parallaxScatterBodies.Values)
                 {
                     foreach (Scatter scatter in body.scatters.Values)

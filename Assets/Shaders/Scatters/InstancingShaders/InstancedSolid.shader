@@ -14,6 +14,9 @@ Shader "Custom/ParallaxInstancedSolid"
         _BumpMap("Bump Map", 2D) = "bump" {}
         _SpecularTexture("Alt Specular Map", 2D) = "black" {}
         _ThicknessMap("Subsurface Thickness Map", 2D) = "black" {}
+        _Depth("Depth", 2D) = "black" {}
+        _DepthMin("Depth Min", Range(-0.25, 0.0)) = -0.1
+        _DepthMax("Depth Max", Range(0.0, 0.25)) = 0.1
         _RefractionTexture("Refraction Cube", CUBE) = "white" {}
 
         // Wind params
@@ -236,6 +239,10 @@ Shader "Custom/ParallaxInstancedSolid"
             PARALLAX_SHADOW_CASTER_STRUCT_APPDATA
             PARALLAX_SHADOW_CASTER_STRUCT_V2F
           
+            sampler2D _Depth;
+            float _DepthMin;
+            float _DepthMax;
+
             v2f vert(appdata i, uint instanceID : SV_InstanceID)
             {
                 v2f o;
@@ -259,13 +266,21 @@ Shader "Custom/ParallaxInstancedSolid"
                 return o;
             }
         
-            void frag(PIXEL_SHADER_INPUT(v2f))
+            float frag(PIXEL_SHADER_INPUT(v2f)) : SV_DEPTH
             {   
+                // test
+                float4 clipPos = (i.pos);
+                float zDepth = clipPos.z / clipPos.w;
+
+                float displacement = tex2D(_Depth, i.uv);
+                float depthOffset = lerp(_DepthMin, _DepthMax, displacement);
+
                 // Do as little work as possible, clip immediately
                 #if defined (ALPHA_CUTOFF)
                     float mainTex = tex2D(_MainTex, i.uv * _MainTex_ST).a;
                     ALPHA_CLIP(mainTex);
                 #endif
+                return zDepth + depthOffset;
             }
         
             ENDCG

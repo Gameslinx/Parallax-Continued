@@ -26,7 +26,7 @@ namespace Parallax.Legacy
                 if (ParallaxBodies.parallaxBodies.Count > 0 || ScatterBodies.scatterBodies.Count > 0)
                 {
                     PopupDialog dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), "Parallax", "Parallax",
-                                      "Old Parallax configs detected! They have been upgraded and exported to GameData/Parallax/Exports/LegacyUpgrades. They won't work until manually activated.", "Understood", true, HighLogic.UISkin);
+                                      "Old Parallax configs detected! They have been upgraded and exported to GameData/ParallaxContinued/Exports/LegacyUpgrades. They won't work until manually activated.", "Understood", true, HighLogic.UISkin);
                 }
             }
         }
@@ -58,7 +58,7 @@ namespace Parallax.Legacy
                     bodyNode.AddNode(body.Value.ToUpgradedTerrainNode());
                     
                 }
-                baseNode.Save(KSPUtil.ApplicationRootPath + "GameData/Parallax/Exports/LegacyUpgrades/_Terrain.cfg");
+                baseNode.Save(KSPUtil.ApplicationRootPath + "GameData/ParallaxContinued/Exports/LegacyUpgrades/_Terrain.cfg");
             }
             public static void DetermineParallaxType()
             {

@@ -340,6 +340,7 @@ namespace Parallax
             {
                 ParallaxDebug.Log("Warning: Received data count was greater than the buffer length. Not serious, but worth reporting as an error.");
             }
+
             int colliderDataCount = Mathf.Min(realCount, data.Length);
 
             NativeArray<PositionData> realData = new NativeArray<PositionData>(colliderDataCount, Allocator.Persistent);
@@ -357,7 +358,7 @@ namespace Parallax
         // For systems that do not support asyncGPUReadback - such as OpenGL
         public void DirectColliderReadback()
         {
-            if (cleaned)
+            if (cleaned || collidersAdded)
             {
                 return;
             }
@@ -365,12 +366,27 @@ namespace Parallax
             // Note - GetData requests the entire buffer!! Not just what we have appended, so most of this data is full of zeroes... FML
             // Use slices to get the data we're interested in
             // When stuff like grass is set to collideable this can take a few ms, otherwise pretty quick
-            PositionData[] data = new PositionData[realCount];
+            PositionData[] data = new PositionData[outputScatterDataBuffer.count];
             outputScatterDataBuffer.GetData(data);
 
-            NativeArray<PositionData> nativeData = new Unity.Collections.NativeArray<PositionData>(data, Allocator.Persistent);
+            NativeArray<PositionData> nativeData = new NativeArray<PositionData>(data, Allocator.Temp);
+            // If we estimated the buffer size incorrectly, the buffer count is higher than the maximum buffer length
+            // And we should appropriately account for it
+            if (realCount > data.Length)
+            {
+                ParallaxDebug.Log("Warning: Received data count was greater than the buffer length. Not serious, but worth reporting as an error.");
+            }
+            int colliderDataCount = Mathf.Min(realCount, data.Length);
 
-            collisionData = new ScatterColliderData(parent, nativeData, scatter.collideableArrayIndex);
+            NativeArray<PositionData> realData = new NativeArray<PositionData>(colliderDataCount, Allocator.Persistent);
+
+            NativeSlice<PositionData> slice1 = new NativeSlice<PositionData>(nativeData, 0, colliderDataCount);
+            NativeSlice<PositionData> slice2 = new NativeSlice<PositionData>(realData);
+            
+            slice2.CopyFrom(slice1);
+            nativeData.Dispose();
+
+            collisionData = new ScatterColliderData(parent, realData, scatter.collideableArrayIndex);
             CollisionManager.QueueIncomingData(collisionData);
             collidersAdded = true;
         }

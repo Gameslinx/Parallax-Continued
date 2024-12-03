@@ -12,6 +12,7 @@ using System;
 using System.Reflection;
 
 [assembly: System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute("Assembly-CSharp")]
+[assembly: System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute("Kopernicus")]
 [assembly: System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute("UnityEngine.CoreModule")]
 [assembly: System.Reflection.AssemblyCompanyAttribute("Parallax")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]

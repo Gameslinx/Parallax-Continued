@@ -585,7 +585,7 @@ namespace Parallax.Legacy
                     {
                         bodyNode.AddNode(scatter.ToUpdatedConfigNode());
                     }
-                    baseNode.Save(KSPUtil.ApplicationRootPath + "GameData/Parallax/Exports/LegacyUpgrades/" + body.Key + ".cfg");
+                    baseNode.Save(KSPUtil.ApplicationRootPath + "GameData/ParallaxContinued/Exports/LegacyUpgrades/" + body.Key + ".cfg");
                 }
             }
             public static void LoadNewScatter(string type)

@@ -186,3 +186,15 @@ NORMAL_FLOAT SampleBiplanarNormal(sampler2D tex, PixelBiplanarParams params, flo
     
     return result;
 }
+
+// World space whiteout blend
+// EXPENSIVE. ONLY DO ONCE.
+// S is the cross between tangent and binormal - it's the outward facing vector from the normal map
+// In this case, for a sphere, it should be the mesh world normal
+float3 ReorientNormal(float3 u, float3 t, float3 s)
+{
+    // Build the shortest-arc quaternion
+    float4 q = float4(cross(s, t), dot(s, t) + 1) / sqrt(2 * (dot(s, t) + 1));
+    // Rotate the normal
+    return u * (q.w * q.w - dot(q.xyz, q.xyz)) + 2 * q.xyz * dot(q.xyz, u) + 2 * q.w * cross(q.xyz, u);
+}

@@ -7,7 +7,7 @@
         <DebugType>portable</DebugType>
         <Optimize>false</Optimize>
         <GameDataPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\</GameDataPath>
-        <OutDir>$(GameDataPath)$(AssemblyName)\Plugins\</OutDir>
+        <OutDir>$(GameDataPath)$(AssemblyName)Continued\Plugins\</OutDir>
         <ErrorReport>prompt</ErrorReport>
         <WarningLevel>4</WarningLevel>
         <NoWarn>0169</NoWarn>
@@ -18,7 +18,7 @@
         <DebugType>pdbonly</DebugType>
         <Optimize>true</Optimize>
         <GameDataPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\</GameDataPath>
-        <OutDir>$(GameDataPath)$(AssemblyName)\Plugins\</OutDir>
+        <OutDir>$(GameDataPath)$(AssemblyName)Continued\Plugins\</OutDir>
         <ErrorReport>prompt</ErrorReport>
         <WarningLevel>4</WarningLevel>
         <NoWarn>0169</NoWarn>
@@ -123,6 +123,7 @@
       </Reference>
 
       <!-- Publicizer-->
+      <!-- PQS -->
       <Publicize Include="Assembly-CSharp:PQ.PrecisePosition" />
       <Publicize Include="Assembly-CSharp:PQS.cache" />
       <Publicize Include="Assembly-CSharp:PQS.gameObject" />
@@ -145,6 +146,10 @@
       <Publicize Include="Assembly-CSharp:PQS.UpdateSphere" />
 
       <Publicize Include="UnityEngine.CoreModule:UnityEngine.Rendering.AsyncGPUReadbackRequest.GetDataRaw" />
+      
+      <Publicize Include="Kopernicus:Kopernicus.ShadowMan.ShadowRemoveFadeCommandBuffer.m_Buffer" />
+      <Publicize Include="Kopernicus:Kopernicus.ShadowMan.ShadowRemoveFadeCommandBuffer.m_Camera" />
+
     </ItemGroup>
 
 </Project>
