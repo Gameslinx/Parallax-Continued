@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection.Emit;
 using UnityEngine;
 using UnityEngine.Rendering;
+using static Parallax.Legacy.LegacyScatterConfigLoader;
 
 //
 // Config upgrade notes:
@@ -32,6 +33,9 @@ namespace Parallax
 
         // Stores all parallax terrain bodies by planet name
         public static Dictionary<string, ParallaxTerrainBody> parallaxTerrainBodies = new Dictionary<string, ParallaxTerrainBody>();
+
+        // Stores all parallax scaled bodies by planet name
+        public static Dictionary<string, ParallaxScaledBody> parallaxScaledBodies = new Dictionary<string, ParallaxScaledBody>();
 
         // Stores all parallax scatter bodies by planet name
         public static Dictionary<string, ParallaxScatterBody> parallaxScatterBodies = new Dictionary<string, ParallaxScatterBody>();
@@ -385,6 +389,14 @@ namespace Parallax
                     body.emissive = isEmissive;
 
                     ParseNewBody(body, planetNode.GetNode("ShaderProperties"));
+
+                    // Parse scaled body, if present
+                    ConfigNode scaledBodyNode = planetNode.GetNode("ParallaxScaledProperties");
+                    if (scaledBodyNode != null)
+                    {
+                        ParseNewScaledBody(body, scaledBodyNode);
+                    }
+                    
                     body.LoadInitial();
                     parallaxTerrainBodies.Add(planetName, body);
                 }
@@ -442,6 +454,171 @@ namespace Parallax
                 ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(int), out object result);
                 body.terrainShaderProperties.shaderFloats[propertyName] = (int)result;
             }
+        }
+
+        // ConfigNode is "ParallaxScaledProperties"
+        public static void ParseNewScaledBody(ParallaxTerrainBody body, ConfigNode bodyNode)
+        {
+            // Prevent duplicate
+            ParallaxDebug.Log("Parsing new scaled body: " + body.planetName);
+            if (parallaxScaledBodies.ContainsKey(body.planetName))
+            {
+                ParallaxDebug.LogError("Parallax Scaled config for " + body.planetName + " already exists, skipping!");
+                return;
+            }
+
+            // Parse scaled body
+            ParallaxScaledBody scaledBody = new ParallaxScaledBody(body.planetName);
+            scaledBody.terrainBody = body;
+
+            string mode = bodyNode.GetValue("mode");
+            bool success = Enum.TryParse(mode, out ParallaxScaledBodyMode bodyMode);
+            if (!success)
+            {
+                bodyMode = ParallaxScaledBodyMode.FromTerrain;
+                ParallaxDebug.LogError("Unable to parse the scaled body mode '" + mode + "'. Defaulting to 'FromTerrain'");
+            }
+            scaledBody.mode = bodyMode;
+
+            // Planet properties
+            string minTerrainAltitudeString = ConfigUtils.TryGetConfigValue(bodyNode, "minTerrainAltitude");
+            string maxTerrainAltitudeString = ConfigUtils.TryGetConfigValue(bodyNode, "maxTerrainAltitude");
+
+            scaledBody.minTerrainAltitude = (float)ConfigUtils.TryParse(scaledBody.planetName, "minTerrainAltitude", minTerrainAltitudeString, typeof(float));
+            scaledBody.maxTerrainAltitude = (float)ConfigUtils.TryParse(scaledBody.planetName, "maxTerrainAltitude", maxTerrainAltitudeString, typeof(float));
+
+            ParseScaledMaterialProperties(scaledBody, bodyMode, bodyNode.GetNode("Material"));
+            ParseScaledMaterialOverride(scaledBody, bodyMode, bodyNode.GetNode("TerrainMaterialOverride"));
+
+            // Load the base properties (no textures) and create the material
+            scaledBody.LoadInitial(scaledBody.scaledMaterialParams.shader);
+
+            parallaxScaledBodies.Add(body.planetName, scaledBody);
+        }
+        public static void ParseScaledMaterialProperties(ParallaxScaledBody body, ParallaxScaledBodyMode mode, ConfigNode materialNode)
+        {
+            body.scaledMaterialParams = new MaterialParams();
+
+            // Get keywords on this material
+            ConfigNode keywordsNode = materialNode.GetNode("Keywords");
+            List<string> keywords = new List<string>();
+            if (keywordsNode != null)
+            {
+                keywords.AddRange(keywordsNode.GetValuesList("name"));
+            }
+            body.scaledMaterialParams.shaderKeywords = keywords;
+
+            // From terrain
+            if (mode == ParallaxScaledBodyMode.FromTerrain)
+            {
+                body.scaledMaterialParams.shader = "Custom/ParallaxScaled";
+
+                // Read material properties - For FromTerrain this'll be _ColorMap, _HeightMap, _BumpMap
+                body.scaledMaterialParams.shaderProperties = LookupTemplateConfig(GetConfigByName("ParallaxScaledShaderProperties"), body.scaledMaterialParams.shader, keywords);
+
+                // Populate the values from this material. Do this before appending the terrain shader stuff, as that is already initialised by this point
+                PopulateMaterialValues(ref body.scaledMaterialParams, materialNode, body.planetName);
+
+                // Finally, copy terrain properties over to the scaled body
+                body.ReadTerrainShaderProperties();
+                DetermineScaledKeywordsFromTerrain(body, body.scaledMaterialParams.shaderKeywords);
+            }
+            if (mode == ParallaxScaledBodyMode.Baked)
+            {
+
+            }
+            if (mode == ParallaxScaledBodyMode.Custom)
+            {
+                // Call initialize template config with the shaderbank config node here
+            }
+            
+        }
+        public static void ParseScaledMaterialOverride(ParallaxScaledBody body, ParallaxScaledBodyMode mode, ConfigNode overrideNode)
+        {
+            // We're not inheriting from terrain, so there's nothing to override
+            if (mode != ParallaxScaledBodyMode.FromTerrain)
+            {
+                return;
+            }
+            // Nothing to override
+            if (overrideNode == null)
+            {
+                return;
+            }
+            ProcessMaterialOverride(overrideNode, ref body.scaledMaterialParams, body.planetName);
+        }
+        public static void DetermineScaledKeywordsFromTerrain(ParallaxScaledBody body, List<string> keywords)
+        {
+            float minAltitude = body.minTerrainAltitude;
+            float maxAltitude = body.maxTerrainAltitude;
+
+            float blendLowMidStart = body.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendStart"];
+            float blendLowMidEnd = body.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendEnd"];
+            float blendMidHighStart = body.scaledMaterialParams.shaderProperties.shaderFloats["_MidHighBlendStart"];
+            float blendMidHighEnd = body.scaledMaterialParams.shaderProperties.shaderFloats["_MidHighBlendEnd"];
+
+            // Parse keywords from quality settings
+            if (ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.ambientOcclusion)
+            {
+                keywords.Add("AMBIENT_OCCLUSION");
+            }
+            if (ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.advancedTextureBlending)
+            {
+                keywords.Add("ADVANCED_BLENDING");
+            }
+            if (body.terrainBody.emissive)
+            {
+                keywords.Add("EMISSION");
+            }
+
+            // Parse keywords from what textures are used on this planet
+            // This quad uses all three textures
+            if (minAltitude < blendLowMidEnd && maxAltitude > blendMidHighStart)
+            {
+                keywords.Add("PARALLAX_FULL");
+                return;
+            }
+
+            // This quad uses entirely 'High' texture
+            if (minAltitude > blendMidHighEnd)
+            {
+                keywords.Add("PARALLAX_SINGLE_HIGH");
+                return;
+            }
+
+            // This quad uses entirely 'Mid' texture
+            if (minAltitude > blendLowMidEnd && maxAltitude < blendMidHighStart)
+            {
+                keywords.Add("PARALLAX_SINGLE_MID");
+                return;
+            }
+
+            // This quad uses entirely 'Low' texture
+            if (maxAltitude < blendLowMidStart)
+            {
+                keywords.Add("PARALLAX_SINGLE_LOW");
+                return;
+            }
+
+            // This quad uses 'Low' and 'Mid' textures
+            // Since any other combination has already been returned
+            if ((minAltitude < blendLowMidStart && maxAltitude > blendLowMidEnd) || (minAltitude < blendLowMidStart && maxAltitude < blendLowMidEnd && maxAltitude > blendLowMidStart) || (minAltitude > blendLowMidStart && minAltitude < blendLowMidEnd && maxAltitude > blendLowMidEnd) || (minAltitude > blendLowMidStart && minAltitude < blendLowMidEnd && maxAltitude > blendLowMidStart && maxAltitude < blendLowMidEnd))
+            {
+                keywords.Add("PARALLAX_DOUBLE_LOWMID");
+                return;
+            }
+
+            // This quad uses 'Mid' and 'high' textures
+            // Since any other combination has already been returned
+            if ((minAltitude < blendMidHighStart && maxAltitude > blendMidHighEnd) || (minAltitude < blendMidHighStart && maxAltitude < blendMidHighEnd && maxAltitude > blendMidHighStart) || (minAltitude > blendMidHighStart && minAltitude < blendMidHighEnd && maxAltitude > blendMidHighEnd) || (minAltitude > blendMidHighStart && minAltitude < blendMidHighEnd && maxAltitude > blendMidHighStart && maxAltitude < blendMidHighEnd))
+            {
+                keywords.Add("PARALLAX_DOUBLE_MIDHIGH");
+                return;
+            }
+
+            // Fallback
+            keywords.Add("PARALLAX_FULL");
+            return;
         }
 
         //
@@ -756,61 +933,7 @@ namespace Parallax
                 lod.inheritsMaterial = true;
 
                 // Now work out what has been replaced
-
-                // Textures
-                string[] textureKeys = lod.materialOverride.shaderProperties.shaderTextures.Keys.ToArray();
-                foreach (string key in textureKeys)
-                {
-                    string configValue = overrideNode.GetValue(key);
-                    if (configValue != null)
-                    {
-                        lod.materialOverride.shaderProperties.shaderTextures[key] = (string)ConfigUtils.TryParse(planetName, key, configValue, typeof(string));
-                    }
-                }
-
-                // Floats
-                string[] floatKeys = lod.materialOverride.shaderProperties.shaderFloats.Keys.ToArray();
-                foreach (string key in floatKeys)
-                {
-                    string configValue = overrideNode.GetValue(key);
-                    if (configValue != null)
-                    {
-                        lod.materialOverride.shaderProperties.shaderFloats[key] = (float)ConfigUtils.TryParse(planetName, key, configValue, typeof(float));
-                    }
-                }
-
-                // Vectors
-                string[] vectorKeys = lod.materialOverride.shaderProperties.shaderVectors.Keys.ToArray();
-                foreach (string key in vectorKeys)
-                {
-                    string configValue = overrideNode.GetValue(key);
-                    if (configValue != null)
-                    {
-                        lod.materialOverride.shaderProperties.shaderVectors[key] = (Vector3)ConfigUtils.TryParse(planetName, key, configValue, typeof(Vector3));
-                    }
-                }
-
-                // Colors
-                string[] colorKeys = lod.materialOverride.shaderProperties.shaderColors.Keys.ToArray();
-                foreach (string key in colorKeys)
-                {
-                    string configValue = overrideNode.GetValue(key);
-                    if (configValue != null)
-                    {
-                        lod.materialOverride.shaderProperties.shaderColors[key] = (Color)ConfigUtils.TryParse(planetName, key, configValue, typeof(Color));
-                    }
-                }
-
-                // Ints
-                string[] intKeys = lod.materialOverride.shaderProperties.shaderInts.Keys.ToArray();
-                foreach (string key in intKeys)
-                {
-                    string configValue = overrideNode.GetValue(key);
-                    if (configValue != null)
-                    {
-                        lod.materialOverride.shaderProperties.shaderInts[key] = (int)ConfigUtils.TryParse(planetName, key, configValue, typeof(int));
-                    }
-                }
+                ProcessMaterialOverride(overrideNode, ref lod.materialOverride, planetName);
             }
 
             //
@@ -825,6 +948,63 @@ namespace Parallax
             }
 
             return lod;
+        }
+        public static void ProcessMaterialOverride(ConfigNode overrideNode, ref MaterialParams materialOverride, string planetName)
+        {
+            // Textures
+            string[] textureKeys = materialOverride.shaderProperties.shaderTextures.Keys.ToArray();
+            foreach (string key in textureKeys)
+            {
+                string configValue = overrideNode.GetValue(key);
+                if (configValue != null)
+                {
+                    materialOverride.shaderProperties.shaderTextures[key] = (string)ConfigUtils.TryParse(planetName, key, configValue, typeof(string));
+                }
+            }
+
+            // Floats
+            string[] floatKeys = materialOverride.shaderProperties.shaderFloats.Keys.ToArray();
+            foreach (string key in floatKeys)
+            {
+                string configValue = overrideNode.GetValue(key);
+                if (configValue != null)
+                {
+                    materialOverride.shaderProperties.shaderFloats[key] = (float)ConfigUtils.TryParse(planetName, key, configValue, typeof(float));
+                }
+            }
+
+            // Vectors
+            string[] vectorKeys = materialOverride.shaderProperties.shaderVectors.Keys.ToArray();
+            foreach (string key in vectorKeys)
+            {
+                string configValue = overrideNode.GetValue(key);
+                if (configValue != null)
+                {
+                    materialOverride.shaderProperties.shaderVectors[key] = (Vector3)ConfigUtils.TryParse(planetName, key, configValue, typeof(Vector3));
+                }
+            }
+
+            // Colors
+            string[] colorKeys = materialOverride.shaderProperties.shaderColors.Keys.ToArray();
+            foreach (string key in colorKeys)
+            {
+                string configValue = overrideNode.GetValue(key);
+                if (configValue != null)
+                {
+                    materialOverride.shaderProperties.shaderColors[key] = (Color)ConfigUtils.TryParse(planetName, key, configValue, typeof(Color));
+                }
+            }
+
+            // Ints
+            string[] intKeys = materialOverride.shaderProperties.shaderInts.Keys.ToArray();
+            foreach (string key in intKeys)
+            {
+                string configValue = overrideNode.GetValue(key);
+                if (configValue != null)
+                {
+                    materialOverride.shaderProperties.shaderInts[key] = (int)ConfigUtils.TryParse(planetName, key, configValue, typeof(int));
+                }
+            }
         }
         public static MaterialParams GetMaterialParams(string planetName, ConfigNode node)
         {
@@ -844,8 +1024,13 @@ namespace Parallax
             materialParams.shaderKeywords = keywords;
             materialParams.shaderProperties = LookupTemplateConfig(GetConfigByName("ParallaxScatterShaderProperties"), shader, keywords);
 
-            // Now we have the shader properties which contains the names (keys) and defaults (values) we can set everything except the textures, which use load on demand
+            PopulateMaterialValues(ref materialParams, node, planetName);
 
+            return materialParams;
+        }
+        public static void PopulateMaterialValues(ref MaterialParams materialParams, ConfigNode node, string planetName)
+        {
+            // Now we have the shader properties which contains the names (keys) and defaults (values) we can set everything except the textures, which use load on demand
             // Get values from config
 
             // Textures
@@ -887,8 +1072,6 @@ namespace Parallax
                 string configValue = ConfigUtils.TryGetConfigValue(node, key);
                 materialParams.shaderProperties.shaderInts[key] = (int)ConfigUtils.TryParse(planetName, key, configValue, typeof(int));
             }
-
-            return materialParams;
         }
         public static void PerformNormalisationConversions(Scatter scatter)
         {

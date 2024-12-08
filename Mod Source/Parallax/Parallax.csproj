@@ -150,6 +150,8 @@
       <Publicize Include="Kopernicus:Kopernicus.ShadowMan.ShadowRemoveFadeCommandBuffer.m_Buffer" />
       <Publicize Include="Kopernicus:Kopernicus.ShadowMan.ShadowRemoveFadeCommandBuffer.m_Camera" />
 
+      <Publicize Include="Assembly-CSharp:Sun.scaledSunLight"/>
+
     </ItemGroup>
 
 </Project>

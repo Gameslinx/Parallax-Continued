@@ -15,6 +15,8 @@ Shader "Custom/ParallaxScaled"
         _BumpMap("Planet Bump Map", 2D) = "bump" {}
         _HeightMap("Planet Height Map", 2D) = "black" {}
 
+        _Skybox("Skybox", CUBE) = "black" {}
+
         [Space(10)]
         [Header(Low Textures)]
         [Space(10)]
@@ -62,7 +64,7 @@ Shader "Custom/ParallaxScaled"
         _MidHighBlendStart("Mid-High Blend Start", Range(0, 0.1)) = 4
         _MidHighBlendEnd("Mid-High Blend End", Range(0, 0.1)) = 5
         [Space(10)]
-        _SteepPower("Steep Power", Range(0.001, 10)) = 1
+        _SteepPower("Steep Power", Range(0.001, 20)) = 1
         _SteepContrast("Steep Contrast", Range(-5, 5)) = 1
         _SteepMidpoint("Steep Midpoint", Range(-1, 1)) = 0
 
@@ -77,7 +79,11 @@ Shader "Custom/ParallaxScaled"
         _RefractionIntensity("Refraction Intensity", Range(0, 2)) = 1
         _Hapke("Hapke", Range(0.001, 2)) = 1
         _BumpScale("Bump Scale", Range(0.001, 2)) = 1
+        _PlanetBumpScale("Planet Bump Scale", Range(0.001, 2)) = 1
         _EmissionColor("Emission Color", COLOR) = (0,0,0)
+
+        _PlanetRadius("Planet Radius", Range(0, 100000)) = 0
+        _PlanetOrigin("Planet Origin", VECTOR) = (0,0,0)
     }
     SubShader
     {
@@ -93,6 +99,8 @@ Shader "Custom/ParallaxScaled"
             Blend SrcAlpha OneMinusSrcAlpha
             Tags { "LightMode" = "ForwardBase" }
             CGPROGRAM
+
+            #define SCALED
 
             // Single:  One surface texture
             // Double:  Blend between two altitude based textures
@@ -154,7 +162,7 @@ Shader "Custom/ParallaxScaled"
                 o.worldTangent = normalize(mul(unity_ObjectToWorld, float4(v.tangent.xyz, 0)).xyz);
                 o.worldBinormal = normalize(mul(unity_ObjectToWorld, float4(cross(v.normal, v.tangent.xyz), 0)).xyz) * v.tangent.w;
                 o.viewDir = _WorldSpaceCameraPos - o.worldPos;
-                o.landMask = GetLandMask(o.worldPos, o.worldNormal);
+                o.landMask = GetScaledLandMask(o.worldPos, o.worldNormal);
                 o.uv = v.uv;
                 return o;
             }
@@ -215,7 +223,9 @@ Shader "Custom/ParallaxScaled"
             }
             fixed4 Frag_Shader (Interpolators i) : SV_Target
             {   
-                float terrainDistance = length(i.viewDir);
+                //
+                //  Block - Prerequisites
+                //
 
                 // Necessary normalizations
                 i.worldNormal = normalize(i.worldNormal);
@@ -223,38 +233,39 @@ Shader "Custom/ParallaxScaled"
                 i.worldBinormal = normalize(i.worldBinormal);
                 float3 viewDir = normalize(i.viewDir);
 
-                // Biplanar tex coords are local space, but we also need local normal. We can calculate it from normalizing the local coords
-                float3 biplanarLocalNormal = normalize(i.biplanarTextureCoords);
-
                 // Construct TBN matrix
-                float3x3 TBN = float3x3(i.worldTangent, i.worldBinormal, i.worldNormal);
-                TBN = transpose(TBN);
+                float3 planetNormal = UnpackScaleNormal(tex2D(_BumpMap, i.uv), _PlanetBumpScale);
+                float3x3 TBN = BuildTBN(i.worldTangent, i.worldBinormal, i.worldNormal);
 
-                // Maybe gamma correct at some point
-                float4 diffuseColor = tex2D(_ColorMap, i.uv);
-                float3 planetNormal = UnpackNormal(tex2D(_BumpMap, i.uv));
-
+                // Get planet normal in world and local space
                 float3 worldPlanetNormal = normalize(mul(TBN, float4(planetNormal.xyz, 0)));
+                float3 localPlanetNormal = normalize(mul(unity_WorldToObject, float4(worldPlanetNormal, 0))).xyz;
                 i.worldNormal = worldPlanetNormal;
 
-                float3 vertexColor = diffuseColor.rgb;
-                
-                // Red low-mid blend, green mid-high blend, blue steep, alpha midpoint which distinguishes low from high
-                // We need to get this mask again on a pixel level because the blending looks much nicer
-                float4 landMask = GetLandMask(i.worldPos, i.worldNormal);
+                float3 localPos = i.biplanarTextureCoords;
+
+                //
+                //  Block - Biplanar Setup
+                //  All biplanar sampling is done in local space to keep texture coords snapped to the mesh
+                //  Involves some non-ideal matrix transforms to and from local space for accurate normals
+                //
 
                 // Retrieve UV levels for texture sampling
-                DO_WORLD_UV_CALCULATIONS(terrainDistance * 0.2, i.biplanarTextureCoords)
+                DO_WORLD_UV_CALCULATIONS(localPos)
                 
                 // Get biplanar params for texture sampling
                 PixelBiplanarParams params;
-                GET_PIXEL_BIPLANAR_PARAMS(params, i.biplanarTextureCoords, worldUVsLevel0, worldUVsLevel1, biplanarLocalNormal, texScale0, texScale1);
+                GET_PIXEL_BIPLANAR_PARAMS(params, localPos, localPlanetNormal, texScale);
+
+                // Red low-mid blend, green mid-high blend, blue steep, alpha midpoint which distinguishes low from high
+                // We need to get this mask again on a pixel level because the blending looks much nicer
+                float4 landMask = GetScaledLandMask(i.worldPos, i.worldNormal);
 
                 // Declares float4 'globalInfluence' if influence mapping is enabled
-                DECLARE_INFLUENCE_TEXTURE
+                DECLARE_INFLUENCE_TEXTURE_SCALED
                 DECLARE_INFLUENCE_VALUES
 
-                float4 globalDisplacement = SampleBiplanarTexture(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+                float4 globalDisplacement = SampleBiplanarTexture(_DisplacementMap, params, worldUVs);
 
                 //
                 // Localised altitude based textures
@@ -263,41 +274,37 @@ Shader "Custom/ParallaxScaled"
 
                 // These declarations perform the texture samples, and within them are checks to see if they should be skipped or not
                 // They will be optimized out if unused
-                DECLARE_LOW_TEXTURE_SET(lowDiffuse, lowNormal, _MainTexLow, _BumpMapLow)
-                DECLARE_MID_TEXTURE_SET(midDiffuse, midNormal, _MainTexMid, _BumpMapMid)
-                DECLARE_HIGH_TEXTURE_SET(highDiffuse, highNormal, _MainTexHigh, _BumpMapHigh)
-                DECLARE_STEEP_TEXTURE_SET(steepDiffuse, steepNormal, _MainTexSteep, _BumpMapSteep)
+
+                float4 diffuseColor = tex2D(_ColorMap, i.uv);
+                float3 vertexColor = diffuseColor.rgb;
+
+                //
+                // Localised altitude based textures
+                // Totals 16 texture samples, BUH!
+                //
+
+                // These declarations perform the texture samples, and within them are checks to see if they should be skipped or not
+                // They will be optimized out if unused
+                DECLARE_LOW_TEXTURE_SET_SCALED(lowDiffuse, lowNormal, _MainTexLow, _BumpMapLow)
+                DECLARE_MID_TEXTURE_SET_SCALED(midDiffuse, midNormal, _MainTexMid, _BumpMapMid)
+                DECLARE_HIGH_TEXTURE_SET_SCALED(highDiffuse, highNormal, _MainTexHigh, _BumpMapHigh)
+                DECLARE_STEEP_TEXTURE_SET_SCALED(steepDiffuse, steepNormal, _MainTexSteep, _BumpMapSteep)
 
                 //
                 //  Displacement Based Texture Blending
                 //
 
-                #if defined (ADVANCED_BLENDING)
-
-                // Only if displacement blending is enabled
-                DECLARE_DISPLACEMENT_TEXTURE(displacement, _DisplacementMap)
-
-                // Get displacement based blend factors
-
-                float lowMidDisplacementFactor = GetDisplacementLerpFactor(landMask.r, displacement.r, displacement.g, logDistance);
-                float midHighDisplacementFactor = GetDisplacementLerpFactor(landMask.g, displacement.g, displacement.b, logDistance);
-
-                // Blend displacements - required for slope based displacement blending
-                float blendedDisplacements = BLEND_CHANNELS_IN_TEX(landMask, displacement);
-                float displacementSteepBlendFactor = GetDisplacementLerpFactor(landMask.b, blendedDisplacements, displacement.a, logDistance);
-
-                // Scale interpolants by blend factors
-                landMask.r = lowMidDisplacementFactor;
-                landMask.g = midHighDisplacementFactor;
-                landMask.b = displacementSteepBlendFactor;
-
-                #endif
-
+                DECLARE_DISPLACEMENT_TEXTURE_SCALED(displacement, _DisplacementMap)
+                CALCULATE_ADVANCED_BLENDING_FACTORS_SCALED(landMask, displacement)
+                
                 fixed4 altitudeDiffuse = BLEND_TEXTURES(landMask, lowDiffuse, midDiffuse, highDiffuse);
                 NORMAL_FLOAT altitudeNormal = BLEND_TEXTURES(landMask, lowNormal, midNormal, highNormal);
 
                 fixed4 finalDiffuse = lerp(altitudeDiffuse, steepDiffuse, landMask.b);
                 NORMAL_FLOAT finalNormal = lerp(altitudeNormal, steepNormal, landMask.b); 
+
+                // Convert local normal back into world space
+                finalNormal.xyz = normalize(mul(unity_ObjectToWorld, float4(finalNormal.xyz, 0)).xyz);
 
                 float3 result = CalculateLighting(finalDiffuse, finalNormal.xyz, viewDir, GET_SHADOW, _WorldSpaceLightPos0);
                 UNITY_APPLY_FOG(i.fogCoord, result);
@@ -317,6 +324,8 @@ Shader "Custom/ParallaxScaled"
             Tags { "LightMode" = "ShadowCaster" }
             CGPROGRAM
         
+            #define SCALED
+
             #pragma multi_compile_local PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
             #pragma multi_compile_fog
             #pragma multi_compile_shadowcaster
@@ -355,7 +364,7 @@ Shader "Custom/ParallaxScaled"
                 o.worldBinormal = normalize(mul(unity_ObjectToWorld, float4(cross(v.normal, v.tangent.xyz), 0)).xyz) * v.tangent.w;
                 o.normal = v.normal;
                 o.vertex = v.vertex;
-                o.landMask = GetLandMask(o.worldPos, o.worldNormal);
+                o.landMask = GetScaledLandMask(o.worldPos, o.worldNormal);
                 o.uv = v.uv;
                 return o;
             }
@@ -434,6 +443,8 @@ Shader "Custom/ParallaxScaled"
             //BlendOp Add
             CGPROGRAM
         
+            #define SCALED
+
             #pragma multi_compile_local           PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
             #pragma multi_compile_local _         INFLUENCE_MAPPING
             #pragma multi_compile_fog
@@ -482,7 +493,7 @@ Shader "Custom/ParallaxScaled"
                 o.viewDir = _WorldSpaceCameraPos - o.worldPos;
                 o.lightDir = _WorldSpaceLightPos0 - o.worldPos;
                 o.vertex = v.vertex;
-                o.landMask = GetLandMask(o.worldPos, o.worldNormal);
+                o.landMask = GetScaledLandMask(o.worldPos, o.worldNormal);
                 o.uv = v.uv;
                 return o;
             }
@@ -547,35 +558,50 @@ Shader "Custom/ParallaxScaled"
             }
             fixed4 Frag_Shader (Interpolators i) : SV_Target
             {   
-                float terrainDistance = length(i.viewDir);
+                //
+                //  Block - Prerequisites
+                //
 
-                // Maybe gamma correct at some point
-                float4 diffuseColor = tex2D(_ColorMap, i.uv);
-                float3 vertexColor = diffuseColor.rgb;
-
+                // Necessary normalizations
                 i.worldNormal = normalize(i.worldNormal);
+                i.worldTangent = normalize(i.worldTangent);
+                i.worldBinormal = normalize(i.worldBinormal);
                 float3 viewDir = normalize(i.viewDir);
                 float3 lightDir = normalize(i.lightDir);
 
-                // Biplanar tex coords are local space, but we also need local normal. We can calculate it from normalizing the local coords
-                float3 biplanarLocalNormal = normalize(i.biplanarTextureCoords);
+                // Construct TBN matrix
+                float3 planetNormal = UnpackScaleNormal(tex2D(_BumpMap, i.uv), _PlanetBumpScale);
+                float3x3 TBN = BuildTBN(i.worldTangent, i.worldBinormal, i.worldNormal);
 
-                // Red low-mid blend, green mid-high blend, blue steep, alpha midpoint which distinguishes low from high
-                // We need to get this mask again on a pixel level because the blending looks much nicer
-                float4 landMask = GetLandMask(i.worldPos, i.worldNormal);
+                // Get planet normal in world and local space
+                float3 worldPlanetNormal = normalize(mul(TBN, float4(planetNormal.xyz, 0)));
+                float3 localPlanetNormal = normalize(mul(unity_WorldToObject, float4(worldPlanetNormal, 0))).xyz;
+                i.worldNormal = worldPlanetNormal;
+
+                float3 localPos = i.biplanarTextureCoords;
+
+                //
+                //  Block - Biplanar Setup
+                //  All biplanar sampling is done in local space to keep texture coords snapped to the mesh
+                //  Involves some non-ideal matrix transforms to and from local space for accurate normals
+                //
 
                 // Retrieve UV levels for texture sampling
-                DO_WORLD_UV_CALCULATIONS(terrainDistance * 0.2, i.biplanarTextureCoords)
+                DO_WORLD_UV_CALCULATIONS(localPos)
                 
                 // Get biplanar params for texture sampling
                 PixelBiplanarParams params;
-                GET_PIXEL_BIPLANAR_PARAMS(params, i.biplanarTextureCoords, worldUVsLevel0, worldUVsLevel1, biplanarLocalNormal, texScale0, texScale1);
+                GET_PIXEL_BIPLANAR_PARAMS(params, localPos, localPlanetNormal, texScale);
+
+                // Red low-mid blend, green mid-high blend, blue steep, alpha midpoint which distinguishes low from high
+                // We need to get this mask again on a pixel level because the blending looks much nicer
+                float4 landMask = GetScaledLandMask(i.worldPos, i.worldNormal);
 
                 // Declares float4 'globalInfluence' if influence mapping is enabled
-                DECLARE_INFLUENCE_TEXTURE
+                DECLARE_INFLUENCE_TEXTURE_SCALED
                 DECLARE_INFLUENCE_VALUES
 
-                float4 globalDisplacement = SampleBiplanarTexture(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+                float4 globalDisplacement = SampleBiplanarTexture(_DisplacementMap, params, worldUVs);
 
                 //
                 // Localised altitude based textures
@@ -584,41 +610,37 @@ Shader "Custom/ParallaxScaled"
 
                 // These declarations perform the texture samples, and within them are checks to see if they should be skipped or not
                 // They will be optimized out if unused
-                DECLARE_LOW_TEXTURE_SET(lowDiffuse, lowNormal, _MainTexLow, _BumpMapLow)
-                DECLARE_MID_TEXTURE_SET(midDiffuse, midNormal, _MainTexMid, _BumpMapMid)
-                DECLARE_HIGH_TEXTURE_SET(highDiffuse, highNormal, _MainTexHigh, _BumpMapHigh)
-                DECLARE_STEEP_TEXTURE_SET(steepDiffuse, steepNormal, _MainTexSteep, _BumpMapSteep)
+
+                float4 diffuseColor = tex2D(_ColorMap, i.uv);
+                float3 vertexColor = diffuseColor.rgb;
+
+                //
+                // Localised altitude based textures
+                // Totals 16 texture samples, BUH!
+                //
+
+                // These declarations perform the texture samples, and within them are checks to see if they should be skipped or not
+                // They will be optimized out if unused
+                DECLARE_LOW_TEXTURE_SET_SCALED(lowDiffuse, lowNormal, _MainTexLow, _BumpMapLow)
+                DECLARE_MID_TEXTURE_SET_SCALED(midDiffuse, midNormal, _MainTexMid, _BumpMapMid)
+                DECLARE_HIGH_TEXTURE_SET_SCALED(highDiffuse, highNormal, _MainTexHigh, _BumpMapHigh)
+                DECLARE_STEEP_TEXTURE_SET_SCALED(steepDiffuse, steepNormal, _MainTexSteep, _BumpMapSteep)
 
                 //
                 //  Displacement Based Texture Blending
                 //
 
-                #if defined (ADVANCED_BLENDING)
-
-                // Only if displacement blending is enabled
-                DECLARE_DISPLACEMENT_TEXTURE(displacement, _DisplacementMap)
-
-                // Get displacement based blend factors
-
-                float lowMidDisplacementFactor = GetDisplacementLerpFactor(landMask.r, displacement.r, displacement.g, logDistance);
-                float midHighDisplacementFactor = GetDisplacementLerpFactor(landMask.g, displacement.g, displacement.b, logDistance);
-
-                // Blend displacements - required for slope based displacement blending
-                float blendedDisplacements = BLEND_CHANNELS_IN_TEX(landMask, displacement);
-                float displacementSteepBlendFactor = GetDisplacementLerpFactor(landMask.b, blendedDisplacements, displacement.a, logDistance);
-
-                // Scale interpolants by blend factors
-                landMask.r = lowMidDisplacementFactor;
-                landMask.g = midHighDisplacementFactor;
-                landMask.b = displacementSteepBlendFactor;
-
-                #endif
+                DECLARE_DISPLACEMENT_TEXTURE_SCALED(displacement, _DisplacementMap)
+                CALCULATE_ADVANCED_BLENDING_FACTORS_SCALED(landMask, displacement)
 
                 fixed4 altitudeDiffuse = BLEND_TEXTURES(landMask, lowDiffuse, midDiffuse, highDiffuse);
                 float3 altitudeNormal = BLEND_TEXTURES(landMask, lowNormal, midNormal, highNormal);
 
                 fixed4 finalDiffuse = lerp(altitudeDiffuse, steepDiffuse, landMask.b);
                 float3 finalNormal = lerp(altitudeNormal, steepNormal, landMask.b); 
+
+                // Convert local normal back into world space
+                finalNormal.xyz = normalize(mul(unity_ObjectToWorld, float4(finalNormal.xyz, 0)).xyz);
 
                 float atten = LIGHT_ATTENUATION(i);
                 float3 result = CalculateLighting(finalDiffuse, finalNormal, viewDir, GET_SHADOW, lightDir);
@@ -651,6 +673,7 @@ Shader "Custom/ParallaxScaled"
             // All have slope based textures
 
             #define PARALLAX_DEFERRED_PASS
+            #define SCALED
 
             // For anyone wondering, the _ after multi_compile tells unity the keyword is a toggle, and avoids creating variants "_ON" and "_OFF"
             // I would move this to ParallaxStructs.cginc but as we're on unity 2019 you can't have preprocessor directives in cgincludes. Sigh
@@ -708,7 +731,7 @@ Shader "Custom/ParallaxScaled"
                 o.worldTangent = normalize(mul(unity_ObjectToWorld, float4(v.tangent.xyz, 0)).xyz);
                 o.worldBinormal = normalize(mul(unity_ObjectToWorld, float4(cross(v.normal, v.tangent.xyz), 0)).xyz) * v.tangent.w;
                 o.viewDir = _WorldSpaceCameraPos - o.worldPos;
-                o.landMask = GetLandMask(o.worldPos, o.worldNormal);
+                o.landMask = GetScaledLandMask(o.worldPos, o.worldNormal);
                 o.uv = v.uv;
                 return o;
             }
@@ -758,10 +781,11 @@ Shader "Custom/ParallaxScaled"
                 float4 landMask = BARYCENTRIC_INTERPOLATE(landMask);
 
                 // Defines 'displacedWorldPos'
-                float heightDisplacement = tex2Dlod(_HeightMap, float4(o.uv, 0, 0));
-                CALCULATE_HEIGHTMAP_DISPLACEMENT_SCALED(o, heightDisplacement);
+                float displacement = tex2Dlod(_HeightMap, float4(o.uv, 0, 0)).r;
+                CALCULATE_HEIGHTMAP_DISPLACEMENT_SCALED(o, displacement);
 
                 o.pos = UnityWorldToClipPos(o.worldPos);
+                o.biplanarTextureCoords = mul(unity_WorldToObject, float4(o.worldPos, 1)).xyz;
 
                 TRANSFER_VERTEX_TO_FRAGMENT(o);
                 UNITY_TRANSFER_FOG(o,o.pos);
@@ -771,7 +795,9 @@ Shader "Custom/ParallaxScaled"
 
             void Frag_Shader (Interpolators i, PARALLAX_DEFERRED_OUTPUT_BUFFERS)
             {   
-                float terrainDistance = length(i.viewDir);
+                //
+                //  Block - Prerequisites
+                //
 
                 // Necessary normalizations
                 i.worldNormal = normalize(i.worldNormal);
@@ -779,38 +805,39 @@ Shader "Custom/ParallaxScaled"
                 i.worldBinormal = normalize(i.worldBinormal);
                 float3 viewDir = normalize(i.viewDir);
 
-                // Biplanar tex coords are local space, but we also need local normal. We can calculate it from normalizing the local coords
-                float3 biplanarLocalNormal = normalize(i.biplanarTextureCoords);
-
                 // Construct TBN matrix
-                float3x3 TBN = float3x3(i.worldTangent, i.worldBinormal, i.worldNormal);
-                TBN = transpose(TBN);
+                float3 planetNormal = UnpackScaleNormal(tex2D(_BumpMap, i.uv), _PlanetBumpScale);
+                float3x3 TBN = BuildTBN(i.worldTangent, i.worldBinormal, i.worldNormal);
 
-                // Maybe gamma correct at some point
-                float4 diffuseColor = tex2D(_ColorMap, i.uv);
-                float3 planetNormal = UnpackNormal(tex2D(_BumpMap, i.uv));
-
+                // Get planet normal in world and local space
                 float3 worldPlanetNormal = normalize(mul(TBN, float4(planetNormal.xyz, 0)));
+                float3 localPlanetNormal = normalize(mul(unity_WorldToObject, float4(worldPlanetNormal, 0))).xyz;
                 i.worldNormal = worldPlanetNormal;
 
-                float3 vertexColor = diffuseColor.rgb;
-                
-                // Red low-mid blend, green mid-high blend, blue steep, alpha midpoint which distinguishes low from high
-                // We need to get this mask again on a pixel level because the blending looks much nicer
-                float4 landMask = GetLandMask(i.worldPos, i.worldNormal);
+                float3 localPos = i.biplanarTextureCoords;
+
+                //
+                //  Block - Biplanar Setup
+                //  All biplanar sampling is done in local space to keep texture coords snapped to the mesh
+                //  Involves some non-ideal matrix transforms to and from local space for accurate normals
+                //
 
                 // Retrieve UV levels for texture sampling
-                DO_WORLD_UV_CALCULATIONS(terrainDistance * 0.2, i.biplanarTextureCoords)
+                DO_WORLD_UV_CALCULATIONS(localPos)
                 
                 // Get biplanar params for texture sampling
                 PixelBiplanarParams params;
-                GET_PIXEL_BIPLANAR_PARAMS(params, i.biplanarTextureCoords, worldUVsLevel0, worldUVsLevel1, biplanarLocalNormal, texScale0, texScale1);
+                GET_PIXEL_BIPLANAR_PARAMS(params, localPos, localPlanetNormal, texScale);
+
+                // Red low-mid blend, green mid-high blend, blue steep, alpha midpoint which distinguishes low from high
+                // We need to get this mask again on a pixel level because the blending looks much nicer
+                float4 landMask = GetScaledLandMask(i.worldPos, i.worldNormal);
 
                 // Declares float4 'globalInfluence' if influence mapping is enabled
-                DECLARE_INFLUENCE_TEXTURE
+                DECLARE_INFLUENCE_TEXTURE_SCALED
                 DECLARE_INFLUENCE_VALUES
 
-                float4 globalDisplacement = SampleBiplanarTexture(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+                float4 globalDisplacement = SampleBiplanarTexture(_DisplacementMap, params, worldUVs);
 
                 //
                 // Localised altitude based textures
@@ -820,16 +847,19 @@ Shader "Custom/ParallaxScaled"
                 // These declarations perform the texture samples, and within them are checks to see if they should be skipped or not
                 // They will be optimized out if unused
 
-                DECLARE_LOW_TEXTURE_SET(lowDiffuse, lowNormal, _MainTexLow, _BumpMapLow)
-                DECLARE_MID_TEXTURE_SET(midDiffuse, midNormal, _MainTexMid, _BumpMapMid)
-                DECLARE_HIGH_TEXTURE_SET(highDiffuse, highNormal, _MainTexHigh, _BumpMapHigh)
-                DECLARE_STEEP_TEXTURE_SET(steepDiffuse, steepNormal, _MainTexSteep, _BumpMapSteep)
+                float4 diffuseColor = tex2D(_ColorMap, i.uv);
+                float3 vertexColor = diffuseColor.rgb;
 
-                DECLARE_AMBIENT_OCCLUSION_TEXTURE(occlusion, _OcclusionMap)
+                DECLARE_LOW_TEXTURE_SET_SCALED(lowDiffuse, lowNormal, _MainTexLow, _BumpMapLow)
+                DECLARE_MID_TEXTURE_SET_SCALED(midDiffuse, midNormal, _MainTexMid, _BumpMapMid)
+                DECLARE_HIGH_TEXTURE_SET_SCALED(highDiffuse, highNormal, _MainTexHigh, _BumpMapHigh)
+                DECLARE_STEEP_TEXTURE_SET_SCALED(steepDiffuse, steepNormal, _MainTexSteep, _BumpMapSteep)
+
+                DECLARE_AMBIENT_OCCLUSION_TEXTURE_SCALED(occlusion, _OcclusionMap)
 
                 // Only if displacement blending is enabled
-                DECLARE_DISPLACEMENT_TEXTURE(displacement, _DisplacementMap)
-                CALCULATE_ADVANCED_BLENDING_FACTORS(landMask, displacement)
+                DECLARE_DISPLACEMENT_TEXTURE_SCALED(displacement, _DisplacementMap)
+                CALCULATE_ADVANCED_BLENDING_FACTORS_SCALED(landMask, displacement)
 
                 fixed4 altitudeDiffuse = BLEND_TEXTURES(landMask, lowDiffuse, midDiffuse, highDiffuse);
                 NORMAL_FLOAT altitudeNormal = BLEND_TEXTURES(landMask, lowNormal, midNormal, highNormal);
@@ -837,9 +867,13 @@ Shader "Custom/ParallaxScaled"
                 fixed4 finalDiffuse = lerp(altitudeDiffuse, steepDiffuse, landMask.b);
                 NORMAL_FLOAT finalNormal = lerp(altitudeNormal, steepNormal, landMask.b);
 
-                //finalNormal = ReorientNormal(worldPlanetNormal, finalNormal, i.worldNormal);
+                // Convert local normal back into world space
+                finalNormal.xyz = normalize(mul(unity_ObjectToWorld, float4(finalNormal.xyz, 0)).xyz);
 
                 BLEND_OCCLUSION(landMask, occlusion)
+
+                //finalNormal.xyz = i.worldNormal;
+                //finalDiffuse = float4(0,0,0,1);
 
                 // Deferred functions
                 SurfaceOutputStandardSpecular surfaceInput = GetPBRStruct(finalDiffuse, GET_EMISSION, finalNormal.xyz, i.worldPos ADDITIONAL_PBR_PARAMS);
@@ -849,6 +883,81 @@ Shader "Custom/ParallaxScaled"
                 
                 OUTPUT_GBUFFERS(surfaceInput, gi)
                 SET_OUT_SHADOWMASK(i)
+
+                //
+                //
+                //
+                //
+                //
+
+                float3 worldPos = i.worldPos;
+
+                //half4 gbuffer0 = tex2D (_CameraGBufferTexture0, uv);
+                //half4 gbuffer1 = tex2D (_CameraGBufferTexture1, uv);
+                //half4 gbuffer2 = tex2D (_CameraGBufferTexture2, uv);
+                //UnityStandardData data = UnityStandardDataFromGbuffer(gbuffer0, gbuffer1, gbuffer2);
+
+                float3 eyeVec = -viewDir;
+                eyeVec = mul(_SkyboxRotation, eyeVec);
+                finalNormal = mul(_SkyboxRotation, finalNormal);
+
+                // Rotate eyevec by the skybox rotation
+                //eyeVec = normalize(mul(_SkyboxRotation, eyeVec).xyz);
+
+                half oneMinusReflectivity = 1 - max (max (outGBuffer1.r, outGBuffer1.g), outGBuffer1.b);
+
+                // Unused member don't need to be initialized
+                UnityGIInput d;
+                d.worldPos = worldPos;
+                d.worldViewDir = -eyeVec;
+                d.probeHDR[0] = _Skybox_HDR;
+                d.probeHDR[1] = _Skybox_HDR;
+                d.boxMin[0].w = 0; // 1 in .w allow to disable blending in UnityGI_IndirectSpecular call since it doesn't work in Deferred
+                d.boxMin[1] = 0;
+                d.boxMax[0] = 0;
+                d.boxMax[1] = 0;
+
+                d.light.color = 0;
+                d.light.dir = half3(0, 1, 0);
+                d.light.ndotl = 0;
+                d.atten = 1;
+                d.lightmapUV = 0.0f;
+                d.ambient.rgb = 0;
+
+                d.probePosition[0] = 0;
+                d.probePosition[1] = 0;
+
+
+                Unity_GlossyEnvironmentData g = UnityGlossyEnvironmentSetup(outGBuffer2.w, -eyeVec, finalNormal, outGBuffer1.rgb);
+
+                float occlusion2 = 1;
+                half3 env0 = UnityGI_IndirectSpecularBasic(d, outGBuffer1.w, g);
+                
+                //env0 = DecodeHDR(float4(env0, 1), _Skybox_HDR);
+
+                UnityLight light;
+                light.color = half3(0, 0, 0);
+                light.dir = half3(0, 1, 0);
+                
+                UnityIndirect ind;
+                ind.diffuse = 0;
+                ind.specular = env0;
+                
+                half3 rgb = UNITY_BRDF_PBS (0, outGBuffer1.xyz, oneMinusReflectivity, outGBuffer2.w, finalNormal, -eyeVec, light, ind).rgb;
+                
+                // Calculate falloff value, so reflections on the edges of the probe would gradually blend to previous reflection.
+                // Also this ensures that pixels not located in the reflection probe AABB won't
+                // accidentally pick up reflections from this probe.
+                
+                SET_OUT_EMISSION(float4(rgb, 1));
+
+                //
+                //
+                //
+                //
+                //
+
+                
             }
             ENDCG
         }

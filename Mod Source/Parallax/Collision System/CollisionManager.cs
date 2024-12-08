@@ -232,7 +232,6 @@ namespace Parallax
         static bool inColliderJob = false;
         static List<JobHandle> colliderJobHandles = new List<JobHandle>();
         static JobHandle findQuadsHandle = new JobHandle();
-        static int numColliderJobsCompleted = 0;
 
         bool allComplete = false;
         void Update()

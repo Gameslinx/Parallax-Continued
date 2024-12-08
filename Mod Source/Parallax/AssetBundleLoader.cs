@@ -14,22 +14,26 @@ namespace Parallax
         public static Dictionary<string, Shader> parallaxTerrainShaders = new Dictionary<string, Shader>();
         public static Dictionary<string, Shader> parallaxScatterShaders = new Dictionary<string, Shader>();
         public static Dictionary<string, ComputeShader> parallaxComputeShaders = new Dictionary<string, ComputeShader>();
+        public static Dictionary<string, Shader> parallaxScaledShaders = new Dictionary<string, Shader>();
         public static Dictionary<string, Shader> parallaxDebugShaders = new Dictionary<string, Shader>();
         public static void Initialize()
         {
             string terrainShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "ParallaxContinued/Shaders/ParallaxTerrain");
             string scatterShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "ParallaxContinued/Shaders/ParallaxScatters");
             string computeShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "ParallaxContinued/Shaders/ParallaxCompute");
+            string scaledShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "ParallaxContinued/Shaders/ParallaxScaled");
             string debugShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "ParallaxContinued/Shaders/ParallaxDebug");
 
             terrainShaderFilePath = DeterminePlatform(terrainShaderFilePath);
             scatterShaderFilePath = DeterminePlatform(scatterShaderFilePath);
             computeShaderFilePath = DeterminePlatform(computeShaderFilePath);
+            scaledShaderFilePath = DeterminePlatform(scaledShaderFilePath);
             debugShaderFilePath = DeterminePlatform(debugShaderFilePath);
 
             LoadAssetBundles<Shader>(terrainShaderFilePath, parallaxTerrainShaders);
             LoadAssetBundles<Shader>(scatterShaderFilePath, parallaxScatterShaders);
             LoadAssetBundles<ComputeShader>(computeShaderFilePath, parallaxComputeShaders);
+            LoadAssetBundles<Shader>(scaledShaderFilePath, parallaxScaledShaders);
             LoadAssetBundles<Shader>(debugShaderFilePath, parallaxDebugShaders);
         }
         static string DeterminePlatform(string filePath)

@@ -25,7 +25,6 @@ namespace Parallax
         bool showGUI = false;
 
         bool initialized = false;
-        bool buttonAdded = false;
 
         static bool showCollideables = false;
 
@@ -44,7 +43,6 @@ namespace Parallax
                 // Create toolbar button
                 Texture buttonTexture = GameDatabase.Instance.GetTexture("ParallaxContinued/Textures/button", false);
                 button = ApplicationLauncher.Instance.AddModApplication(ShowToolbarGUI, HideToolbarGUI, IncrementBingus, Nothing, Nothing, Nothing, ApplicationLauncher.AppScenes.ALWAYS, buttonTexture);
-                buttonAdded = true;
 
                 initialized = true;
             }

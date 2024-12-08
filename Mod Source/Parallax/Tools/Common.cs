@@ -160,6 +160,10 @@ namespace Parallax
             {
                 baseMaterial.SetColor(colorValue.Key, colorValue.Value);
             }
+            foreach (KeyValuePair<string, int> intValue in terrainShaderProperties.shaderInts)
+            {
+                baseMaterial.SetInt(intValue.Key, intValue.Value);
+            }
 
             baseMaterial.SetFloat("_MaxTessellation", ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.maxTessellation);
             baseMaterial.SetFloat("_TessellationEdgeLength", ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength);
@@ -268,6 +272,17 @@ namespace Parallax
         }
         public void Unload()
         {
+            // Check to see if a scaled body that requires these textures exists
+            if (ConfigLoader.parallaxScaledBodies.ContainsKey(planetName))
+            {
+                ParallaxScaledBody scaledBody = ConfigLoader.parallaxScaledBodies[planetName];
+                if (scaledBody.mode == ParallaxScaledBodyMode.FromTerrain && scaledBody.loaded)
+                {
+                    // Remain loaded - the scaled planet uses these textures and is still visible
+                    return;
+                }
+            }
+
             // Unload all textures
             Texture2D[] textures = loadedTextures.Values.ToArray();
             for (int i = 0 ; i < textures.Length; i++)
@@ -278,6 +293,153 @@ namespace Parallax
             loaded = false;
         }
     }
+
+    public enum ParallaxScaledBodyMode
+    {
+        FromTerrain,
+        Baked,
+        Custom
+    }
+    // Parallax Scaled Body
+    public class ParallaxScaledBody
+    {
+        public string planetName;
+
+        public ParallaxTerrainBody terrainBody;
+        public MaterialParams scaledMaterialParams;
+        public ParallaxScaledBodyMode mode = ParallaxScaledBodyMode.FromTerrain;
+        public Material scaledMaterial;
+
+        public float minTerrainAltitude = 0;
+        public float maxTerrainAltitude = 0;
+
+        public Dictionary<string, Texture2D> loadedTextures = new Dictionary<string, Texture2D>();
+        public float worldSpaceMeshRadius;
+
+        public bool loaded = false;
+
+        public ParallaxScaledBody(string name)
+        {
+            planetName = name;
+        }
+        /// <summary>
+        /// When using Custom/ParallaxScaled shader, copy over the terrain shader properties
+        /// </summary>
+        public void ReadTerrainShaderProperties()
+        {
+            scaledMaterialParams.shaderProperties.Append(terrainBody.terrainShaderProperties);
+        }
+        public void LoadInitial(string shader)
+        {
+            Material baseMaterial = new Material(AssetBundleLoader.parallaxScaledShaders[shader]);
+            
+            // Enable keywords
+            foreach (string keyword in scaledMaterialParams.shaderKeywords)
+            {
+                baseMaterial.EnableKeyword(keyword);
+                Debug.Log("Enabling keyword: " + keyword);
+            }
+
+            ShaderProperties scaledShaderProperties = scaledMaterialParams.shaderProperties;
+
+            foreach (KeyValuePair<string, float> floatValue in scaledShaderProperties.shaderFloats)
+            {
+                baseMaterial.SetFloat(floatValue.Key, floatValue.Value);
+            }
+            foreach (KeyValuePair<string, Vector3> vectorValue in scaledShaderProperties.shaderVectors)
+            {
+                baseMaterial.SetVector(vectorValue.Key, vectorValue.Value);
+            }
+            foreach (KeyValuePair<string, Color> colorValue in scaledShaderProperties.shaderColors)
+            {
+                baseMaterial.SetColor(colorValue.Key, colorValue.Value);
+            }
+            foreach (KeyValuePair<string, int> intValue in scaledShaderProperties.shaderInts)
+            {
+                baseMaterial.SetInt(intValue.Key, intValue.Value);
+            }
+
+            // Scaled meshes are denser than terrain, lower the tessellation but reduce edge length
+            baseMaterial.SetFloat("_MaxTessellation", ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.maxTessellation / 6);
+            baseMaterial.SetFloat("_TessellationEdgeLength", ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength / 4);
+            baseMaterial.SetFloat("_MaxTessellationRange", float.MaxValue);
+
+            scaledMaterial = baseMaterial;
+        }
+        public void Load()
+        {
+            // First check for terrain body's terrain textures and load them
+            if (!terrainBody.loaded)
+            {
+                terrainBody.Load(true);
+            }
+
+            // Now load the textures needed here
+            foreach (KeyValuePair<string, string> textureValue in scaledMaterialParams.shaderProperties.shaderTextures)
+            {
+                Debug.Log("Attempting load: " + textureValue.Key + " at " + textureValue.Value);
+                Texture2D tex;
+
+                // Texture already loaded? Use it
+                if (loadedTextures.ContainsKey(textureValue.Key))
+                {
+                    tex = loadedTextures[textureValue.Key];
+                }
+                else
+                {
+                    // Check to see if the texture we're trying to load is a terrain texture
+                    if (mode == ParallaxScaledBodyMode.FromTerrain && terrainBody.loadedTextures.ContainsKey(textureValue.Key))
+                    {
+                        // Point to the terrain texture
+                        tex = terrainBody.loadedTextures[textureValue.Key];
+                        loadedTextures.Add(textureValue.Key, tex);
+                    }
+                    else
+                    {
+                        // This texture is unique
+                        bool linear = TextureUtils.IsLinear(textureValue.Key);
+                        tex = TextureLoader.LoadTexture(textureValue.Value, linear);
+
+                        // Add to active textures
+                        loadedTextures.Add(textureValue.Key, tex);
+                    }
+                }
+
+                scaledMaterial.SetTexture(textureValue.Key, tex);
+            }
+
+            loaded = true;
+        }
+        public void Unload()
+        {
+            // First destroy our textures
+            Texture2D[] textures = loadedTextures.Values.ToArray();
+            string[] keys = loadedTextures.Keys.ToArray();
+            for (int i = 0; i < textures.Length; i++)
+            {
+                // This texture belongs to the terrain body, and will be handled by it later
+                if (terrainBody.loadedTextures.ContainsKey(keys[i]))
+                {
+                    continue;
+                }
+                else
+                {
+                    UnityEngine.Object.Destroy(textures[i]);
+                }
+            }
+            loadedTextures.Clear();
+            loaded = false;
+
+            // Scaled body is always loaded when terrain is loaded
+            // So, if terrain is loaded, it could be hanging around for the scaled body
+            // Unload the terrain now that the scaled body is no longer needed
+            if (terrainBody.loaded)
+            {
+                terrainBody.Unload();
+            }
+        }
+    }
+
     // Stores all material quality variants
     public class ParallaxMaterials
     {
@@ -831,6 +993,69 @@ namespace Parallax
                 clone.shaderInts.Add(intValue.Key, intValue.Value);
             }
             return clone;
+        }
+        /// <summary>
+        /// Append incoming ShaderProperties to this one. No duplicate values allowed - will prioritise source properties if conflicted, and will log an error.
+        /// </summary>
+        /// <param name="original"></param>
+        /// <param name="incoming"></param>
+        public void Append(ShaderProperties incoming)
+        {
+            foreach (var textureValue in incoming.shaderTextures)
+            {
+                if (!shaderTextures.ContainsKey(textureValue.Key))
+                {
+                    shaderTextures.Add(textureValue.Key, textureValue.Value);
+                }
+                else
+                {
+                    ParallaxDebug.LogError("Attempting to append duplicate shader property: " + textureValue.Key);
+                }
+            }
+            foreach (var floatValue in incoming.shaderFloats)
+            {
+                if (!shaderFloats.ContainsKey(floatValue.Key))
+                {
+                    shaderFloats.Add(floatValue.Key, floatValue.Value);
+                }
+                else
+                {
+                    ParallaxDebug.LogError("Attempting to append duplicate shader property: " + floatValue.Key);
+                }
+            }
+            foreach (var vectorValue in incoming.shaderVectors)
+            {
+                if (!shaderVectors.ContainsKey(vectorValue.Key))
+                {
+                    shaderVectors.Add(vectorValue.Key, vectorValue.Value);
+                }
+                else
+                {
+                    ParallaxDebug.LogError("Attempting to append duplicate shader property: " + vectorValue.Key);
+                }
+            }
+            foreach (var colorValue in incoming.shaderColors)
+            {
+                if (!shaderColors.ContainsKey(colorValue.Key))
+                {
+                    shaderColors.Add(colorValue.Key, colorValue.Value);
+                }
+                else
+                {
+                    ParallaxDebug.LogError("Attempting to append duplicate shader property: " + colorValue.Key);
+                }
+            }
+            foreach (var intValue in incoming.shaderInts)
+            {
+                if (!shaderInts.ContainsKey(intValue.Key))
+                {
+                    shaderInts.Add(intValue.Key, intValue.Value);
+                }
+                else
+                {
+                    ParallaxDebug.LogError("Attempting to append duplicate shader property: " + intValue.Key);
+                }
+            }
         }
     }
 }

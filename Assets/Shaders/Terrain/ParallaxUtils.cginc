@@ -1,5 +1,8 @@
-
-#include "../Includes/BiplanarFunctions.cginc"
+#if !defined (SCALED)
+    #include "../Includes/BiplanarFunctions.cginc"
+#else
+    #include "../Includes/ScaledBiplanarFunctions.cginc"
+#endif
 
 //
 //  Tessellation Functions
@@ -201,6 +204,7 @@ float GetDisplacementLerpFactor(float heightLerp, float displacement1, float dis
 // Texture Set Calcs
 // When using lighter shader variations these aren't included
 //
+
 #if defined (INFLUENCE_MAPPING)
     #define BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)                                                                                                        \
         fixed4 diffuseName = SampleBiplanarTexture(diffuseSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);                                                       \

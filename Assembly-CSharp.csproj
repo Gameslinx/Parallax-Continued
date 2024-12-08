@@ -100,6 +100,7 @@
      <Compile Include="Assets\Scripts\rtp.cs" />
      <None Include="Assets\Shaders\Debug\ShowSlope.shader" />
      <None Include="Assets\Shaders\Scatters\InstancingShaders\ParallaxScatterUtils.cginc" />
+     <None Include="Assets\Shaders\Debug\_Standard.shader" />
      <None Include="Assets\Shaders\Scatters\ScatterUtils.cginc" />
      <None Include="Assets\Shaders\Debug\SphericalCoords.shader" />
      <None Include="Assets\Shaders\Debug\ShowNoise.shader" />
@@ -143,6 +144,7 @@
      <None Include="Assets\Shaders\Scaled\ParallaxScaledBakedStructs.cginc" />
      <None Include="Assets\Shaders\Scatters\TerrainScatters.compute" />
      <None Include="Assets\Shaders\Terrain\Wireframe.shader" />
+     <None Include="Assets\Shaders\Includes\ScaledBiplanarFunctions.cginc" />
      <None Include="Assets\Shaders\Terrain\ParallaxStructs.cginc" />
  <Reference Include="UnityEngine">
  <HintPath>F:/Productivity/Unity/Editor/Data/Managed/UnityEngine/UnityEngine.dll</HintPath>

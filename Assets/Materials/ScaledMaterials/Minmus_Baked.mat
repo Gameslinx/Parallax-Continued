@@ -125,7 +125,7 @@ Material:
     - _MaxTessellationRange: 5
     - _Metallic: 0
     - _MidHighBlendEnd: 5
-    - _MidHighBlendStart: 4
+    - _MidHighBlendStart: 10
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
