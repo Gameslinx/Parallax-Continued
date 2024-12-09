@@ -214,65 +214,7 @@ namespace Parallax
             GUILayout.Label("Material Params: ", HighLogic.Skin.label);
             ShaderProperties properties = materialParams.shaderProperties;
 
-            // Process ints
-            GUILayout.Label("Integers: ", HighLogic.Skin.label);
-            List<string> intKeys = new List<string>(materialParams.shaderProperties.shaderInts.Keys);
-            foreach (string key in intKeys)
-            {
-                // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
-                int value = properties.shaderInts[key];
-                bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.IntField);
-                if (valueChanged)
-                {
-                    properties.shaderInts[key] = value;
-                    callback();
-                }
-            }
-
-            // Process floats
-            GUILayout.Label("Floats: ", HighLogic.Skin.label);
-            List<string> floatKeys = new List<string>(materialParams.shaderProperties.shaderFloats.Keys);
-            foreach (string key in floatKeys)
-            {
-                // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
-                float value = properties.shaderFloats[key];
-                bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.FloatField);
-                if (valueChanged)
-                {
-                    properties.shaderFloats[key] = value;
-                    callback();
-                }
-            }
-
-            // Process vectors
-            GUILayout.Label("Vectors: ", HighLogic.Skin.label);
-            List<string> vectorKeys = new List<string>(materialParams.shaderProperties.shaderVectors.Keys);
-            foreach (string key in vectorKeys)
-            {
-                // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
-                Vector3 value = properties.shaderVectors[key];
-                bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.Vector3Field);
-                if (valueChanged)
-                {
-                    properties.shaderVectors[key] = value;
-                    callback();
-                }
-            }
-
-            // Process colors
-            GUILayout.Label("Colors: ", HighLogic.Skin.label);
-            List<string> colorKeys = new List<string>(materialParams.shaderProperties.shaderColors.Keys);
-            foreach (string key in colorKeys)
-            {
-                // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
-                Color value = properties.shaderColors[key];
-                bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.ColorField);
-                if (valueChanged)
-                {
-                    properties.shaderColors[key] = value;
-                    callback();
-                }
-            }
+            ProcessGenericMaterialParams(materialParams, callback);
 
             // Process keywords
             // This requires reading configs which can be slow, since we don't store keywords anywhere except ones that are already enabled

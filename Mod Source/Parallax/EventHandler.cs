@@ -12,7 +12,7 @@ namespace Parallax
     {
         public delegate void QuadRangeCheck();
         public static event QuadRangeCheck OnQuadRangeCheck;
-        
+
         public static EventHandler Instance;
         public static ParallaxTerrainBody currentParallaxBody;
 

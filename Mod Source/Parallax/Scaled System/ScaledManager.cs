@@ -77,12 +77,14 @@ namespace Parallax
         public static int SkyboxRotationShaderParam = Shader.PropertyToID("_SkyboxRotation");
         public static int PlanetOriginShaderParam = Shader.PropertyToID("_PlanetOrigin");
         public static int PlanetRadiusParam = Shader.PropertyToID("_PlanetRadius");
+        public static ScaledManager Instance;
         public void Awake()
         {
             if (!HighLogic.LoadedSceneIsFlight && !(HighLogic.LoadedScene == GameScenes.TRACKSTATION))
             {
                 Destroy(this);
             }
+            Instance = this;
         }
         public void Start()
         {
@@ -96,50 +98,13 @@ namespace Parallax
                 onDemandManager.scaledBody = body;
                 onDemandManager.celestialBody = kspBody;
 
-                Material scaledMaterial = body.scaledMaterial;
-
-                float _PlanetRadius = (float)kspBody.Radius;
-                float _MinAltitude = body.minTerrainAltitude;
-                float _MaxAltitude = body.maxTerrainAltitude;
-
-                float _MeshRadius = GetMeshRadiusScaledSpace(kspBody);
-                body.worldSpaceMeshRadius = _MeshRadius;
-
-                float scalingFactor = _MeshRadius / _PlanetRadius;
-
-                // Set these for all shaders, they might need them
-                scaledMaterial.SetVector(PlanetOriginShaderParam, kspBody.scaledBody.transform.position);
-                scaledMaterial.SetFloat(PlanetRadiusParam, _MeshRadius);
-
-                scaledMaterial.SetFloat("_MinRadialAltitude", (_MinAltitude) * scalingFactor);
-                scaledMaterial.SetFloat("_MaxRadialAltitude", (_MaxAltitude) * scalingFactor);
-
-                // Terrain shader specific
-                if (body.mode == ParallaxScaledBodyMode.FromTerrain)
-                {
-                    scaledMaterial.SetFloat("_LowMidBlendStart", (3.0f + _PlanetRadius) * scalingFactor);
-                    scaledMaterial.SetFloat("_LowMidBlendEnd", (36.0f + _PlanetRadius) * scalingFactor);
-                    scaledMaterial.SetFloat("_MidHighBlendStart", (1150.0f + _PlanetRadius) * scalingFactor);
-                    scaledMaterial.SetFloat("_MidHighBlendEnd", (1500.0f + _PlanetRadius) * scalingFactor);
-                }
-                
-                // Setup environment
-                scaledMaterial.SetTexture("_Skybox", SkyboxControl.cubeMap);
+                body.SetScaledMaterialParams(kspBody);
 
                 meshRenderer.material = body.scaledMaterial;
             }
         }
-        // Averages all vert distances from the planet to get the radius in scaled space
-        // Potential optimization here - just calculate the scaled space mesh radius manually
-        public float GetMeshRadiusScaledSpace(CelestialBody celestialBody)
-        {
-            float localMeshRadius = 1000.0f;
-            Vector3 meshCenter = Vector3.zero;
-            Vector3 arbitraryMeshBound = Vector3.up * localMeshRadius;
-
-            float radius = Vector3.Distance(celestialBody.scaledBody.transform.TransformPoint(meshCenter), celestialBody.scaledBody.transform.TransformPoint(arbitraryMeshBound));
-            return radius;
-        }
+        
+        
         public void Update()
         {
             // Send inverse of skybox rotation to shader

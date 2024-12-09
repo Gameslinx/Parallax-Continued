@@ -1,4 +1,5 @@
 ﻿using Parallax.Harmony_Patches;
+using Parallax.Scaled_System;
 using Parallax.Tools;
 using System;
 using System.Collections.Generic;
@@ -332,39 +333,89 @@ namespace Parallax
         public void LoadInitial(string shader)
         {
             Material baseMaterial = new Material(AssetBundleLoader.parallaxScaledShaders[shader]);
-            
+            scaledMaterial = baseMaterial;
+
             // Enable keywords
             foreach (string keyword in scaledMaterialParams.shaderKeywords)
             {
-                baseMaterial.EnableKeyword(keyword);
+                scaledMaterial.EnableKeyword(keyword);
                 Debug.Log("Enabling keyword: " + keyword);
             }
+            
+            UpdateBaseMaterialParams();
 
+            // Scaled meshes are denser than terrain, lower the tessellation but reduce edge length
+            scaledMaterial.SetFloat("_MaxTessellation", ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.maxTessellation / 6);
+            scaledMaterial.SetFloat("_TessellationEdgeLength", ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength / 4);
+            scaledMaterial.SetFloat("_MaxTessellationRange", float.MaxValue);
+        }
+        public void UpdateBaseMaterialParams()
+        {
             ShaderProperties scaledShaderProperties = scaledMaterialParams.shaderProperties;
 
             foreach (KeyValuePair<string, float> floatValue in scaledShaderProperties.shaderFloats)
             {
-                baseMaterial.SetFloat(floatValue.Key, floatValue.Value);
+                scaledMaterial.SetFloat(floatValue.Key, floatValue.Value);
             }
             foreach (KeyValuePair<string, Vector3> vectorValue in scaledShaderProperties.shaderVectors)
             {
-                baseMaterial.SetVector(vectorValue.Key, vectorValue.Value);
+                scaledMaterial.SetVector(vectorValue.Key, vectorValue.Value);
             }
             foreach (KeyValuePair<string, Color> colorValue in scaledShaderProperties.shaderColors)
             {
-                baseMaterial.SetColor(colorValue.Key, colorValue.Value);
+                scaledMaterial.SetColor(colorValue.Key, colorValue.Value);
             }
             foreach (KeyValuePair<string, int> intValue in scaledShaderProperties.shaderInts)
             {
-                baseMaterial.SetInt(intValue.Key, intValue.Value);
+                scaledMaterial.SetInt(intValue.Key, intValue.Value);
+            }
+        }
+        public void UpdateBaseMaterialParamsFromGUI()
+        {
+            UpdateBaseMaterialParams();
+            SetScaledMaterialParams(FlightGlobals.GetBodyByName(planetName));
+        }
+        /// <summary>
+        /// Sets the ScaledSpace shader material params correctly scaled by the scale factor
+        /// </summary>
+        public void SetScaledMaterialParams(CelestialBody kspBody)
+        {
+            Material scaledMaterial = this.scaledMaterial;
+
+            float _PlanetRadius = (float)kspBody.Radius;
+            float _MinAltitude = minTerrainAltitude;
+            float _MaxAltitude = maxTerrainAltitude;
+
+            float _MeshRadius = GetMeshRadiusScaledSpace(kspBody);
+            worldSpaceMeshRadius = _MeshRadius;
+
+            float scalingFactor = _MeshRadius / _PlanetRadius;
+
+            scaledMaterial.SetFloat("_MinRadialAltitude", (_MinAltitude) * scalingFactor);
+            scaledMaterial.SetFloat("_MaxRadialAltitude", (_MaxAltitude) * scalingFactor);
+
+            // Terrain shader specific
+            if (mode == ParallaxScaledBodyMode.FromTerrain)
+            {
+                scaledMaterial.SetFloat("_LowMidBlendStart", (scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendStart"] + _PlanetRadius) * scalingFactor);
+                scaledMaterial.SetFloat("_LowMidBlendEnd", (scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendEnd"] + _PlanetRadius) * scalingFactor);
+                scaledMaterial.SetFloat("_MidHighBlendStart", (scaledMaterialParams.shaderProperties.shaderFloats["_MidHighBlendStart"] + _PlanetRadius) * scalingFactor);
+                scaledMaterial.SetFloat("_MidHighBlendEnd", (scaledMaterialParams.shaderProperties.shaderFloats["_MidHighBlendEnd"] + _PlanetRadius) * scalingFactor);
             }
 
-            // Scaled meshes are denser than terrain, lower the tessellation but reduce edge length
-            baseMaterial.SetFloat("_MaxTessellation", ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.maxTessellation / 6);
-            baseMaterial.SetFloat("_TessellationEdgeLength", ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength / 4);
-            baseMaterial.SetFloat("_MaxTessellationRange", float.MaxValue);
+            // Setup environment
+            scaledMaterial.SetTexture("_Skybox", SkyboxControl.cubeMap);
+        }
+        // Averages all vert distances from the planet to get the radius in scaled space
+        // Potential optimization here - just calculate the scaled space mesh radius manually
+        public float GetMeshRadiusScaledSpace(CelestialBody celestialBody)
+        {
+            float localMeshRadius = 1000.0f;
+            Vector3 meshCenter = Vector3.zero;
+            Vector3 arbitraryMeshBound = Vector3.up * localMeshRadius;
 
-            scaledMaterial = baseMaterial;
+            float radius = Vector3.Distance(celestialBody.scaledBody.transform.TransformPoint(meshCenter), celestialBody.scaledBody.transform.TransformPoint(arbitraryMeshBound));
+            return radius;
         }
         public void Load()
         {

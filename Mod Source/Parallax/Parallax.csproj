@@ -152,6 +152,10 @@
 
       <Publicize Include="Assembly-CSharp:Sun.scaledSunLight"/>
 
+      <Publicize Include="Assembly-CSharp:MapSO.Byte2Float"/>
+      <Publicize Include="Assembly-CSharp:MapSO._data"/>
+      <Publicize Include="Assembly-CSharp:MapSO.PixelIndex"/>
+      <Publicize Include="Assembly-CSharp" MemberPattern="^MapSO\..*" />
     </ItemGroup>
 
 </Project>

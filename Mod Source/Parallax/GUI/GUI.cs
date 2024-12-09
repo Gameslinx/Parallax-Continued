@@ -6,11 +6,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using static Parallax.Legacy.LegacyScatterConfigLoader;
+using static Parallax.Tools.TextureExporter;
+using static SystemInformation;
 
 namespace Parallax
 {
-    [KSPAddon(KSPAddon.Startup.Flight, false)]
+    [KSPAddon(KSPAddon.Startup.AllGameScenes, false)]
     public partial class ParallaxGUI : MonoBehaviour
     {
         // Update is called once per frame
@@ -47,7 +48,13 @@ namespace Parallax
         static bool currentBodyHasTerrain = false;
         static bool currentBodyHasScaled = false;
 
-        public static GUIEditorMode editorMode;
+        static ParallaxScaledBody currentScaledBody;
+
+        public static GUIEditorMode editorMode = GUIEditorMode.Terrain;
+        private static List<GUIEditorMode> possibleEditorModes = new List<GUIEditorMode>();
+        private static int currentEditorModeIndex = 0;
+
+        private static TextureExporterOptions exportOptions;
 
         static GUIStyle activeButton;
         public enum GUIEditorMode
@@ -56,7 +63,13 @@ namespace Parallax
             Terrain,
             Scaled
         }
-
+        void Awake()
+        {
+            if (HighLogic.LoadedScene != GameScenes.FLIGHT && HighLogic.LoadedScene != GameScenes.TRACKSTATION)
+            {
+                Destroy(this);
+            }
+        }
         void Start()
         {
             window = new Rect(Screen.width / 2 - 450 / 2, Screen.height / 2 - 50, 450, 100);
@@ -65,22 +78,44 @@ namespace Parallax
             activeButton.normal.textColor = HighLogic.Skin.label.normal.textColor;
             activeButton.hover.textColor = HighLogic.Skin.label.normal.textColor * 1.25f;
 
+            exportOptions = new TextureExporterOptions()
+            {
+                horizontalResolution = 4096,
+                exportColor = true,
+                exportHeight = true,
+                exportNormal = true,
+                multithread = true
+            };
+
+            // Register events
             PQSStartPatch.onPQSStart += OnBodyChanged;
-            OnBodyChanged(FlightGlobals.currentMainBody.name);
+            GameEvents.onPlanetariumTargetChanged.Add(OnScaledBodyChanged);
+
+            if (HighLogic.LoadedScene == GameScenes.FLIGHT)
+            {
+                OnBodyChanged(FlightGlobals.currentMainBody.name);
+            }
+            else
+            {
+                editorMode = GUIEditorMode.Scaled;
+            }
         }
         void OnDisable()
         {
             PQSStartPatch.onPQSStart -= OnBodyChanged;
+            GameEvents.onPlanetariumTargetChanged.Remove(OnScaledBodyChanged);
         }
         // Update GUI on body change, reset scatter counter and get new scatters
         void OnBodyChanged(string bodyName)
         {
+            possibleEditorModes.Clear();
             if (ConfigLoader.parallaxScatterBodies.ContainsKey(bodyName))
             {
                 // Includes shared scatters
                 scatters = ConfigLoader.parallaxScatterBodies[bodyName].scatters.Values.ToArray();
                 currentBodyHasScatters = true;
                 currentScatterIndex = 0;
+                possibleEditorModes.Add(GUIEditorMode.Scatter);
             }
             else
             {
@@ -90,6 +125,7 @@ namespace Parallax
             if (ConfigLoader.parallaxTerrainBodies.ContainsKey(bodyName))
             {
                 currentBodyHasTerrain = true;
+                possibleEditorModes.Add(GUIEditorMode.Terrain);
             }
             else
             {
@@ -99,9 +135,33 @@ namespace Parallax
             if (ConfigLoader.parallaxScaledBodies.ContainsKey(bodyName))
             {
                 currentBodyHasScaled = true;
+                possibleEditorModes.Add(GUIEditorMode.Scaled);
             }
             else
             {
+                currentBodyHasScaled = false;
+            }
+        }
+        // Test if this body has parallax scaled
+        void OnScaledBodyChanged(MapObject body)
+        {
+            if (body.celestialBody == null)
+            {
+                // Probably focusing on a vessel. Or at least, not a planet
+                return;
+            }
+            if (ConfigLoader.parallaxScaledBodies.ContainsKey(body.celestialBody.name))
+            {
+                currentScaledBody = ConfigLoader.parallaxScaledBodies[body.celestialBody.name];
+                if (!possibleEditorModes.Contains(GUIEditorMode.Scaled)) 
+                {
+                    possibleEditorModes.Add(GUIEditorMode.Scaled);
+                    currentBodyHasScaled = true;
+                }
+            }
+            else
+            {
+                possibleEditorModes.Remove(GUIEditorMode.Scaled);
                 currentBodyHasScaled = false;
             }
         }
@@ -111,12 +171,6 @@ namespace Parallax
             bool toggleDisplayGUI = (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.P));
             if (toggleDisplayGUI)
             {
-                if (!currentBodyHasScatters && !currentBodyHasTerrain && !currentBodyHasScaled)
-                {
-                    ScreenMessages.PostScreenMessage("This body is not configured for Parallax");
-                    showGUI = false;
-                    return;
-                }
                 showGUI = !showGUI;
             }
         }
@@ -133,22 +187,21 @@ namespace Parallax
             GUILayout.BeginVertical();
             ///////////////////////////
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Terrain Edit Mode", HighLogic.Skin.button))
+            if (GUILayout.Button("Previous Edit Mode", HighLogic.Skin.button))
             {
-                editorMode = GUIEditorMode.Terrain;
+                editorMode = WrapEditorMode(currentEditorModeIndex - 1);
+                Debug.Log("Editor mode changed: " + editorMode.ToString());
             }
             //GUILayout.Space(350);
             GUILayout.FlexibleSpace();
             GUILayout.Label("Editing " + editorMode.ToString(), HighLogic.Skin.label);
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Scatter Edit Mode", HighLogic.Skin.button))
+            if (GUILayout.Button("Next Edit Mode", HighLogic.Skin.button))
             {
-                editorMode = GUIEditorMode.Scatter;
+                editorMode = WrapEditorMode(currentEditorModeIndex + 1);
+                Debug.Log("Editor mode changed: " + editorMode.ToString());
             }
             GUILayout.EndHorizontal();
-
-            // Force an editor if only one is configured
-            editorMode = GetEditorMode(currentBodyHasTerrain, currentBodyHasScatters, currentBodyHasScaled);
 
             if (editorMode == GUIEditorMode.Terrain)
             {
@@ -160,7 +213,19 @@ namespace Parallax
             }
             else if (editorMode == GUIEditorMode.Scaled)
             {
-                ScaledMenu();
+                if (currentBodyHasScaled)
+                {
+                    ScaledMenu(currentScaledBody);
+                    TextureExporterMenu();
+                }
+                else
+                {
+                    TextureExporterMenu();
+                }
+            }
+            else
+            {
+                GUILayout.Label("Current planet is not configured for Parallax", HighLogic.Skin.label);
             }
 
             ///////////////////////////
@@ -169,20 +234,43 @@ namespace Parallax
             // Must be last or buttons wont work
             UnityEngine.GUI.DragWindow();
         }
-        
+        static GUIEditorMode WrapEditorMode(int value)
+        {
+            int max = possibleEditorModes.Count;
+            int min = 0;
+            if (value > max - 1)
+            {
+                currentEditorModeIndex = (value - max);
+                return possibleEditorModes[currentEditorModeIndex];
+            }
+            if (value < min)
+            {
+                currentEditorModeIndex = (max - 1);
+                return possibleEditorModes[currentEditorModeIndex];
+            }
+            currentEditorModeIndex = value;
+            return possibleEditorModes[currentEditorModeIndex];
+        }
         static GUIEditorMode GetEditorMode(bool terrain, bool scatters, bool scaled)
         {
-            if (terrain)
+            // Only one configured
+            if (!scatters && !scaled && terrain && editorMode != GUIEditorMode.Terrain)
             {
                 return GUIEditorMode.Terrain;
             }
-            if (scatters)
+            if (!scaled && !terrain && scatters && editorMode != GUIEditorMode.Scatter)
             {
                 return GUIEditorMode.Scatter;
             }
-            if (scaled)
+            if (!terrain && !scatters && scaled && editorMode != GUIEditorMode.Scaled)
             {
                 return GUIEditorMode.Scaled;
+            }
+        
+            // Two configured but we're on the wrong one
+            if (terrain && scatters && !scaled && editorMode == GUIEditorMode.Scaled)
+            {
+                
             }
             return GUIEditorMode.Terrain;
         }
@@ -261,7 +349,105 @@ namespace Parallax
                 }
             }
         }
-        
+        public static void ProcessGenericMaterialParams(in MaterialParams materialParams, ParamCreator.ChangeMethod callback, bool includeKeywords = false, Material material = null, string configName = null)
+        {
+            // Process ints
+            GUILayout.Label("Integers: ", HighLogic.Skin.label);
+            List<string> intKeys = new List<string>(materialParams.shaderProperties.shaderInts.Keys);
+            ShaderProperties properties = materialParams.shaderProperties;
+            foreach (string key in intKeys)
+            {
+                // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
+                int value = properties.shaderInts[key];
+                bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.IntField);
+                if (valueChanged)
+                {
+                    properties.shaderInts[key] = value;
+                    callback();
+                }
+            }
+
+            // Process floats
+            GUILayout.Label("Floats: ", HighLogic.Skin.label);
+            List<string> floatKeys = new List<string>(materialParams.shaderProperties.shaderFloats.Keys);
+            foreach (string key in floatKeys)
+            {
+                // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
+                float value = properties.shaderFloats[key];
+                bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.FloatField);
+                if (valueChanged)
+                {
+                    properties.shaderFloats[key] = value;
+                    callback();
+                }
+            }
+
+            // Process vectors
+            GUILayout.Label("Vectors: ", HighLogic.Skin.label);
+            List<string> vectorKeys = new List<string>(materialParams.shaderProperties.shaderVectors.Keys);
+            foreach (string key in vectorKeys)
+            {
+                // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
+                Vector3 value = properties.shaderVectors[key];
+                bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.Vector3Field);
+                if (valueChanged)
+                {
+                    properties.shaderVectors[key] = value;
+                    callback();
+                }
+            }
+
+            // Process colors
+            GUILayout.Label("Colors: ", HighLogic.Skin.label);
+            List<string> colorKeys = new List<string>(materialParams.shaderProperties.shaderColors.Keys);
+            foreach (string key in colorKeys)
+            {
+                // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
+                Color value = properties.shaderColors[key];
+                bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.ColorField);
+                if (valueChanged)
+                {
+                    properties.shaderColors[key] = value;
+                    callback();
+                }
+            }
+
+            if (!includeKeywords)
+            {
+                return;
+            }
+
+            string shaderName = materialParams.shader;
+            ConfigNode config = GameDatabase.Instance.GetConfigs(configName).FirstOrDefault().config.GetNodes("ParallaxShader").Where(x => x.GetValue("name") == shaderName).FirstOrDefault();
+            ConfigNode[] keywords = config.GetNode("Keywords").GetNodes();
+            foreach (ConfigNode node in keywords)
+            {
+                // These are our keywords
+                string keywordName = node.name;
+                bool enabled = materialParams.shaderKeywords.Contains(keywordName);
+                bool wasChanged = ParamCreator.CreateParam(keywordName, ref enabled, GUIHelperFunctions.BoolField);
+                if (wasChanged)
+                {
+                    if (!enabled)
+                    {
+                        materialParams.shaderKeywords.Remove(keywordName);
+                        material.DisableKeyword(keywordName);
+                        // Remove the keyword specific params from the properties list, as they are unused
+                        // and remove duplicates when the keyword is re-enabled again
+                        RemoveKeywordValues(materialParams.shaderProperties, node);
+                    }
+                    if (enabled)
+                    {
+                        materialParams.shaderKeywords.Add(keywordName);
+                        material.EnableKeyword(keywordName);
+
+                        // Now we need to initialize defaults for the keywords
+                        ConfigLoader.InitializeTemplateConfig(node, materialParams.shaderProperties);
+                    }
+                    callback();
+                }
+            }
+        }
         static GUIStyle GetButtonColor(bool isActive)
         {
             if (isActive)
@@ -296,7 +482,7 @@ namespace Parallax
             GUILayout.Label(name);
             existingValue = fieldMethod(existingValue, out bool valueWasChanged);
 
-            if (valueWasChanged)
+            if (valueWasChanged && callback != null)
             {
                 callback();
             }

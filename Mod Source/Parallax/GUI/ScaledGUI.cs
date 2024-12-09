@@ -1,16 +1,68 @@
-﻿using System;
+﻿using Kopernicus.Configuration;
+using Parallax.Tools;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace Parallax
 {
     public partial class ParallaxGUI
     {
-        static void ScaledMenu()
+        static bool showExporter = false;
+        static void ScaledMenu(ParallaxScaledBody body)
         {
+            GUILayout.Label("Scaled Shader Properties ( " + body.planetName + "):", HighLogic.Skin.label);
+            GUILayout.Space(15);
+            ProcessBaseScaledMaterial(body);
+        }
+        static void ProcessBaseScaledMaterial(ParallaxScaledBody body)
+        {
+            ParamCreator.ChangeMethod callback = body.UpdateBaseMaterialParamsFromGUI;
+            ProcessGenericMaterialParams(body.scaledMaterialParams, callback, true, body.scaledMaterial, "ParallaxScaledShaderProperties");
+        }
+        static void TextureExporterMenu()
+        {
+            if (PlanetariumCamera.fetch.target.type != MapObject.ObjectType.CelestialBody)
+            {
+                return;
+            }
 
+            string planetName = PlanetariumCamera.fetch.target.gameObject.name;
+            CelestialBody body = FlightGlobals.GetBodyByName(planetName);
+
+            if (GUILayout.Button("Texture Exporter", GetButtonColor(showExporter)))
+            {
+                showExporter = !showExporter;
+            }
+            if (showExporter)
+            {
+                // Options
+                GUILayout.Label("Planet Texture Exporter Options:", HighLogic.Skin.label);
+
+                ParamCreator.CreateParam("Resolution", ref exportOptions.horizontalResolution, GUIHelperFunctions.IntField, null);
+                GUILayout.Space(10);
+                ParamCreator.CreateParam("Export Height", ref exportOptions.exportHeight, GUIHelperFunctions.BoolField, null);
+                ParamCreator.CreateParam("Export Color", ref exportOptions.exportColor, GUIHelperFunctions.BoolField, null);
+                ParamCreator.CreateParam("Export Normal", ref exportOptions.exportNormal, GUIHelperFunctions.BoolField, null);
+                GUILayout.Space(10);
+                ParamCreator.CreateParam("Multithreaded Export", ref exportOptions.multithread, GUIHelperFunctions.BoolField, null);
+
+                if (GUILayout.Button("Export", HighLogic.Skin.button))
+                {
+                    Coroutine co = ScaledManager.Instance.StartCoroutine(TextureExporter.GenerateTextures(exportOptions, body));
+                }
+                if (GUILayout.Button("Export Entire System", HighLogic.Skin.button))
+                {
+                    GenerateEntireSystem();
+                }
+            }
+        }
+        public static void GenerateEntireSystem()
+        {
+            Coroutine co = ScaledManager.Instance.StartCoroutine(TextureExporter.GenerateTextures(exportOptions, FlightGlobals.Bodies.ToArray()));
         }
     }
 }
