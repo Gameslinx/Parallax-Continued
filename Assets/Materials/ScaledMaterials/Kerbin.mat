@@ -1,0 +1,166 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Kerbin
+  m_Shader: {fileID: 4800000, guid: 3c05f23d39e47ad438585d779ea28a16, type: 3}
+  m_ShaderKeywords: INFLUENCE_MAPPING OCEAN OCEAN_FROM_COLORMAP PARALLAX_FULL
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap:
+    QUEUE: Geometry
+    RenderType: Opaque
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _AtmosphereRimMap:
+        m_Texture: {fileID: 2800000, guid: 250c98605becc4e42ada8553631a37b2, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMap:
+        m_Texture: {fileID: 2800000, guid: 7e4a6db07ab4dea4794706d3812af5ec, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMapHigh:
+        m_Texture: {fileID: 2800000, guid: a000468ea20ea784e8f0df96c75f14c5, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMapLow:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMapMid:
+        m_Texture: {fileID: 2800000, guid: 9c0a7298a4736554ba8a64bafae725ae, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMapSteep:
+        m_Texture: {fileID: 2800000, guid: cac7d0bce6560234db7de1d37dfbc89f, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ColorMap:
+        m_Texture: {fileID: 2800000, guid: 43626d9d8856832489cbe80164adf7f7, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailAlbedoMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailNormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DisplacementMap:
+        m_Texture: {fileID: 2800000, guid: 5036b381bb6048c4e88eeb4f1ab53b52, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmissionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _HeightMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _InfluenceMap:
+        m_Texture: {fileID: 2800000, guid: 4c46301e0f8b2934186ff8b9bbd9bbb8, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: 94b52dcdb48a4a7478ec83701a9d1512, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTexHigh:
+        m_Texture: {fileID: 2800000, guid: 7071c30b2c3b0874da1c4e2bcb6120b9, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTexLow:
+        m_Texture: {fileID: 2800000, guid: 97d24b0e55852ab48bc34158ad822a48, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTexMid:
+        m_Texture: {fileID: 2800000, guid: e05d9ddc3b6d9ab4c9513036d6fd2feb, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTexSteep:
+        m_Texture: {fileID: 2800000, guid: 4cf4ca62bdf9a2247ab1f900ca91a0ef, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OcclusionMap:
+        m_Texture: {fileID: 2800000, guid: 711fd535f268e034f8cab909aa616bda, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ParallaxMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Skybox:
+        m_Texture: {fileID: 8900000, guid: dbd4791fb36c99f42b857172ac311e9c, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Floats:
+    - _AtmosphereThickness: 2.33
+    - _BiplanarBlendFactor: 1
+    - _BumpScale: 1
+    - _Cutoff: 0.5
+    - _DetailNormalMapScale: 1
+    - _DisplacementOffset: 0
+    - _DisplacementScale: 0
+    - _DstBlend: 0
+    - _EnvironmentMapFactor: 1
+    - _FresnelPower: 1
+    - _GlossMapScale: 1
+    - _Glossiness: 0.5
+    - _GlossyReflections: 1
+    - _Hapke: 1
+    - _HeightDeformity: 0
+    - _LowMidBlendEnd: 0.50004876
+    - _LowMidBlendStart: 0.5
+    - _MaxTessellation: 4
+    - _MaxTessellationRange: 1
+    - _Metallic: 0
+    - _MidHighBlendEnd: 0.5029167
+    - _MidHighBlendStart: 0.50208336
+    - _Mode: 0
+    - _OcclusionStrength: 1
+    - _OceanAltitude: 0
+    - _OceanSpecularIntensity: 0.35
+    - _OceanSpecularPower: 0.5
+    - _Parallax: 0.02
+    - _PlanetBumpScale: 1
+    - _PlanetRadius: 1000000
+    - _RefractionIntensity: 1
+    - _SmoothnessTextureChannel: 0
+    - _SpecularHighlights: 1
+    - _SpecularIntensity: 0.119
+    - _SpecularPower: 5
+    - _SrcBlend: 1
+    - _SteepContrast: 4.5
+    - _SteepMidpoint: 0.73
+    - _SteepPower: 8
+    - _TessellationEdgeLength: 1
+    - _Tiling: 4.78
+    - _TransitionWidth: 0.029
+    - _UVSec: 0
+    - _WorldPlanetRadius: 0.5
+    - _ZWrite: 1
+    m_Colors:
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _OceanColor: {r: 0.07058824, g: 0.101960786, b: 0.15686275, a: 1}
+    - _PlanetOrigin: {r: 0, g: 0, b: 0, a: 0}

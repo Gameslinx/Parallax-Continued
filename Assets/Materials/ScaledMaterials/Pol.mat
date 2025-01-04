@@ -19,6 +19,10 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _AtmosphereRimMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _BumpMap:
         m_Texture: {fileID: 2800000, guid: b3b8f85b04985514f92df7e010ba65c7, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -103,7 +107,12 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _Skybox:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Floats:
+    - _AtmosphereThickness: 2
     - _BiplanarBlendFactor: 1
     - _BumpScale: 2
     - _Cutoff: 0.5
@@ -127,7 +136,10 @@ Material:
     - _MidHighBlendStart: 1.3390279
     - _Mode: 0
     - _OcclusionStrength: 1
+    - _OceanSpecularIntensity: 1
+    - _OceanSpecularPower: 1
     - _Parallax: 0.02
+    - _PlanetBumpScale: 1
     - _PlanetRadius: 0
     - _RefractionIntensity: 1
     - _SmoothnessTextureChannel: 0
@@ -141,8 +153,10 @@ Material:
     - _TessellationEdgeLength: 1
     - _Tiling: 2
     - _UVSec: 0
+    - _WorldPlanetRadius: 1.304922
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _OceanColor: {r: 0, g: 0, b: 0, a: 1}
     - _PlanetOrigin: {r: 1.218, g: 0, b: -0.218, a: 0}

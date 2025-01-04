@@ -34,7 +34,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMapMid:
-        m_Texture: {fileID: 2800000, guid: 01b1b9dbd91874742867c631f5459e6e, type: 3}
+        m_Texture: {fileID: 2800000, guid: cdc618e9719001d40a8c8b5cb125edd0, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMapSteep:
@@ -58,7 +58,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DisplacementMap:
-        m_Texture: {fileID: 2800000, guid: 4a3508cf3a52bd744aeee1879803ee4b, type: 3}
+        m_Texture: {fileID: 2800000, guid: 2a18b89d9fe49a7448c60473e333a356, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _EmissionMap:
@@ -66,7 +66,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _InfluenceMap:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: dd286aa9e84745d4b94d594a541a8708, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
@@ -82,7 +82,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTexMid:
-        m_Texture: {fileID: 2800000, guid: 556f49f5c006c224888e3e7a8a231ee0, type: 3}
+        m_Texture: {fileID: 2800000, guid: a1e4f40fd61f9f0418557beb6460406f, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTexSteep:
@@ -94,7 +94,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
-        m_Texture: {fileID: 2800000, guid: 7860feec5df1a1e46b0ac0aed37deef8, type: 3}
+        m_Texture: {fileID: 2800000, guid: 0f37b316da38f17419e4724a0439c61d, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ParallaxMap:
@@ -127,7 +127,7 @@ Material:
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DisplacementOffset: -0.5
-    - _DisplacementScale: 0
+    - _DisplacementScale: 0.141
     - _DstBlend: 0
     - _EnvironmentMapFactor: 1
     - _FadeEnd: 9000
@@ -161,7 +161,7 @@ Material:
     - _Shininess: 10
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
-    - _SpecularIntensity: 0.41
+    - _SpecularIntensity: 0.03
     - _SpecularPower: 1
     - _SrcBlend: 1
     - _SteepContrast: 2.62
@@ -172,7 +172,7 @@ Material:
     - _TessellationFactor: 1
     - _TessellationMax: 64
     - _TessellationRange: 99
-    - _Tiling: 0.184
+    - _Tiling: 0.037
     - _UVSec: 0
     - _ZWrite: 1
     - _displacement_offset: 0

@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>net48</TargetFramework>
+        <Platforms>AnyCPU;x86;x64</Platforms>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
         <DebugSymbols>true</DebugSymbols>
@@ -14,7 +15,51 @@
         <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
         <DefineConstants>TRACE;DEBUG;ENABLE_PROFILER</DefineConstants>
       </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      <DebugSymbols>true</DebugSymbols>
+      <DebugType>portable</DebugType>
+      <Optimize>false</Optimize>
+      <GameDataPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\</GameDataPath>
+      <OutDir>$(GameDataPath)$(AssemblyName)Continued\Plugins\</OutDir>
+      <ErrorReport>prompt</ErrorReport>
+      <WarningLevel>4</WarningLevel>
+      <NoWarn>0169</NoWarn>
+      <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
+      <DefineConstants>TRACE;DEBUG;ENABLE_PROFILER</DefineConstants>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
+      <DebugSymbols>true</DebugSymbols>
+      <DebugType>portable</DebugType>
+      <Optimize>false</Optimize>
+      <GameDataPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\</GameDataPath>
+      <OutDir>$(GameDataPath)$(AssemblyName)Continued\Plugins\</OutDir>
+      <ErrorReport>prompt</ErrorReport>
+      <WarningLevel>4</WarningLevel>
+      <NoWarn>0169</NoWarn>
+      <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
+      <DefineConstants>TRACE;DEBUG;ENABLE_PROFILER</DefineConstants>
+    </PropertyGroup>
       <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+        <DebugType>pdbonly</DebugType>
+        <Optimize>true</Optimize>
+        <GameDataPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\</GameDataPath>
+        <OutDir>$(GameDataPath)$(AssemblyName)Continued\Plugins\</OutDir>
+        <ErrorReport>prompt</ErrorReport>
+        <WarningLevel>4</WarningLevel>
+        <NoWarn>0169</NoWarn>
+        <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
+      </PropertyGroup>
+      <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+        <DebugType>pdbonly</DebugType>
+        <Optimize>true</Optimize>
+        <GameDataPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\</GameDataPath>
+        <OutDir>$(GameDataPath)$(AssemblyName)Continued\Plugins\</OutDir>
+        <ErrorReport>prompt</ErrorReport>
+        <WarningLevel>4</WarningLevel>
+        <NoWarn>0169</NoWarn>
+        <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
+      </PropertyGroup>
+      <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
         <DebugType>pdbonly</DebugType>
         <Optimize>true</Optimize>
         <GameDataPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\</GameDataPath>
@@ -150,11 +195,11 @@
       <Publicize Include="Kopernicus:Kopernicus.ShadowMan.ShadowRemoveFadeCommandBuffer.m_Buffer" />
       <Publicize Include="Kopernicus:Kopernicus.ShadowMan.ShadowRemoveFadeCommandBuffer.m_Camera" />
 
-      <Publicize Include="Assembly-CSharp:Sun.scaledSunLight"/>
+      <Publicize Include="Assembly-CSharp:Sun.scaledSunLight" />
 
-      <Publicize Include="Assembly-CSharp:MapSO.Byte2Float"/>
-      <Publicize Include="Assembly-CSharp:MapSO._data"/>
-      <Publicize Include="Assembly-CSharp:MapSO.PixelIndex"/>
+      <Publicize Include="Assembly-CSharp:MapSO.Byte2Float" />
+      <Publicize Include="Assembly-CSharp:MapSO._data" />
+      <Publicize Include="Assembly-CSharp:MapSO.PixelIndex" />
       <Publicize Include="Assembly-CSharp" MemberPattern="^MapSO\..*" />
     </ItemGroup>
 

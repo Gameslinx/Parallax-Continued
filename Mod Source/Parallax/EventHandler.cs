@@ -36,14 +36,14 @@ namespace Parallax
             ParallaxTerrainBody body = ConfigLoader.parallaxTerrainBodies[planetName];
 
             // This is a new body, we should load it
-            if (body.loaded)
+            if (body.Loaded)
             {
                 // This route can be taken, and often is taken, by the Update() check because the PQS will usually request this first
                 return;
             }
             else
             {
-                body.Load(true);
+                body.Load();
                 currentParallaxBody = body;
             }
         }
@@ -58,7 +58,7 @@ namespace Parallax
             ParallaxTerrainBody body = ConfigLoader.parallaxTerrainBodies[planetName];
 
             // The planet we're trying to unload is the current body
-            if (body.loaded)
+            if (body.Loaded)
             {
                 body.Unload();
             }

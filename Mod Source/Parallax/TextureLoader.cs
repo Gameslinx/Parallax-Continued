@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -10,12 +11,20 @@ namespace Parallax
 {
     public class TextureLoader
     {
-        public static Texture2D LoadTexture(string name, bool linear, bool markUnreadable = true)
+        public struct TextureLoaderData
         {
-            Debug.Log("Loading Parallax Texture: " + name);
+            public int width, height;
+            public TextureFormat format;
+            public bool mips;
+            public bool linear;
+            public bool unreadable;
+        }
+        public static Texture2D LoadTexture(string path, bool linear, bool markUnreadable = true)
+        {
+            ParallaxDebug.Log("Loading Parallax Texture: " + path);
             Texture2D output;
-            string filePath = KSPUtil.ApplicationRootPath + "GameData/" + name;
-            if (name.EndsWith(".dds"))
+            string filePath = ConfigLoader.GameDataPath + path;
+            if (path.EndsWith(".dds"))
             {
                 output = TextureLoader.LoadDDSTexture(filePath, linear, markUnreadable);
             }
@@ -25,9 +34,23 @@ namespace Parallax
             }
             return output;
         }
+        public static byte[] LoadTextureData(string path, bool linear, bool unreadable, out TextureLoaderData textureData)
+        {
+            string filePath = ConfigLoader.GameDataPath + path;
+            if (path.EndsWith(".dds"))
+            {
+                return TextureLoader.LoadDDSTextureData(filePath, linear, unreadable, out textureData);
+            }
+            else
+            {
+                //return TextureLoader.LoadPNGTextureData(filePath);
+                textureData = new TextureLoaderData();
+                return null;
+            }
+        }
         public static Cubemap LoadCubeTexture(string name, bool linear)
         {
-            Debug.Log("Loading Parallax Cubemap: " + name);
+            ParallaxDebug.Log("Loading Parallax Cubemap: " + name);
             Texture2D texture = LoadTexture(name, linear, false);
             Cubemap result = CubemapFromTexture2D(texture);
             return result;
@@ -40,61 +63,184 @@ namespace Parallax
             tex.Apply(true, markUnreadable);
             return tex;
         }
-        public static Texture2D LoadDDSTexture(string url, bool linear, bool markUnreadable)
+        public static byte[] LoadDDSTextureData(string url, bool linear, bool markUnreadable, out TextureLoaderData textureData)
         {
+            textureData = new TextureLoaderData();
+
             byte[] data = File.ReadAllBytes(url);
+            if (data.Length < 128)
+            {
+                ParallaxDebug.LogError("This DDS texture is invalid - File is too small to contain a valid header.");
+                return null;
+            }
+
             byte ddsSizeCheck = data[4];
             if (ddsSizeCheck != 124)
             {
-                Debug.Log("This DDS texture is invalid - Unable to read the size check value from the header.");
+                ParallaxDebug.LogError("This DDS texture is invalid - Header size check failed.");
+                return null;
             }
 
-            int height = data[13] * 256 + data[12];
-            int width = data[17] * 256 + data[16];
+            int height = BitConverter.ToInt32(data, 12);
+            int width = BitConverter.ToInt32(data, 16);
 
-            int DDS_HEADER_SIZE = 128;
-            byte[] dxtBytes = new byte[data.Length - DDS_HEADER_SIZE];
-            Buffer.BlockCopy(data, DDS_HEADER_SIZE, dxtBytes, 0, data.Length - DDS_HEADER_SIZE);
-            int mipMapCount = (data[28]) | (data[29] << 8) | (data[30] << 16) | (data[31] << 24);
+            const int DDS_HEADER_SIZE = 128;
+            byte[] rawData = new byte[data.Length - DDS_HEADER_SIZE];
 
-            TextureFormat format = TextureFormat.DXT1;
-            if (data[84] == 'D')
+            Buffer.BlockCopy(data, DDS_HEADER_SIZE, rawData, 0, data.Length - DDS_HEADER_SIZE);
+
+            int mipMapCount = BitConverter.ToInt32(data, 28);
+            uint pixelFormatFlags = BitConverter.ToUInt32(data, 80);
+            uint fourCC = BitConverter.ToUInt32(data, 84);
+
+            TextureFormat format;
+
+            if ((pixelFormatFlags & 0x4) != 0) // DDPF_FOURCC
             {
-
-                if (data[87] == 49) //Also char '1'
+                if (fourCC == 0x31545844) // 'DXT1'
                 {
                     format = TextureFormat.DXT1;
                 }
-                else if (data[87] == 53)    //Also char '5'
+                else if (fourCC == 0x35545844) // 'DXT5'
                 {
                     format = TextureFormat.DXT5;
                 }
                 else
                 {
-                    Debug.Log("Texture is not a DXT 1 or DXT5");
+                    return null;
                 }
             }
-            Texture2D texture;
-            if (mipMapCount == 1)
+            else if ((pixelFormatFlags & 0x40) != 0 && fourCC == 0) // DDPF_ALPHAPIXELS (standard L8)
             {
-                texture = new Texture2D(width, height, format, false, linear);
+                format = TextureFormat.Alpha8; // Equivalent to L8
+            }
+            else if ((pixelFormatFlags & 0x20000) != 0 && fourCC == 0) // DDPF_FOURCC with no FourCC (alternate L8)
+            {
+                format = TextureFormat.R8; // Equivalent to L8
             }
             else
             {
-                texture = new Texture2D(width, height, format, true, linear);
+                return null;
             }
+
+            // Create the Texture2D with or without mipmaps based on the header
+            textureData.width = width;
+            textureData.height = height;
+            textureData.format = format;
+            textureData.mips = mipMapCount > 1;
+            textureData.linear = linear;
+            textureData.unreadable = markUnreadable;
+
+            return rawData;
+        }
+        public static Texture2D LoadDDSTexture(string url, bool linear, bool markUnreadable)
+        {
+            byte[] data = File.ReadAllBytes(url);
+            if (data.Length < 128)
+            {
+                ParallaxDebug.LogError("This DDS texture is invalid - File is too small to contain a valid header.");
+                return null;
+            }
+
+            byte ddsSizeCheck = data[4];
+            if (ddsSizeCheck != 124)
+            {
+                ParallaxDebug.LogError("This DDS texture is invalid - Header size check failed.");
+                return null;
+            }
+
+            int height = BitConverter.ToInt32(data, 12);
+            int width = BitConverter.ToInt32(data, 16);
+
+            const int DDS_HEADER_SIZE = 128;
+            byte[] rawData = new byte[data.Length - DDS_HEADER_SIZE];
+
+            Buffer.BlockCopy(data, DDS_HEADER_SIZE, rawData, 0, data.Length - DDS_HEADER_SIZE);
+
+            int mipMapCount = BitConverter.ToInt32(data, 28);
+            uint pixelFormatFlags = BitConverter.ToUInt32(data, 80);
+            uint fourCC = BitConverter.ToUInt32(data, 84);
+
+            TextureFormat format;
+
+            if ((pixelFormatFlags & 0x4) != 0) // DDPF_FOURCC
+            {
+                if (fourCC == 0x31545844) // 'DXT1'
+                {
+                    format = TextureFormat.DXT1;
+                }
+                else if (fourCC == 0x35545844) // 'DXT5'
+                {
+                    format = TextureFormat.DXT5;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else if ((pixelFormatFlags & 0x40) != 0 && fourCC == 0) // DDPF_ALPHAPIXELS (standard L8)
+            {
+                format = TextureFormat.Alpha8; // Equivalent to L8
+            }
+            else if ((pixelFormatFlags & 0x20000) != 0 && fourCC == 0) // DDPF_FOURCC with no FourCC (alternate L8)
+            {
+                format = TextureFormat.R8; // Equivalent to L8
+            }
+            else
+            {
+                return null;
+            }
+
+            // Create the Texture2D with or without mipmaps based on the header
+            TextureLoaderData textureData = new TextureLoaderData();
+            textureData.width = width;
+            textureData.height = height;
+            textureData.format = format;
+            textureData.mips = mipMapCount > 1;
+            textureData.linear = linear;
+            textureData.unreadable = markUnreadable;
+
+            // Create the texture
+            Texture2D tex = new Texture2D(textureData.width, textureData.height, textureData.format, textureData.mips, textureData.linear);
+            Texture2DFromData(tex, rawData, textureData);
+            tex.Apply(false, textureData.unreadable);
+            return tex;
+        }
+        public static Texture2D Texture2DFromData(byte[] bytes, in TextureLoaderData data)
+        {
+            Texture2D texture = new Texture2D(data.width, data.height, data.format, data.mips, data.linear);
+
+            // Load texture data
             try
             {
-                texture.LoadRawTextureData(dxtBytes);
+                // Takes the longest
+                texture.LoadRawTextureData(bytes);
             }
-            catch
+            catch (Exception e)
             {
-                Debug.Log("CRITICAL ERROR: Parallax has halted the OnDemand loading process because texture.LoadRawTextureData(dxtBytes) would have resulted in overread");
-                Debug.Log("Please check the format for this texture and refer to the wiki if you're unsure:");
+                ParallaxDebug.LogError($"Error loading texture data: {e.Message}");
+                return null;
             }
-            texture.Apply(true, markUnreadable);
 
-            return (texture);
+            return texture;
+        }
+        public static Texture2D Texture2DFromData(Texture2D texture, byte[] bytes, in TextureLoaderData data)
+        {
+            //Texture2D texture = new Texture2D(data.width, data.height, data.format, data.mips, data.linear);
+
+            // Load texture data
+            try
+            {
+                // Takes the longest
+                texture.LoadRawTextureData(bytes);
+            }
+            catch (Exception e)
+            {
+                ParallaxDebug.LogError($"Error loading texture data: {e.Message}");
+                return null;
+            }
+
+            return texture;
         }
 
         // Helper function
@@ -112,7 +258,7 @@ namespace Parallax
             cube.SetPixels(texture.GetPixels(2 * cubedim, 0, cubedim, cubedim), CubemapFace.PositiveY);
             cube.Apply(true, true);
             stopwatch.Stop();
-            Debug.Log("Cubemap conversion took: " + stopwatch.Elapsed.TotalMilliseconds.ToString("F5") + " ms");
+            ParallaxDebug.Log("Cubemap conversion took: " + stopwatch.Elapsed.TotalMilliseconds.ToString("F5") + " ms");
             return cube;
         }
     }

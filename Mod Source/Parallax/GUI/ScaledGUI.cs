@@ -1,4 +1,5 @@
 ﻿using Kopernicus.Configuration;
+using Parallax.Scaled_System;
 using Parallax.Tools;
 using System;
 using System.Collections.Generic;
@@ -22,6 +23,12 @@ namespace Parallax
         {
             ParamCreator.ChangeMethod callback = body.UpdateBaseMaterialParamsFromGUI;
             ProcessGenericMaterialParams(body.scaledMaterialParams, callback, true, body.scaledMaterial, "ParallaxScaledShaderProperties");
+
+            if (GUILayout.Button("Reload"))
+            {
+                body.Unload();
+                body.Load();
+            }
         }
         static void TextureExporterMenu()
         {

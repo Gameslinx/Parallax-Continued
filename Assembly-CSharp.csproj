@@ -93,11 +93,13 @@
      <Compile Include="Assets\Scripts\Tools\GUI\GUIUtils.cs" />
      <Compile Include="Assets\Scripts\Tools\GUI\ScatterGUI.cs" />
      <Compile Include="Assets\Scripts\Tools\GUI\ScatterStructs.cs" />
+     <Compile Include="Assets\Scripts\Tools\GenerateScaledMesh.cs" />
      <Compile Include="Assets\Scripts\Tools\HighResScreenshot.cs" />
      <Compile Include="Assets\Scripts\Tools\KeywordsMenu.cs" />
+     <Compile Include="Assets\Scripts\Tools\MeshExporter.cs" />
      <Compile Include="Assets\Scripts\Tools\MeshToKSPBin.cs" />
      <Compile Include="Assets\Scripts\Tools\TextureLoader.cs" />
-     <Compile Include="Assets\Scripts\rtp.cs" />
+     <Compile Include="Assets\Scripts\Tools\TextureLoader1.cs" />
      <None Include="Assets\Shaders\Debug\ShowSlope.shader" />
      <None Include="Assets\Shaders\Scatters\InstancingShaders\ParallaxScatterUtils.cginc" />
      <None Include="Assets\Shaders\Debug\_Standard.shader" />
@@ -105,6 +107,7 @@
      <None Include="Assets\Shaders\Debug\SphericalCoords.shader" />
      <None Include="Assets\Shaders\Debug\ShowNoise.shader" />
      <None Include="Assets\Shaders\Scatters\InstancingShaders\InstancedBiplanar.shader" />
+     <None Include="Assets\Shaders\Scaled\MaxBlit.shader" />
      <None Include="Assets\Shaders\Scatters\InstancingShaders\InstancedSolid.shader" />
      <None Include="Assets\Shaders\Debug\ShowNormals.shader" />
      <None Include="Assets\Shaders\Debug\ShowBiomeMap.shader" />

@@ -16,39 +16,6 @@ using static PQS;
 
 namespace Parallax.Tools
 {
-    public class MapSOCloneable : MapSO, ICloneable
-    {
-        public MapSOCloneable(MapSO baseInstance)
-        {
-            this._isCompiled = baseInstance._isCompiled;
-            this._name = baseInstance._name;
-            this._width = baseInstance._width;
-            this._height = baseInstance._height;
-            this._bpp = baseInstance._bpp;
-            this._data = baseInstance._data.Clone() as byte[];
-            this._rowWidth = baseInstance._rowWidth;
-            this.centerX = baseInstance.centerX;
-            this.centerY = baseInstance.centerY;
-            this.midX = baseInstance.midX;
-            this.midY = baseInstance.midY;
-            this.minX = baseInstance.minX;
-            this.minY = baseInstance.minY;
-            this.maxX = baseInstance.maxX;
-            this.maxY = baseInstance.maxY;
-            this.index = baseInstance.index;
-            this.itr = baseInstance.itr;
-            this.retVal = baseInstance.retVal;
-            this.val = baseInstance.val;
-            this.centerXD = baseInstance.centerXD;
-            this.centerYD = baseInstance.centerYD;
-            this.midXD = baseInstance.midXD;
-            this.midYD = baseInstance.midYD;
-        }
-        public object Clone()
-        {
-            return (MapSO)this;
-        }
-    }
     public class TextureExporter : MonoBehaviour
     {
         public static bool exportRequested = true;
@@ -136,9 +103,6 @@ namespace Parallax.Tools
                 // Remove this, we don't need it and it throws exceptions
                 ModularScatter[] kopScatterComponent = thisPQS.GetComponentsInChildren<ModularScatter>();
                 for (int j = 0; j < kopScatterComponent.Length; j++) { Destroy(kopScatterComponent[j]); }
-
-                //PQSMod_VertexColorMap colorMapPQS = (PQSMod_VertexColorMap)thisPQS.mods.FirstOrDefault((x) => x.GetType() == typeof(PQSMod_VertexColorMap));
-                //colorMapPQS.vertexColorMap = originalColorMap.vertexColorMap;
 
                 thisPQS.SetupExternalRender();
                 pqsTasklist.Add(thisPQS);

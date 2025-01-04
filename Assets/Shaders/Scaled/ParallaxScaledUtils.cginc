@@ -2,12 +2,32 @@
 // Calculate the heightmap displacement
 // Take into account planet radius and terrain min/max value
 // Assume normalised heightmap input (0 min, 1 max)
-#define CALCULATE_HEIGHTMAP_DISPLACEMENT_SCALED(o, displacement)                                                                                                    \
-    o.worldPos = o.worldPos + o.worldNormal * lerp(_MinRadialAltitude, _MaxRadialAltitude, displacement);
+#if defined (OCEAN) || defined (OCEAN_FROM_COLORMAP)
+    #define CALCULATE_HEIGHTMAP_DISPLACEMENT_SCALED(o, displacement)                                                                                                    \
+        if (!_DisableDisplacement)                                                                                                                                      \
+        {                                                                                                                                                               \
+            float altitude = lerp(_MinRadialAltitude, _MaxRadialAltitude, displacement);                                                                                \
+            altitude = max(altitude, _OceanAltitude);                                                                                                                   \
+            o.worldPos = o.worldPos + o.worldNormal * altitude;                                                                                                         \
+        }
+#else
+    #define CALCULATE_HEIGHTMAP_DISPLACEMENT_SCALED(o, displacement)                                                                                                    \
+        if (!_DisableDisplacement)                                                                                                                                      \
+        {                                                                                                                                                               \
+            o.worldPos = o.worldPos + o.worldNormal * lerp(_MinRadialAltitude, _MaxRadialAltitude, displacement);                                                       \
+        }
+        
+#endif
+
 
 #define BuildTBN(tangent, binormal, normal)          \
     transpose(float3x3(tangent, binormal, normal));
 
+//
+//  Per vertex scaled mask functions
+//
+
+// Per vertex
 float GetSlopeScaled(float3 worldPos, float3 worldNormal, float3 planetOrigin)
 {
     // We abs in the very strange case of overhangs
@@ -17,6 +37,7 @@ float GetSlopeScaled(float3 worldPos, float3 worldNormal, float3 planetOrigin)
     return 1 - slope;
 }
 
+// Per vertex
 float4 GetScaledAltitudeMask(float3 worldPos, float3 worldNormal, float altitude, float midpoint, float3 planetOrigin)
 {
     float lowMidBlend = GetPercentageAltitudeBetween(altitude, _LowMidBlendStart, _LowMidBlendEnd);
@@ -27,7 +48,7 @@ float4 GetScaledAltitudeMask(float3 worldPos, float3 worldNormal, float altitude
     return float4(lowMidBlend, midHighBlend, slope, midpoint);
 }
 
-// Get land mask macro
+// Per vertex
 float4 GetScaledLandMask(float3 worldPos, float3 worldNormal)
 {
     // Planet origin is delayed in scaled space, instead we know it's just the planet center (mesh origin) in world space
@@ -37,6 +58,68 @@ float4 GetScaledLandMask(float3 worldPos, float3 worldNormal)
     float midpoint = altitude / (_MidHighBlendStart + _LowMidBlendEnd);
     return GetScaledAltitudeMask(worldPos, worldNormal, altitude, midpoint, planetOrigin);
 }
+
+//
+//  Per pixel scaled mask functions
+//
+
+// Per pixel
+float GetSlopeScaled(float3 flatWorldNormal, float3 worldNormal)
+{
+    // We abs in the very strange case of overhangs
+    float slope = abs(dot(flatWorldNormal, worldNormal));
+    slope = pow(slope, _SteepPower);
+    slope = saturate((slope - _SteepMidpoint) * _SteepContrast + _SteepMidpoint);
+    return 1 - slope;
+}
+
+// Per pixel
+float4 GetScaledAltitudeMask(float3 worldNormal, float3 flatWorldNormal, float altitude, float midpoint)
+{
+    float lowMidBlend = GetPercentageAltitudeBetween(altitude, _LowMidBlendStart, _LowMidBlendEnd);
+    float midHighBlend = GetPercentageAltitudeBetween(altitude, _MidHighBlendStart, _MidHighBlendEnd);
+    float slope = GetSlopeScaled(flatWorldNormal, worldNormal);
+
+    // Land mask - Low-mid blend in red, mid-high blend in green, steep in blue
+    return float4(lowMidBlend, midHighBlend, slope, midpoint);
+}
+
+// Per pixel
+float4 GetScaledLandMask(float altitude, float3 flatWorldNormal, float3 worldNormal)
+{
+    altitude += _WorldPlanetRadius;
+    float midpoint = altitude / (_MidHighBlendStart + _LowMidBlendEnd);
+    return GetScaledAltitudeMask(worldNormal, flatWorldNormal, altitude, midpoint);
+}
+
+#if defined (OCEAN)
+    #define GET_OCEAN_DIFFUSE float4 oceanDiffuse = _OceanColor;
+#elif defined (OCEAN_FROM_COLORMAP)
+    #define GET_OCEAN_DIFFUSE float4 oceanDiffuse = diffuseColor;
+#endif
+
+#define PI 3.1415f
+
+#if defined (ATMOSPHERE)
+    float3 GetAtmosphereColor(float3 smoothWorldNormal, float3 viewDir)
+    {
+        // Just NdotL in a 0 to 1 range
+        float textureCoord = dot(_WorldSpaceLightPos0, smoothWorldNormal) * 0.5f + 0.5f;
+        textureCoord = saturate(textureCoord);
+        
+        // Some basic fresnel to give the atmosphere some perceived thickness
+        float fresnelStrength = FresnelEffect(smoothWorldNormal, viewDir, _AtmosphereThickness);
+        fresnelStrength += lerp(1 - fresnelStrength, 0, saturate(_AtmosphereThickness));
+        
+        return _AtmosphereRimMap.Sample(point_clamp_sampler_AtmosphereRimMap, float2(textureCoord, 0.5f)).rgb * fresnelStrength;
+    }
+#else
+    float3 GetAtmosphereColor(float3 smoothWorldNormal, float3 viewDir)
+    {
+        return 0;
+    }
+#endif
+
 
 // Fake reflections as emission
 inline half3 UnityGI_IndirectSpecularBasic(UnityGIInput data, half occlusion, Unity_GlossyEnvironmentData glossIn)

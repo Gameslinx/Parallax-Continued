@@ -48,11 +48,14 @@ namespace Parallax
         // Debug wireframe material
         public static Material wireframeMaterial;
 
+        public static string GameDataPath;
+
         // Configs that start with 'Parallax' as the root node
         public UrlDir.UrlConfig globalNode;
         public void Awake()
         {
             ParallaxDebug.Log("Starting!");
+            GameDataPath = KSPUtil.ApplicationRootPath + "GameData/";
         }
         // Entry point
         public static void ModuleManagerPostLoad()
@@ -489,6 +492,12 @@ namespace Parallax
 
             ParseScaledMaterialProperties(scaledBody, bodyMode, bodyNode.GetNode("Material"));
             ParseScaledMaterialOverride(scaledBody, bodyMode, bodyNode.GetNode("TerrainMaterialOverride"));
+
+            bool usingStockMesh = false;
+            if (bodyNode.TryGetValue("usingStockMesh", ref usingStockMesh))
+            {
+                scaledBody.disableDeformity = true;
+            }
 
             // Load the base properties (no textures) and create the material
             scaledBody.LoadInitial(scaledBody.scaledMaterialParams.shader);

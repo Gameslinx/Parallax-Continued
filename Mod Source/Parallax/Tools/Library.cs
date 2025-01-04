@@ -197,7 +197,8 @@ namespace Parallax
     {
         public static bool IsLinear(string textureName)
         {
-            if (textureName.Contains("Bump") || textureName.Contains("Displacement") || textureName.Contains("Influence") || textureName.Contains("Wind")) { return true; }
+            if (textureName.Contains("Bump") || textureName.Contains("Displacement") || textureName.Contains("Influence") || textureName.Contains("Wind") || textureName.Contains("Height"))
+            { return true; }
             return false;
         }
         public static bool IsCube(string textureName)

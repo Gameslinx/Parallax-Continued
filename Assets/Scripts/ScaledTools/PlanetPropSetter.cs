@@ -64,7 +64,7 @@ public class PlanetPropSetter : MonoBehaviour
         mat.SetFloat("_MidHighBlendStart", (_PlanetRadius + _MidHighBlendStart) * scalingFactor);
         mat.SetFloat("_MidHighBlendEnd", (_PlanetRadius + _MidHighBlendEnd) * scalingFactor);
 
-        mat.SetFloat("_PlanetRadius", _PlanetRadius2);
+        mat.SetFloat("_WorldPlanetRadius", _MeshRadius);
 
         Quaternion rot = Quaternion.Euler(0, _SkyboxRotation, 0);
         Matrix4x4 rotMat = Matrix4x4.Rotate(rot);

@@ -14,6 +14,9 @@ Shader "Custom/ParallaxScaled"
         _ColorMap("Planet Color Map", 2D) = "white" {}
         _BumpMap("Planet Bump Map", 2D) = "bump" {}
         _HeightMap("Planet Height Map", 2D) = "black" {}
+        _OceanColor("Planet Ocean Color", COLOR) = (0,0,0,1)
+        _AtmosphereRimMap("Atmosphere Rim", 2D) = "black" {}
+        _AtmosphereThickness("Transition Width", Range(0.0001, 5)) = 2
 
         _Skybox("Skybox", CUBE) = "black" {}
 
@@ -49,10 +52,7 @@ Shader "Custom/ParallaxScaled"
         [Space(10)]
         [Header(Texture Parameters)]
         [Space(10)]
-        _Tiling("Texture Tiling", Range(0.001, 2.0)) = 0.2
-        _HeightDeformity("Height Map Deformity", Range(0, 1)) = 0
-        _DisplacementScale("Displacement Scale", Range(0, 0.3)) = 0
-        _DisplacementOffset("Displacement Offset", Range(-1, 1)) = 0
+        _Tiling("Texture Tiling", Range(0.001, 10.0)) = 0.2
         _BiplanarBlendFactor("Biplanar Blend Factor", Range(0.01, 8)) = 1
 
         [Space(10)]
@@ -74,6 +74,8 @@ Shader "Custom/ParallaxScaled"
         [PowerSlider(3.0)]
         _SpecularPower("Specular Power", Range(0.001, 1000)) = 1
         _SpecularIntensity("Specular Intensity", Range(0.0, 5.0)) = 1
+        _OceanSpecularPower("Ocean Specular Power", Range(0.001, 200)) = 1
+        _OceanSpecularIntensity("Ocean Specular Intensity", Range(0.0, 5.0)) = 1
         _FresnelPower("Fresnel Power", Range(0.001, 20)) = 1
         _EnvironmentMapFactor("Environment Map Factor", Range(0.0, 2.0)) = 1
         _RefractionIntensity("Refraction Intensity", Range(0, 2)) = 1
@@ -82,14 +84,20 @@ Shader "Custom/ParallaxScaled"
         _PlanetBumpScale("Planet Bump Scale", Range(0.001, 2)) = 1
         _EmissionColor("Emission Color", COLOR) = (0,0,0)
 
+        _OceanAltitude("Ocean Altitude", Range(-0.001, 0.001)) = 0
+
         _PlanetRadius("Planet Radius", Range(0, 100000)) = 0
+        _WorldPlanetRadius("World Planet Radius", Range(0, 2000)) = 0
         _PlanetOrigin("Planet Origin", VECTOR) = (0,0,0)
+
+        // Saves a multicompile
+        _DisableDisplacement("Disable Displacement", int) = 0
     }
     SubShader
     {
         Tags { "RenderType"="Opaque" }
         LOD 100
-        //ZWrite On
+        ZWrite On
         //Cull Back
         //
         //  Forward Base Pass
@@ -113,7 +121,6 @@ Shader "Custom/ParallaxScaled"
             #pragma multi_compile_local _          INFLUENCE_MAPPING
             #pragma multi_compile_local _          ADVANCED_BLENDING
             #pragma multi_compile_local _          EMISSION
-            #pragma multi_compile_fog
             //#pragma skip_variants POINT_COOKIE LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING VERTEXLIGHT_ON
 
             #include "UnityCG.cginc"
@@ -327,7 +334,6 @@ Shader "Custom/ParallaxScaled"
             #define SCALED
 
             #pragma multi_compile_local PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
-            #pragma multi_compile_fog
             #pragma multi_compile_shadowcaster
 
             #define PARALLAX_SHADOW_CASTER_PASS
@@ -447,7 +453,6 @@ Shader "Custom/ParallaxScaled"
 
             #pragma multi_compile_local           PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
             #pragma multi_compile_local _         INFLUENCE_MAPPING
-            #pragma multi_compile_fog
             #pragma multi_compile_fwdadd_fullshadows
         
             #pragma vertex Vertex_Shader
@@ -658,12 +663,12 @@ Shader "Custom/ParallaxScaled"
         {
             Tags { "LightMode" = "Deferred" }
 
-            Stencil
-			{
-			    Ref 2
-			    Comp Always
-			    Pass Replace
-			}
+            //Stencil
+			//{
+			//    Ref 2
+			//    Comp Always
+			//    Pass Replace
+			//}
 
             CGPROGRAM
 
@@ -682,7 +687,8 @@ Shader "Custom/ParallaxScaled"
             #pragma multi_compile_local _          EMISSION
             #pragma multi_compile_local _          ADVANCED_BLENDING
             #pragma multi_compile_local _          AMBIENT_OCCLUSION
-            #pragma multi_compile_fog
+            #pragma multi_compile_local _          OCEAN OCEAN_FROM_COLORMAP
+            #pragma multi_compile_local _          ATMOSPHERE
             #pragma multi_compile _ UNITY_HDR_ON
 
             #include "UnityCG.cginc"
@@ -793,7 +799,7 @@ Shader "Custom/ParallaxScaled"
                 return o;
             }
 
-            void Frag_Shader (Interpolators i, PARALLAX_DEFERRED_OUTPUT_BUFFERS)
+            void Frag_Shader (Interpolators i, PARALLAX_DEFERRED_OUTPUT_BUFFERS, float depth : SV_Depth)
             {   
                 //
                 //  Block - Prerequisites
@@ -805,11 +811,19 @@ Shader "Custom/ParallaxScaled"
                 i.worldBinormal = normalize(i.worldBinormal);
                 float3 viewDir = normalize(i.viewDir);
 
+                // Height value
+                float planetHeight = tex2D(_HeightMap, i.uv).r;
+                planetHeight = lerp(_MinRadialAltitude, _MaxRadialAltitude, planetHeight);
+
+                // Atmosphere
+                float3 atmosphereColor = GetAtmosphereColor(i.worldNormal, viewDir);
+
                 // Construct TBN matrix
                 float3 planetNormal = UnpackScaleNormal(tex2D(_BumpMap, i.uv), _PlanetBumpScale);
                 float3x3 TBN = BuildTBN(i.worldTangent, i.worldBinormal, i.worldNormal);
 
                 // Get planet normal in world and local space
+                float3 flatWorldNormal = i.worldNormal;
                 float3 worldPlanetNormal = normalize(mul(TBN, float4(planetNormal.xyz, 0)));
                 float3 localPlanetNormal = normalize(mul(unity_WorldToObject, float4(worldPlanetNormal, 0))).xyz;
                 i.worldNormal = worldPlanetNormal;
@@ -831,7 +845,7 @@ Shader "Custom/ParallaxScaled"
 
                 // Red low-mid blend, green mid-high blend, blue steep, alpha midpoint which distinguishes low from high
                 // We need to get this mask again on a pixel level because the blending looks much nicer
-                float4 landMask = GetScaledLandMask(i.worldPos, i.worldNormal);
+                float4 landMask = GetScaledLandMask(planetHeight, flatWorldNormal, i.worldNormal);
 
                 // Declares float4 'globalInfluence' if influence mapping is enabled
                 DECLARE_INFLUENCE_TEXTURE_SCALED
@@ -867,13 +881,26 @@ Shader "Custom/ParallaxScaled"
                 fixed4 finalDiffuse = lerp(altitudeDiffuse, steepDiffuse, landMask.b);
                 NORMAL_FLOAT finalNormal = lerp(altitudeNormal, steepNormal, landMask.b);
 
+                // Ocean
+                #if defined (OCEAN) || defined (OCEAN_FROM_COLORMAP)
+
+                GET_OCEAN_DIFFUSE
+                float3 oceanNormal = normalize(localPos);
+
+                if (planetHeight <= _OceanAltitude)
+                {
+                    finalDiffuse = oceanDiffuse;
+                    finalNormal.xyz = oceanNormal;
+                    _SpecularPower = _OceanSpecularPower;
+                    _SpecularIntensity = _OceanSpecularIntensity;
+                }
+
+                #endif
+                
                 // Convert local normal back into world space
                 finalNormal.xyz = normalize(mul(unity_ObjectToWorld, float4(finalNormal.xyz, 0)).xyz);
 
                 BLEND_OCCLUSION(landMask, occlusion)
-
-                //finalNormal.xyz = i.worldNormal;
-                //finalDiffuse = float4(0,0,0,1);
 
                 // Deferred functions
                 SurfaceOutputStandardSpecular surfaceInput = GetPBRStruct(finalDiffuse, GET_EMISSION, finalNormal.xyz, i.worldPos ADDITIONAL_PBR_PARAMS);
@@ -945,12 +972,17 @@ Shader "Custom/ParallaxScaled"
                 
                 half3 rgb = UNITY_BRDF_PBS (0, outGBuffer1.xyz, oneMinusReflectivity, outGBuffer2.w, finalNormal, -eyeVec, light, ind).rgb;
                 
+                // make this more elegant
+                #if defined (ATMOSPHERE)
+                rgb = 0;
+                #endif
+
                 // Calculate falloff value, so reflections on the edges of the probe would gradually blend to previous reflection.
                 // Also this ensures that pixels not located in the reflection probe AABB won't
                 // accidentally pick up reflections from this probe.
                 
+                rgb += atmosphereColor;
                 SET_OUT_EMISSION(float4(rgb, 1));
-
                 //
                 //
                 //
