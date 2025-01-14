@@ -35,14 +35,15 @@ public class PlanetPropSetter : MonoBehaviour
             float avgRad = 0;
             foreach (Vector3 v in verts)
             {
-                avgRad += Vector3.Distance(Vector3.zero, transform.TransformPoint(v));
+                avgRad += Vector3.Distance(gameObject.transform.position, transform.TransformPoint(v));
             }
             avgRad /= verts.Length;
             _MeshRadius = avgRad;
+            Debug.Log("Mesh rad: " + _MeshRadius + " go name: " + gameObject.name);
         }
         else
         {
-            _MeshRadius = gameObject.GetComponent<MeshFilter>().sharedMesh.bounds.size.x * 0.5f * transform.localScale.x;
+            _MeshRadius = 0.5f;//gameObject.GetComponent<MeshFilter>().sharedMesh.bounds.size.x * 0.5f * transform.localScale.x;
         }
     }
 
@@ -65,6 +66,8 @@ public class PlanetPropSetter : MonoBehaviour
         mat.SetFloat("_MidHighBlendEnd", (_PlanetRadius + _MidHighBlendEnd) * scalingFactor);
 
         mat.SetFloat("_WorldPlanetRadius", _MeshRadius);
+
+        mat.SetFloat("_ScaleFactor", scalingFactor);
 
         Quaternion rot = Quaternion.Euler(0, _SkyboxRotation, 0);
         Matrix4x4 rotMat = Matrix4x4.Rotate(rot);

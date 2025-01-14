@@ -35,7 +35,6 @@ public class CubeHeightGenerator : MonoBehaviour
 
         float[,] data = new float[heightmap.width, heightmap.height];
 
-        float minDistance = 0;
         float maxDistance = -1;
 
         for (int i = 0; i < heightmap.width; i++)

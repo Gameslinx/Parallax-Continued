@@ -20,6 +20,8 @@ public class CreateAssetBundles
         {
             // Build the resource file from the active selection.
             Object[] selection = Selection.GetFiltered(typeof(Object), SelectionMode.Assets);
+
+            #pragma warning disable CS0618
             BuildPipeline.BuildAssetBundle(Selection.activeObject, selection, path.Replace(".unity3d", platformExts[i] + ".unity3d"), opts, platforms[i]);
             Selection.objects = selection;
         }//

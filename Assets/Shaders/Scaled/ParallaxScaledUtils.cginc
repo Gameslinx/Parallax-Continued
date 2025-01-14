@@ -1,3 +1,4 @@
+#include "ScaledDisplacementUtils.cginc"
 
 // Calculate the heightmap displacement
 // Take into account planet radius and terrain min/max value
@@ -136,36 +137,6 @@ inline half3 UnityGI_IndirectSpecularBasic(UnityGIInput data, half occlusion, Un
 // Texture Set Calcs
 // When using lighter shader variations these aren't included
 //
-
-// Displacement blending
-float GetDisplacementLerpFactorScaled(float heightLerp, float displacement1, float displacement2)
-{
-    // heightLerp * heightLerp not needed but balances out the blend (makes it more central)
-    displacement2 += (heightLerp);
-    displacement1 *= (1 - heightLerp);
-
-    displacement2 = saturate(displacement2);
-    displacement1 = saturate(displacement1);
-
-    float diff = (displacement2 - displacement1) * heightLerp;
-
-    diff = saturate(diff);
-    return diff;
-}
-
-#if defined (ADVANCED_BLENDING)
-#define CALCULATE_ADVANCED_BLENDING_FACTORS_SCALED(landMask, displacement)                                                              \
-    float lowMidDisplacementFactor = GetDisplacementLerpFactorScaled(landMask.r, displacement.r, displacement.g);                       \
-    float midHighDisplacementFactor = GetDisplacementLerpFactorScaled(landMask.g, displacement.g, displacement.b);                      \
-    float blendedDisplacements = BLEND_CHANNELS_IN_TEX(landMask, displacement);                                                         \
-    float displacementSteepBlendFactor = GetDisplacementLerpFactorScaled(landMask.b, blendedDisplacements, displacement.a);             \
-                                                                                                                                        \
-    landMask.r = lowMidDisplacementFactor;                                                                                              \
-    landMask.g = midHighDisplacementFactor;                                                                                             \
-    landMask.b = displacementSteepBlendFactor;                                                                                      
-#else
-#define CALCULATE_ADVANCED_BLENDING_FACTORS_SCALED(landMask, displacement)
-#endif
 
 #if defined (INFLUENCE_MAPPING)
 #define BIPLANAR_TEXTURE_SET_SCALED(diffuseName, normalName, diffuseSampler, normalSampler)                                                 \

@@ -351,13 +351,11 @@ namespace Parallax
 
             CreateTriangles();
         }
-        int done = 0;
         void Update()
         {
             parent.Clear();
             child.Clear();
 
-            SubdividableTriangle tri;
             Vector3 mousePos = transform.InverseTransformPoint(GetMousePosInWorld());
             for (int i = 0; i < triangles.Length; i++)
             {

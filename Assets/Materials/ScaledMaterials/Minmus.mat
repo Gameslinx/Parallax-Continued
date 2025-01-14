@@ -27,7 +27,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
-        m_Texture: {fileID: 2800000, guid: fa9801d11b7dccc45accaa69dc97e08f, type: 3}
+        m_Texture: {fileID: 2800000, guid: 189c3e6b067394e4080c6307273756f5, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMapHigh:
@@ -47,7 +47,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ColorMap:
-        m_Texture: {fileID: 2800000, guid: 2b085bd893a61b848862c87b191fe55f, type: 3}
+        m_Texture: {fileID: 2800000, guid: 042842a5599472d40b32e8fe99896b5c, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DetailAlbedoMap:
@@ -71,7 +71,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _HeightMap:
-        m_Texture: {fileID: 2800000, guid: a1243a4b9b3ad81488643feabb83a1d0, type: 3}
+        m_Texture: {fileID: 2800000, guid: bf4d031e6e521914f871d5563fd152bd, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _InfluenceMap:
@@ -119,6 +119,7 @@ Material:
     - _BiplanarBlendFactor: 1
     - _BumpScale: 1
     - _Cutoff: 0.5
+    - _Debug: 0
     - _DetailNormalMapScale: 1
     - _DisableDisplacement: 0
     - _DisplacementOffset: -0.5

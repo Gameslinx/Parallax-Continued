@@ -295,8 +295,6 @@ public class ParallelSubdivision : MonoBehaviour
     [Range(1.0f, 20.0f)]
     public float subdivisionRange = 10.0f;
 
-    bool previousIsDone = true;
-
     public void Start()
     {
         mesh = Instantiate(GetComponent<MeshFilter>().sharedMesh);

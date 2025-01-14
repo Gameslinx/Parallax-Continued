@@ -116,7 +116,9 @@ Material:
     - _BiplanarBlendFactor: 1
     - _BumpScale: 2
     - _Cutoff: 0.5
+    - _Debug: 0
     - _DetailNormalMapScale: 1
+    - _DisableDisplacement: 0
     - _DisplacementOffset: 0
     - _DisplacementScale: 0.06
     - _DstBlend: 0
@@ -127,15 +129,16 @@ Material:
     - _GlossyReflections: 1
     - _Hapke: 1
     - _HeightDeformity: 0.063
-    - _LowMidBlendEnd: 1.3059896
-    - _LowMidBlendStart: 1.3050109
+    - _LowMidBlendEnd: 1.3052833
+    - _LowMidBlendStart: 1.304952
     - _MaxTessellation: 8
     - _MaxTessellationRange: 100
     - _Metallic: 0
-    - _MidHighBlendEnd: 1.3494079
-    - _MidHighBlendStart: 1.3390279
+    - _MidHighBlendEnd: 1.3199787
+    - _MidHighBlendStart: 1.3164655
     - _Mode: 0
     - _OcclusionStrength: 1
+    - _OceanAltitude: 0
     - _OceanSpecularIntensity: 1
     - _OceanSpecularPower: 1
     - _Parallax: 0.02

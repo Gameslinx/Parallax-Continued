@@ -92,6 +92,7 @@ Shader "Custom/ParallaxScaled"
 
         // Saves a multicompile
         _DisableDisplacement("Disable Displacement", int) = 0
+        _Debug("Debug", Range(-1, 1)) = 0
     }
     SubShader
     {
@@ -799,6 +800,8 @@ Shader "Custom/ParallaxScaled"
                 return o;
             }
 
+            float _Debug;
+
             void Frag_Shader (Interpolators i, PARALLAX_DEFERRED_OUTPUT_BUFFERS, float depth : SV_Depth)
             {   
                 //
@@ -983,13 +986,6 @@ Shader "Custom/ParallaxScaled"
                 
                 rgb += atmosphereColor;
                 SET_OUT_EMISSION(float4(rgb, 1));
-                //
-                //
-                //
-                //
-                //
-
-                
             }
             ENDCG
         }
