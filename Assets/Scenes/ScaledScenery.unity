@@ -169,6 +169,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90265b84edfe7d84a8b6eceaf85c1aab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  exportableMeshTemplate: {fileID: 0}
   _MinAltitude: 73
   _MaxAltitude: 12738
   _LowMidBlendStart: -1000
@@ -578,6 +579,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90265b84edfe7d84a8b6eceaf85c1aab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  exportableMeshTemplate: {fileID: 0}
   _MinAltitude: 0
   _MaxAltitude: 5725
   _LowMidBlendStart: 3
@@ -819,6 +821,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90265b84edfe7d84a8b6eceaf85c1aab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  exportableMeshTemplate: {fileID: 0}
   _MinAltitude: 73
   _MaxAltitude: 12738
   _LowMidBlendStart: 3
@@ -1279,6 +1282,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90265b84edfe7d84a8b6eceaf85c1aab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  exportableMeshTemplate: {fileID: 0}
   _MinAltitude: 0
   _MaxAltitude: 5725
   _LowMidBlendStart: 3
@@ -1460,6 +1464,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90265b84edfe7d84a8b6eceaf85c1aab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  exportableMeshTemplate: {fileID: 0}
   _MinAltitude: 0
   _MaxAltitude: 8000
   _LowMidBlendStart: 1755
@@ -1591,6 +1596,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90265b84edfe7d84a8b6eceaf85c1aab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  exportableMeshTemplate: {fileID: 0}
   _MinAltitude: -1393
   _MaxAltitude: 6768
   _LowMidBlendStart: 0

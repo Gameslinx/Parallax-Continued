@@ -236,6 +236,11 @@ namespace Parallax
         }
         public static Texture2D Texture2DFromData(Texture2D texture, byte[] bytes, in TextureLoaderData data)
         {
+            Debug.Log("Loading texture2D from data");
+            Debug.Log("Is texture null? " + (texture == null));
+            Debug.Log("Texture format: " + texture.format.ToString());
+            Debug.Log("Is the data null? " + (bytes == null));
+
             //Texture2D texture = new Texture2D(data.width, data.height, data.format, data.mips, data.linear);
             // Load texture data
             try
