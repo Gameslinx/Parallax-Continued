@@ -1,4 +1,4 @@
-﻿Shader "Unlit/RaymarchedShadows"
+﻿Shader "Custom/RaymarchedShadows"
 {
     Properties
     {
@@ -20,6 +20,7 @@
 
         // Saves a multicompile
         _DisableDisplacement("Disable Displacement", int) = 0
+        _LightWidth("Light Width", Range(0.0001, 0.3)) = 0.05
     }
     SubShader
     {
@@ -27,159 +28,6 @@
         LOD 100
         ZWrite On
         ZTest On
-        //Cull Back
-        //
-        //  Forward Base Pass
-        //
-        //Pass
-        //{
-        //    Blend SrcAlpha OneMinusSrcAlpha
-        //    Tags { "LightMode" = "ForwardBase" }
-        //    CGPROGRAM
-        //
-        //    #define SCALED
-        //
-        //    // Single:  One surface texture
-        //    // Double:  Blend between two altitude based textures
-        //    // Full:    Blend between three altitude based textures
-        //    // All have slope based textures
-        //
-        //    // For anyone wondering, the _ after multi_compile tells unity the keyword is a toggle, and avoids creating variants "_ON" and "_OFF"
-        //    // I would move this to ParallaxStructs.cginc but as we're on unity 2019 you can't have preprocessor directives in cgincludes. Sigh
-        //    #pragma multi_compile_local            PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
-        //    #pragma multi_compile_local _          INFLUENCE_MAPPING
-        //    #pragma multi_compile_local _          ADVANCED_BLENDING
-        //    #pragma multi_compile_local _          EMISSION
-        //    //#pragma skip_variants POINT_COOKIE LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING VERTEXLIGHT_ON
-        //
-        //    #include "UnityCG.cginc"
-        //    #include "Lighting.cginc"
-        //    #include "AutoLight.cginc"
-        //    
-        //    #include "../Includes/ParallaxGlobalFunctions.cginc" 
-        //    #include "../Terrain/ParallaxVariables.cginc"
-        //    #include "ParallaxScaledVariables.cginc"
-        //    #include "../Terrain/ParallaxUtils.cginc"
-        //    #include "ParallaxScaledUtils.cginc"
-        //
-        //    #pragma multi_compile_fwdbase
-        //
-        //    #pragma vertex Vertex_Shader
-        //    #pragma hull Hull_Shader
-        //    #pragma domain Domain_Shader
-        //    #pragma fragment Frag_Shader
-        //    
-        //
-        //    // Input
-        //
-        //    struct appdata
-        //    {
-        //        float4 vertex : POSITION;
-        //        float3 normal : NORMAL;
-        //        float2 uv : TEXCOORD0;
-        //    };
-        //
-        //    struct TessellationControlPoint
-        //    {                                            
-        //        float4 pos : SV_POSITION;                
-        //        float3 worldPos : INTERNALTESSPOS;       
-        //        float3 worldNormal : NORMAL;             
-        //        float2 uv : TEXCOORD0;                   
-        //    };
-        //
-        //    struct TessellationFactors
-        //    {
-        //        float edge[3] : SV_TessFactor;
-        //        float inside : SV_InsideTessFactor;
-        //    };
-        //
-        //    struct Interpolators                            
-        //    {                                               
-        //        float4 pos : SV_POSITION;                   
-        //        float3 worldPos : TEXCOORD2;                
-        //        float3 worldNormal : NORMAL;                
-        //        float2 uv : TEXCOORD0;                                            
-        //    };
-        //    
-        //    // Do expensive shit here!!
-        //    // Before tessellation!!
-        //
-        //    // Return type is TessellationControlPoint if Tessellation is enabled, or Interpolators if not
-        //    TessellationControlPoint Vertex_Shader (appdata v)
-        //    {
-        //        TessellationControlPoint o;
-        //
-        //        o.pos = UnityObjectToClipPos(v.vertex);
-        //        o.worldPos = mul(unity_ObjectToWorld, v.vertex);
-        //        o.worldNormal = normalize(mul(unity_ObjectToWorld, v.normal).xyz);
-        //        o.uv = v.uv;
-        //        return o;
-        //    }
-        //    TessellationFactors PatchConstantFunction(InputPatch<TessellationControlPoint, 3> patch) 
-        //    {
-        //        TessellationFactors f;
-        //
-        //        if (ShouldClipPatch(patch[0].pos, patch[1].pos, patch[2].pos, patch[0].worldNormal, patch[1].worldNormal, patch[2].worldNormal, patch[0].worldPos, patch[1].worldPos, patch[2].worldPos))
-        //        {
-        //            // Cull the patch - This should be set to 1 in the shadow caster
-        //            // Also set to 1 in the pixel shader, because smooth normals can mess with this
-        //            f.edge[0] = f.edge[1] = f.edge[2] = f.inside = 1;
-        //        } 
-        //        else
-        //        {
-        //            float tessFactor0 =  EdgeTessellationFactor(_TessellationEdgeLength.x, 0, patch[1].worldPos, patch[1].pos, patch[2].worldPos, patch[2].pos);
-        //            float tessFactor1 =  EdgeTessellationFactor(_TessellationEdgeLength.x, 0, patch[2].worldPos, patch[2].pos, patch[0].worldPos, patch[0].pos);
-        //            float tessFactor2 =  EdgeTessellationFactor(_TessellationEdgeLength.x, 0, patch[0].worldPos, patch[0].pos, patch[1].worldPos, patch[1].pos);
-        //
-        //            f.edge[0] = min(tessFactor0, _MaxTessellation);
-        //            f.edge[1] = min(tessFactor1, _MaxTessellation);
-        //            f.edge[2] = min(tessFactor2, _MaxTessellation);
-        //            f.inside  = min((tessFactor0 + tessFactor1 + tessFactor2) * 0.333f, _MaxTessellation);
-        //        }
-        //        return f;
-        //    }
-        //
-        //    [domain("tri")]
-        //    [outputcontrolpoints(3)]
-        //    [outputtopology("triangle_cw")]
-        //    [patchconstantfunc("PatchConstantFunction")]
-        //    [partitioning("fractional_odd")]
-        //    TessellationControlPoint Hull_Shader(InputPatch<TessellationControlPoint, 3> patch, uint id : SV_OutputControlPointID)
-        //    {
-        //        return patch[id];
-        //    }
-        //
-        //    // Domain shader
-        //    [domain("tri")]
-        //    Interpolators Domain_Shader(TessellationFactors factors, OutputPatch<TessellationControlPoint, 3> patch, float3 barycentricCoordinates : SV_DomainLocation)
-        //    {
-        //        Interpolators o;
-        //
-        //        o.worldPos = BARYCENTRIC_INTERPOLATE(worldPos);
-        //        o.worldNormal = normalize(BARYCENTRIC_INTERPOLATE(worldNormal));
-        //        o.uv = BARYCENTRIC_INTERPOLATE(uv);
-        //
-        //        float displacement = tex2Dlod(_HeightMap, float4(o.uv, 0, 0));
-        //        CALCULATE_HEIGHTMAP_DISPLACEMENT_SCALED(o, displacement);
-        //
-        //        o.pos = UnityWorldToClipPos(o.worldPos);
-        //
-        //        return o;
-        //    }
-        //    fixed4 Frag_Shader (Interpolators i) : SV_Target
-        //    {   
-        //        //
-        //        //  Block - Prerequisites
-        //        //
-        //
-        //        // Necessary normalizations
-        //        i.worldNormal = normalize(i.worldNormal);
-        //
-        //        return tex2D(_HeightMap, i.uv);
-        //    }
-        //    ENDCG
-        //}
-
         Pass
         {
             Tags {"LightMode"="ForwardBase"}
@@ -187,6 +35,10 @@
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_fwdbase nolightmap nodirlightmap nodynlightmap novertexlight
+
+            #define STEP_COUNT 48
+            #define SHADOW_BIAS 0.001
+            #define SHADOW_NORMAL_BIAS 0.01
 
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
@@ -199,6 +51,7 @@
         
             // Mesh to real planet scale factor
             float _ScaleFactor;
+            float _LightWidth;
         
             // Parallax includes
             #include "../../Includes/ParallaxGlobalFunctions.cginc" 
@@ -206,9 +59,6 @@
             #include "../../Terrain/ParallaxVariables.cginc"
             #include "../../Terrain/ParallaxUtils.cginc"
             #include "../ScaledDisplacementUtils.cginc"
-            
-            sampler2D _CameraDepthTexture;
-            sampler2D _DepthTex;
         
             struct appdata
             {
@@ -258,6 +108,7 @@
             {
                 float4 shadowAttenuation : SV_TARGET0;
                 float4 shadowDistance : SV_TARGET1;
+                float depth : DEPTH;
             };
         
             float GetTerrainHeightAt(float3 pos, float3 origin)
@@ -265,7 +116,7 @@
                 // Also transform by the planet rotation
                 float3 dirFromCenter = normalize(pos - origin);
                 float2 uv = DirectionToEquirectangularUV(dirFromCenter);
-                float heightValue = tex2Dlod(_HeightMap, float4(uv, 0, 0));
+                float heightValue = tex2Dlod(_HeightMap, float4(uv, 0, 0)).r;
         
                 return lerp(_MinRadialAltitude, _MaxRadialAltitude, heightValue);
             }
@@ -277,77 +128,76 @@
 
                 return altAboveRadius * _ScaleFactor;
             }
-        
+
+            // Shadow umbra and penumbra calculation reference: https://iquilezles.org/articles/rmshadows/
             PS_Output frag (v2f i)
             {
                 i.worldNormal = normalize(i.worldNormal);
-        
+
+                // Planet origin
                 float3 origin = mul(unity_ObjectToWorld, float4(0, 0, 0, 1)).xyz;
-                float2 sphericalUV = DirectionToEquirectangularUV(normalize(i.worldPos - origin));
-        
-                fixed4 col = tex2Dlod(_HeightMap, float4(i.uv, 0, 0));
-        
-                // Shadow experiments
-        
-                float shadowAttenuation = 1;
-        
-                int stepCount = 128;
-                float worldMeshRadius = 0.5;
-        
-                float ETA = 0.0001;
-        
-                // Start slightly above to prevent self shadow
-                // Start at terrain surface
 
-                float initialHeight = lerp(_MinRadialAltitude, _MaxRadialAltitude, tex2Dlod(_HeightMap, float4(i.uv,0,0)));
-                initialHeight += ETA;
+                // Initial height position, add a small amount to prevent immediate self shadow
+                // Set it to 1/100 of the total altitude range
+                float initialHeight = lerp(_MinRadialAltitude, _MaxRadialAltitude, tex2Dlod(_HeightMap, float4(i.uv, 0, 0)) + SHADOW_BIAS);
 
-                float3 initialRayPos = origin + normalize(i.worldNormal) * 0.5 + i.worldNormal * initialHeight; //i.worldPos + i.worldNormal * 0.001f;//GetTerrainHeightAt(i.worldPos, origin) * i.worldNormal; //GetTerrainHeightAt(i.worldNormal * _WorldPlanetRadius * _ScaleFactor, origin) + i.worldNormal * ETA;
-                float3 rayPos = initialRayPos;
-        
+                // Setup ray params
+                // Shadow bias
+                float3 initialRayPos = origin + normalize(i.worldPos - origin) * _WorldPlanetRadius + normalize(i.worldPos - origin) * initialHeight;
+
+                // Shadow normal bias
+                float3 dhdx = ddx(i.worldPos);
+                float3 dhdy = ddy(i.worldPos);
+                float3 dhdz = -normalize(cross(dhdx, dhdy)) * (_MaxRadialAltitude - _MinRadialAltitude) * SHADOW_NORMAL_BIAS;
+
+                float3 rayPos = initialRayPos + dhdz;
                 float3 rayDir = normalize(_WorldSpaceLightPos0);
-                float stepSize = (float)worldMeshRadius / (float)stepCount;
-        
-                for (int b = 0; b < stepCount; b++)
+
+                // TODO: Precompute the ray distance
+                float rayDistance = _WorldPlanetRadius * 0.2f;
+                float stepSize = rayDistance / float(STEP_COUNT);
+
+                float attenuation = 1.0f;
+                float t = 0;
+
+                // Raymarch towards the light
+                for (int b = 0; b < 48; b++)
                 {
+                    rayPos += rayDir * stepSize;
+
+                    // Get ray altitude and terrain height
                     float worldTerrainAltitude = GetTerrainHeightAt(rayPos, origin);
                     float worldRayAltitude = GetAltitudeAt(rayPos, origin);
-        
-                    if (worldTerrainAltitude > worldRayAltitude)
+
+                    // Compute height difference between ray and terrain
+                    float h = (worldRayAltitude - worldTerrainAltitude);
+                    attenuation = min(attenuation, h / (_LightWidth * t));
+                    t += stepSize;
+
+                    // Stop when shadowed
+                    if (attenuation < -1.0f)
                     {
-                        shadowAttenuation = 0;
                         break;
                     }
-        
-                    // Advance ray
-                    rayPos += rayDir * stepSize;
                 }
-        
+
+                // Snap to -1 contribution and use a smoothstep function
+                attenuation = max(attenuation, -1.0f);
+                attenuation = 0.25f * (1.0f + attenuation) * (1.0f + attenuation) * (2.0f - attenuation);
+
                 PS_Output output;
-        
-                // Max possible distance a ray could travel (planet radius world space)
-        
-                output.shadowAttenuation = shadowAttenuation;
-                output.shadowDistance = (distance(rayPos, initialRayPos));
 
-                float pixelDepth = i.pos.z / i.pos.w;
-                float sceneDepth = tex2D(_CameraDepthTexture, i.screenPos.xy / i.screenPos.w);
-
-                if (sceneDepth < pixelDepth)
-                {
-                    //discard;
-                }
-
-                //output.shadowAttenuation = LinearEyeDepth(sceneDepth);
-                //output.shadowAttenuation = pixelDepth;
-
-                //float atten = SHADOW_ATTENUATION(i);
-                //output.shadowAttenuation = 1;
+                output.shadowAttenuation = attenuation;
+                float shadowBlurMaxDistance = 0.05f;
+                output.shadowDistance = saturate(distance(rayPos, initialRayPos) / shadowBlurMaxDistance);
+                output.depth = i.pos.z + 0.001f;
 
                 return output;
             }
             ENDCG
         }
+
+        // Depth pass
         Pass
         {
             Tags {"LightMode"="ShadowCaster"}
@@ -372,9 +222,6 @@
             #include "../../Terrain/ParallaxVariables.cginc"
             #include "../../Terrain/ParallaxUtils.cginc"
             #include "../ScaledDisplacementUtils.cginc"
-            
-            sampler2D _CameraDepthTexture;
-            sampler2D _DepthTex;
         
             struct appdata
             {

@@ -74,7 +74,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _HeightMap:
-        m_Texture: {fileID: 2800000, guid: a1243a4b9b3ad81488643feabb83a1d0, type: 3}
+        m_Texture: {fileID: 2800000, guid: bf4d031e6e521914f871d5563fd152bd, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _InfluenceMap:
@@ -133,6 +133,7 @@ Material:
     - _Glossiness: 0.5
     - _GlossyReflections: 1
     - _Hapke: 1
+    - _LightWidth: 0.029
     - _LowMidBlendEnd: 0.5003
     - _LowMidBlendStart: 0.50002503
     - _MaxTessellation: 6

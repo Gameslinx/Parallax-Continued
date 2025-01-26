@@ -13,6 +13,7 @@ namespace Parallax
     public partial class ParallaxGUI
     {
         static bool showExporter = false;
+        static float lightWidth = 0.001f;
         static void ScaledMenu(ParallaxScaledBody body)
         {
             GUILayout.Label("Scaled Shader Properties ( " + body.planetName + "):", HighLogic.Skin.label);
@@ -23,6 +24,9 @@ namespace Parallax
         {
             ParamCreator.ChangeMethod callback = body.UpdateBaseMaterialParamsFromGUI;
             ProcessGenericMaterialParams(body.scaledMaterialParams, callback, true, body.scaledMaterial, "ParallaxScaledShaderProperties");
+
+            lightWidth = GUILayout.HorizontalSlider(lightWidth, 0.000001f, 0.75f);
+            body.shadowCasterMaterial.SetFloat("_LightWidth", lightWidth);
 
             if (GUILayout.Button("Reload"))
             {

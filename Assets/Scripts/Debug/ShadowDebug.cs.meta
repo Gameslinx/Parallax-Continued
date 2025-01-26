@@ -1,0 +1,13 @@
+fileFormatVersion: 2
+guid: 882fe0f205516da4b8d2bc81b0af1888
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - attenuationTexture: {fileID: 8400000, guid: 96e18389e3bae8d4996e097f35f49ea9,
+      type: 2}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

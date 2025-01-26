@@ -2,6 +2,7 @@
 using Parallax.Scaled_System;
 using Parallax.Tools;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -267,6 +268,49 @@ namespace Parallax
 
             Debug.Log("Elapsed (terrain): " + sw.Elapsed.Milliseconds.ToString("F3"));
         }
+        public IEnumerator LoadAsync()
+        {
+            if (loaded)
+            {
+                yield break;
+            }
+            System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+
+            foreach (KeyValuePair<string, string> textureValue in terrainShaderProperties.shaderTextures)
+            {
+                Debug.Log("Attempting load: " + textureValue.Key + " at " + textureValue.Value);
+                Texture2D tex;
+                if (loadedTextures.ContainsKey(textureValue.Key))
+                {
+                    tex = loadedTextures[textureValue.Key];
+                    Debug.Log(" - already contained");
+                }
+                else
+                {
+                    bool linear = TextureUtils.IsLinear(textureValue.Key);
+                    tex = TextureLoader.LoadTexture(textureValue.Value, linear);
+
+                    // Add to active textures
+                    loadedTextures.Add(textureValue.Key, tex);
+                    Debug.Log(" - loaded from disk");
+                    yield return null;
+                }
+                // Bump maps need to be linear, while everything else sRGB
+                // This could be handled better, tbh, but at least we're accounting for linear textures this time around
+
+                parallaxMaterials.parallaxLow.SetTexture(textureValue.Key, tex);
+                parallaxMaterials.parallaxMid.SetTexture(textureValue.Key, tex);
+                parallaxMaterials.parallaxHigh.SetTexture(textureValue.Key, tex);
+
+                parallaxMaterials.parallaxLowMid.SetTexture(textureValue.Key, tex);
+                parallaxMaterials.parallaxMidHigh.SetTexture(textureValue.Key, tex);
+
+                parallaxMaterials.parallaxFull.SetTexture(textureValue.Key, tex);
+            }
+            loaded = true;
+
+            Debug.Log("Elapsed (terrain): " + sw.Elapsed.Milliseconds.ToString("F3"));
+        }
         public static Texture2D LoadTexIfUnloaded(ParallaxTerrainBody body, string path, string key)
         {
             if (!body.loadedTextures.ContainsKey(key))
@@ -324,7 +368,15 @@ namespace Parallax
     {
         public string planetName;
 
+        /// <summary>
+        /// Reference to the stock scaled body
+        /// </summary>
+
         public ParallaxTerrainBody terrainBody;
+
+        // Material for shadow casting
+        public Material shadowCasterMaterial;
+
         public MaterialParams scaledMaterialParams;
         public ParallaxScaledBodyMode mode = ParallaxScaledBodyMode.FromTerrain;
         public Material scaledMaterial;
@@ -369,12 +421,17 @@ namespace Parallax
         {
             Material baseMaterial = new Material(AssetBundleLoader.parallaxScaledShaders[shader]);
             scaledMaterial = baseMaterial;
+            shadowCasterMaterial = new Material(AssetBundleLoader.parallaxScaledShaders["Custom/RaymarchedShadows"]);
 
             // Enable keywords
             foreach (string keyword in scaledMaterialParams.shaderKeywords)
             {
-                scaledMaterial.EnableKeyword(keyword);
                 Debug.Log("Enabling keyword: " + keyword);
+
+                scaledMaterial.EnableKeyword(keyword);
+
+                // Shadow caster won't have all the keywords that the main material will, but enable them anyway in case we're using custom shaders
+                shadowCasterMaterial.EnableKeyword(keyword);
             }
             
             UpdateBaseMaterialParams();
@@ -383,6 +440,7 @@ namespace Parallax
             scaledMaterial.SetFloat("_MaxTessellation", ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.maxTessellation / 6);
             scaledMaterial.SetFloat("_TessellationEdgeLength", ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength / 4);
             scaledMaterial.SetFloat("_MaxTessellationRange", float.MaxValue);
+
         }
         public void UpdateBaseMaterialParams()
         {
@@ -451,9 +509,18 @@ namespace Parallax
             {
                 scaledMaterial.SetInt("_DisableDisplacement", 0);
             }
+
+            // Setup shadow caster
+            shadowCasterMaterial.SetFloat("_MinRadialAltitude", (_MinAltitude) * scalingFactor);
+            shadowCasterMaterial.SetFloat("_MaxRadialAltitude", (_MaxAltitude) * scalingFactor);
+            shadowCasterMaterial.SetFloat("_WorldPlanetRadius", _MeshRadius);
+            shadowCasterMaterial.SetFloat("_ScaleFactor", scalingFactor);
+            shadowCasterMaterial.SetInt("_DisableDisplacement", disableDeformity ? 1 : 0);
+
             // Setup environment
             scaledMaterial.SetTexture("_Skybox", SkyboxControl.cubeMap);
         }
+
         // Averages all vert distances from the planet to get the radius in scaled space
         // Potential optimization here - just calculate the scaled space mesh radius manually
         public float GetMeshRadiusScaledSpace(CelestialBody celestialBody)
@@ -510,6 +577,10 @@ namespace Parallax
                 }
 
                 scaledMaterial.SetTexture(textureValue.Key, tex);
+                if (textureValue.Key == "_HeightMap")
+                {
+                    shadowCasterMaterial.SetTexture("_HeightMap", tex);
+                }
             }
 
             // Set ocean color
@@ -528,6 +599,79 @@ namespace Parallax
 
             loaded = true;
         }
+
+        public IEnumerator LoadAsync()
+        {
+            isLoading = true;
+            // First check for terrain body's terrain textures and load them
+            if (!terrainBody.Loaded)
+            {
+                ScaledManager.Instance.StartCoroutine(terrainBody.LoadAsync());
+                yield return new WaitUntil(() => terrainBody.Loaded == true);
+            }
+
+            System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+
+            // Now load the textures needed here
+            foreach (KeyValuePair<string, string> textureValue in scaledMaterialParams.shaderProperties.shaderTextures)
+            {
+                Debug.Log("Attempting load: " + textureValue.Key + " at " + textureValue.Value);
+                Texture2D tex;
+
+                // Texture already loaded? Use it
+                if (loadedTextures.ContainsKey(textureValue.Key))
+                {
+                    Debug.Log(" - already contained in scaled");
+                    tex = loadedTextures[textureValue.Key];
+                }
+                else
+                {
+                    // Check to see if the texture we're trying to load is a terrain texture
+                    if (mode == ParallaxScaledBodyMode.FromTerrain && terrainBody.loadedTextures.ContainsKey(textureValue.Key))
+                    {
+                        // Point to the terrain texture
+                        tex = terrainBody.loadedTextures[textureValue.Key];
+                        loadedTextures.Add(textureValue.Key, tex);
+                        Debug.Log(" - already contained in terrain");
+                    }
+                    else
+                    {
+                        // This texture is unique
+                        bool linear = TextureUtils.IsLinear(textureValue.Key);
+                        tex = TextureLoader.LoadTexture(textureValue.Value, linear);
+
+                        // Add to active textures
+                        loadedTextures.Add(textureValue.Key, tex);
+                        Debug.Log(" - loaded from disk");
+                        yield return null;
+                    }
+                }
+
+                scaledMaterial.SetTexture(textureValue.Key, tex);
+                if (textureValue.Key == "_HeightMap")
+                {
+                    shadowCasterMaterial.SetTexture("_HeightMap", tex);
+                }
+            }
+
+            // Set ocean color
+            if (scaledMaterialParams.shaderKeywords.Contains("OCEAN"))
+            {
+                if (FlightGlobals.GetBodyByName(planetName).pqsController == null)
+                {
+                    ParallaxDebug.LogError("Planet " + planetName + " scaled material has OCEAN keyword but the planet doesn't have any PQS");
+                    yield break;
+                }
+                Color pqsMapOceanColor = FlightGlobals.GetBodyByName(planetName).pqsController.mapOceanColor;
+                scaledMaterial.SetColor("_OceanColor", pqsMapOceanColor);
+            }
+
+            Debug.Log("Elapsed (scaled): " + sw.Elapsed.Milliseconds.ToString("F3"));
+
+            loaded = true;
+            isLoading = false;
+        }
+
         public void Unload()
         {
             Debug.Log("Scaled unload requested: " + planetName);

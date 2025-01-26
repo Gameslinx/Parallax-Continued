@@ -545,7 +545,6 @@ GameObject:
   - component: {fileID: 602558057}
   - component: {fileID: 602558056}
   - component: {fileID: 602558055}
-  - component: {fileID: 602558061}
   m_Layer: 0
   m_Name: ShadowCaster
   m_TagString: Untagged
@@ -662,26 +661,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 13
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &602558061
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 602558054}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c1527a031b9c0c842a9429f557eb8412, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  meshToDraw: {fileID: -3566852339332043396, guid: d95405797914fd649b28275ebd194820,
-    type: 3}
-  shadowMaterial: {fileID: 2100000, guid: 6f617edabbc68dc4a80951415894f808, type: 2}
-  depthMaterial: {fileID: 2100000, guid: 973270e42ef8d2843b603a3ed7759601, type: 2}
-  targetShadowAttenuation: {fileID: 8400000, guid: 96e18389e3bae8d4996e097f35f49ea9,
-    type: 2}
-  targetShadowDistance: {fileID: 8400000, guid: 90957980a3bb45640978c3d151e222e1,
-    type: 2}
 --- !u!1 &743140372
 GameObject:
   m_ObjectHideFlags: 0
@@ -695,6 +674,7 @@ GameObject:
   - component: {fileID: 743140373}
   - component: {fileID: 743140376}
   - component: {fileID: 743140377}
+  - component: {fileID: 743140378}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -760,8 +740,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 743140372}
-  m_LocalRotation: {x: 0.09303488, y: 0.8574397, z: -0.16660807, w: 0.47789493}
-  m_LocalPosition: {x: -0.5410436, y: 0.25705197, z: 0.33464193}
+  m_LocalRotation: {x: -0.068897456, y: -0.7241366, z: 0.072936274, w: -0.68231934}
+  m_LocalPosition: {x: -0.91055894, y: 0.18672365, z: 0.051743448}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -774,7 +754,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 743140372}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 27e5196de3ffbc84b8f103c26cfd4f1c, type: 3}
   m_Name: 
@@ -793,6 +773,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6612ee84563d5f846b9f65aa0321fcac, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &743140378
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 743140372}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 882fe0f205516da4b8d2bc81b0af1888, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  attenuationTexture: {fileID: 8400000, guid: 96e18389e3bae8d4996e097f35f49ea9, type: 2}
+  dummyBlitMaterial: {fileID: 2100000, guid: 3cde64f4b459f764a8a08e7f82c2fdbc, type: 2}
 --- !u!1 &746188346
 GameObject:
   m_ObjectHideFlags: 0
@@ -1337,7 +1331,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1497709580}
   - component: {fileID: 1497709579}
-  - component: {fileID: 1497709581}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -1413,28 +1406,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1497709578}
-  m_LocalRotation: {x: -0.14619692, y: -0.789586, z: 0.20648135, w: -0.55905795}
+  m_LocalRotation: {x: 0.0012740849, y: -0.9982595, z: 0.023525262, w: 0.054063898}
   m_LocalPosition: {x: 0, y: 3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 1
-  m_LocalEulerAnglesHint: {x: 29.31, y: -250.6, z: 0}
---- !u!114 &1497709581
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1497709578}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8494687e292d0894f89dd38d66a6da06, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  blitMaterial: {fileID: 2100000, guid: 4ffcc516aaa6ff840b70f18f4c7e49d1, type: 2}
-  shadowMap: {fileID: 8400000, guid: 96e18389e3bae8d4996e097f35f49ea9, type: 2}
-  shadowDistances: {fileID: 8400000, guid: 90957980a3bb45640978c3d151e222e1, type: 2}
+  m_LocalEulerAnglesHint: {x: 2.7, y: -173.8, z: 0}
 --- !u!1 &1846516371
 GameObject:
   m_ObjectHideFlags: 0

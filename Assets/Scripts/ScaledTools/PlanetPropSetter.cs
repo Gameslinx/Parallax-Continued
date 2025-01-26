@@ -1,11 +1,14 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 [ExecuteInEditMode]
 public class PlanetPropSetter : MonoBehaviour
 {
     Material mat;
+    public Mesh exportableMeshTemplate;
     
     // Mesh radius
     float _MeshRadius = 1.0f;
@@ -66,6 +69,7 @@ public class PlanetPropSetter : MonoBehaviour
         mat.SetFloat("_MidHighBlendEnd", (_PlanetRadius + _MidHighBlendEnd) * scalingFactor);
 
         mat.SetFloat("_WorldPlanetRadius", _MeshRadius);
+        mat.SetMatrix("_WorldRotation", Matrix4x4.Inverse(Matrix4x4.Rotate(gameObject.transform.rotation)));
 
         mat.SetFloat("_ScaleFactor", scalingFactor);
 
@@ -73,5 +77,32 @@ public class PlanetPropSetter : MonoBehaviour
         Matrix4x4 rotMat = Matrix4x4.Rotate(rot);
 
         mat.SetMatrix("_SkyboxRotation", rotMat);
+    }
+
+    public Mesh GenerateMesh()
+    {
+        Mesh mesh = exportableMeshTemplate;
+        if (!mesh) { return null; }
+
+        return mesh;
+    }
+}
+
+[CustomEditor(typeof(PlanetPropSetter))]
+class PlanetPropSetterButton : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        base.OnInspectorGUI();
+        if (GUILayout.Button("Generate Mesh"))
+        {
+            PlanetPropSetter script = (PlanetPropSetter)target;
+            Mesh mesh = script.GenerateMesh();
+
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.GetComponent<MeshFilter>().sharedMesh = mesh;
+
+            go.transform.position = Vector3.zero;
+        }
     }
 }

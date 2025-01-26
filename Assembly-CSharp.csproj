@@ -66,12 +66,12 @@
      <Compile Include="Assets\Scripts\Advanced Subdivision\JobDefinitions.cs" />
      <Compile Include="Assets\Scripts\Advanced Subdivision\ParallelSubdivision.cs" />
      <Compile Include="Assets\Scripts\Debug\CubeHeightGenerator.cs" />
-     <Compile Include="Assets\Scripts\Debug\FibonacciSphere.cs" />
      <Compile Include="Assets\Scripts\Debug\LimitFPS.cs" />
-     <Compile Include="Assets\Scripts\Debug\ShowShadowTarget.cs" />
+     <Compile Include="Assets\Scripts\Debug\ShadowDebug.cs" />
      <Compile Include="Assets\Scripts\Extensions\Dictionary_TryAdd.cs" />
      <Compile Include="Assets\Scripts\ScaledTools\PlanetPropSetter.cs" />
      <Compile Include="Assets\Scripts\ScaledTools\RaymarchedShadows.cs" />
+     <Compile Include="Assets\Scripts\ScaledTools\SaveMesh.cs" />
      <Compile Include="Assets\Scripts\ScatterSystem\ScatterRenderer.cs" />
      <Compile Include="Assets\Scripts\ScatterSystem\TerrainScatters.cs" />
      <Compile Include="Assets\Scripts\Tools\CameraUtils.cs" />
@@ -94,8 +94,8 @@
      <None Include="Assets\Shaders\Debug\SphericalCoords.shader" />
      <None Include="Assets\Shaders\Debug\ShowNoise.shader" />
      <None Include="Assets\Shaders\Debug\DummyDisplacement.shader" />
+     <None Include="Assets\Shaders\Debug\SDF Visualiser.shader" />
      <None Include="Assets\Shaders\Scatters\InstancingShaders\InstancedBiplanar.shader" />
-     <None Include="Assets\Shaders\Scaled\MaxBlit.shader" />
      <None Include="Assets\Shaders\Scatters\InstancingShaders\InstancedSolid.shader" />
      <None Include="Assets\Shaders\Debug\ShowNormals.shader" />
      <None Include="Assets\Shaders\Debug\ShowBiomeMap.shader" />
@@ -131,7 +131,7 @@
      <None Include="Assets\Shaders\Scatters\InstancingShaders\Barebones.shader" />
      <None Include="Assets\Shaders\Debug\BlendTest.shader" />
      <None Include="Assets\Shaders\Debug\ShowWind.shader" />
-     <None Include="Assets\Shaders\Debug\PostProcessShadows.shader" />
+     <None Include="Assets\Shaders\Scaled\Raymarched Shadows\PostProcessShadows.shader" />
      <None Include="Assets\Shaders\Includes\ParallaxGlobalFunctions.cginc" />
      <None Include="Assets\Shaders\Debug\ShowDensity.shader" />
      <None Include="Assets\Shaders\Debug\TriplanarRotationTest.shader" />
@@ -140,6 +140,7 @@
      <None Include="Assets\Shaders\Scaled\ParallaxScaledBakedStructs.cginc" />
      <None Include="Assets\Shaders\Scatters\TerrainScatters.compute" />
      <None Include="Assets\Shaders\Terrain\Wireframe.shader" />
+     <None Include="Assets\Shaders\Debug\DummyBlit.shader" />
      <None Include="Assets\Shaders\Includes\ScaledBiplanarFunctions.cginc" />
      <None Include="Assets\Shaders\Terrain\ParallaxStructs.cginc" />
      <None Include="Assets\Shaders\Debug\DebugShadowRaymarch.shader" />

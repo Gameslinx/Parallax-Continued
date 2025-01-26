@@ -920,6 +920,9 @@ Shader "Custom/ParallaxScaled"
                 //
                 //
 
+                //outGBuffer0.xyz = 1;
+                //outGBuffer2.xyz = i.biplanarTextureCoords * 0.5f + 0.5f;
+
                 float3 worldPos = i.worldPos;
 
                 //half4 gbuffer0 = tex2D (_CameraGBufferTexture0, uv);
