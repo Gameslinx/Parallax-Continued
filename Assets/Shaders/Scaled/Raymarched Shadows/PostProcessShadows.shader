@@ -115,6 +115,8 @@
                 // Define a depth threshold to avoid z-fighting issues
                 float depthThreshold = 0.01; // Tweak this value for better results
                 
+                // In KSP the local scene renders on top of the scaled scene, so we don't need to do this unless two planets are overlapping...
+                // TODO: that ^
                 if (abs(sceneDepth - shadowCasterDepth) > depthThreshold)
                 {
                     // Discard shadow: return white (no shadow attenuation)

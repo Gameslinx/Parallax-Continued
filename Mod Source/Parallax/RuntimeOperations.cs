@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Parallax.Scaled_System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -39,6 +40,7 @@ namespace Parallax
         /// The current world space position of the current main body. If the current main body is null, this is set to 0.
         /// </summary>
         public static Vector3 currentPlanetOrigin = Vector3.zero;
+        public static float currentPlanetOpacity = 0.0f;
         Plane[] planes;
         public void Start()
         {
@@ -106,7 +108,8 @@ namespace Parallax
                 // Handle the case where we orbit a gas giant or a star
                 if (FlightGlobals.currentMainBody.pqsController != null)
                 {
-                    Shader.SetGlobalFloat(planetOpacityID, FlightGlobals.currentMainBody.pqsController.surfaceMaterial.GetFloat(planetOpacityID));
+                    currentPlanetOpacity = FlightGlobals.currentMainBody.pqsController.surfaceMaterial.GetFloat(planetOpacityID);
+                    Shader.SetGlobalFloat(planetOpacityID, currentPlanetOpacity);
                 }
             }
             if (FlightGlobals.currentMainBody != null)

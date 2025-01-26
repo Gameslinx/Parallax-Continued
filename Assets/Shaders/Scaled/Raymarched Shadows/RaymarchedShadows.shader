@@ -21,6 +21,7 @@
         // Saves a multicompile
         _DisableDisplacement("Disable Displacement", int) = 0
         _LightWidth("Light Width", Range(0.0001, 0.3)) = 0.05
+        //_ScaledPlanetOpacity("Scaled planet opacity", Range(0, 1)) = 1
     }
     SubShader
     {
@@ -52,7 +53,8 @@
             // Mesh to real planet scale factor
             float _ScaleFactor;
             float _LightWidth;
-        
+            float _ScaledPlanetOpacity;
+
             // Parallax includes
             #include "../../Includes/ParallaxGlobalFunctions.cginc" 
             #include "../ParallaxScaledStructs.cginc"
@@ -191,6 +193,8 @@
                 float shadowBlurMaxDistance = 0.05f;
                 output.shadowDistance = saturate(distance(rayPos, initialRayPos) / shadowBlurMaxDistance);
                 output.depth = i.pos.z + 0.001f;
+
+                output.shadowAttenuation = saturate(output.shadowAttenuation + (1 - _ScaledPlanetOpacity));
 
                 return output;
             }

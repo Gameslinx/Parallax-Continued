@@ -11,6 +11,9 @@ using UnityEngine.Rendering;
 
 namespace Parallax.Scaled_System
 {
+    /// <summary>
+    /// Handles texture loading and planet specific runtime material params
+    /// </summary>
     public class ScaledOnDemandComponent : MonoBehaviour
     {
         public ParallaxScaledBody scaledBody;

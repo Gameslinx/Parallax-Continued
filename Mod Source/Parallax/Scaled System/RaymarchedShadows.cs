@@ -117,12 +117,27 @@ namespace Parallax.Scaled_System
             // Only render what we can see and is loaded
             foreach (ParallaxScaledBody scaledBody in scaledBodies)
             {
-                //if (scaledBody.planetName == "Minmus")
-                //{
+                // Prevent "donut" object rendering around small bodies from causing intense shadow flickering - stop rendering the attenuation mesh
+                // Only set opacity on the current planet, or it'll set all scaled planet opacities to 0 if on pqs
+                if (FlightGlobals.currentMainBody != null && RuntimeOperations.currentPlanetOpacity <= 0 && FlightGlobals.currentMainBody.name == scaledBody.planetName)
+                {
+                    // Don't render - we're in pqs view
+                }
+                else
+                {
                     shadowCommandBuffer.SetGlobalMatrix("_WorldRotation", Matrix4x4.Inverse(Matrix4x4.Rotate(FlightGlobals.GetBodyByName(scaledBody.planetName).scaledBody.GetComponent<MeshRenderer>().localToWorldMatrix.rotation)));
                     shadowCommandBuffer.DrawRenderer(FlightGlobals.GetBodyByName(scaledBody.planetName).scaledBody.GetComponent<MeshRenderer>(), scaledBody.shadowCasterMaterial, 0);
-                //}
-                
+                    
+                    // Set planet opacity for current and other scaled planets
+                    if (FlightGlobals.currentMainBody != null && FlightGlobals.currentMainBody.name == scaledBody.planetName)
+                    {
+                        shadowCommandBuffer.SetGlobalFloat("_ScaledPlanetOpacity", RuntimeOperations.currentPlanetOpacity);
+                    }
+                    else
+                    {
+                        shadowCommandBuffer.SetGlobalFloat("_ScaledPlanetOpacity", 1.0f);
+                    }
+                }
             }
         }
 

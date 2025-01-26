@@ -15,8 +15,10 @@ namespace Parallax
 
         public static EventHandler Instance;
         public static ParallaxTerrainBody currentParallaxBody;
+        public static ParallaxScaledBody currentScaledBody;
 
         CelestialBody currentBody;
+        
         void Awake()
         {
             GameObject.DontDestroyOnLoad(this);
@@ -80,7 +82,13 @@ namespace Parallax
                 {
                     EventHandler.RequestLoad(FlightGlobals.currentMainBody.name, "EventHandler");
                 }
+
                 currentBody = FlightGlobals.currentMainBody;
+
+                if (currentBody != null && ConfigLoader.parallaxScaledBodies.ContainsKey(currentBody.name))
+                {
+                    currentScaledBody = ConfigLoader.parallaxScaledBodies[currentBody.name];
+                }
             }
         }
         void FixedUpdate()

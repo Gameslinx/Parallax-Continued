@@ -148,6 +148,7 @@ Material:
     - _OceanSpecularPower: 1
     - _Parallax: 0.02
     - _PlanetBumpScale: 1
+    - _PlanetOpacity: 1
     - _PlanetRadius: 0
     - _RefractionIntensity: 1
     - _SmoothnessTextureChannel: 0
