@@ -236,26 +236,12 @@ namespace Parallax
         }
         public static Texture2D Texture2DFromData(Texture2D texture, byte[] bytes, in TextureLoaderData data)
         {
-            Debug.Log("Loading texture2D from data");
-            Debug.Log("Is texture null? " + (texture == null));
-            Debug.Log("Texture format: " + texture.format.ToString());
-            Debug.Log("Is the data null? " + (bytes == null));
 
             //Texture2D texture = new Texture2D(data.width, data.height, data.format, data.mips, data.linear);
             // Load texture data
             try
             {
-                if (texture.format == TextureFormat.DXT5 || texture.format == TextureFormat.DXT1 || texture.format == TextureFormat.R8 || texture.format == TextureFormat.Alpha8)
-                {
-                    // Could be faster
-                    NativeArray<byte> rawData = texture.GetRawTextureData<byte>();
-                    rawData.CopyFrom(bytes);
-                }
-                else
-                {
-                    texture.LoadRawTextureData(bytes);
-                }
-                
+                texture.LoadRawTextureData(bytes);
             }
             catch (Exception e)
             {
