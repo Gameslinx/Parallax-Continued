@@ -14,6 +14,7 @@ namespace Parallax
     {
         static bool showExporter = false;
         static float lightWidth = 0.001f;
+        static float maxRadAlt = 5000.0f;
         static void ScaledMenu(ParallaxScaledBody body)
         {
             GUILayout.Label("Scaled Shader Properties ( " + body.planetName + "):", HighLogic.Skin.label);
@@ -25,8 +26,13 @@ namespace Parallax
             ParamCreator.ChangeMethod callback = body.UpdateBaseMaterialParamsFromGUI;
             ProcessGenericMaterialParams(body.scaledMaterialParams, callback, true, body.scaledMaterial, "ParallaxScaledShaderProperties");
 
+            // Debugs
             lightWidth = GUILayout.HorizontalSlider(lightWidth, 0.000001f, 0.75f);
+            maxRadAlt = GUILayout.HorizontalSlider(maxRadAlt, 0.0f, 1.0f);
+
             body.shadowCasterMaterial.SetFloat("_LightWidth", lightWidth);
+            body.shadowCasterMaterial.SetFloat("_MaxRadialAltitude", maxRadAlt);
+            body.scaledMaterial.SetFloat("_MaxRadialAltitude", maxRadAlt);
 
             if (GUILayout.Button("Reload"))
             {

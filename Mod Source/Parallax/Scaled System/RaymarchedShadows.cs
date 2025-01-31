@@ -45,15 +45,11 @@ namespace Parallax.Scaled_System
         }
         public void Start()
         {
-            //QualitySettings.shadowDistance = 100000;
-
             mainLight = Sun.Instance.scaledSunLight;
             mainLight.shadows = LightShadows.Soft;
             mainLight.shadowStrength = 1;
             mainLight.lightShadowCasterMode = LightShadowCasterMode.Everything;
             mainLight.shadowResolution = LightShadowResolution.VeryHigh;
-
-            //QualitySettings.shadowDistance = 55000;
 
             // Get the scaled mesh and material for rendering
             scaledMesh = UnityEngine.Object.Instantiate(GameDatabase.Instance.GetModel("ParallaxContinued/Models/ScaledMesh").GetComponent<MeshFilter>().mesh);
@@ -117,6 +113,11 @@ namespace Parallax.Scaled_System
             // Only render what we can see and is loaded
             foreach (ParallaxScaledBody scaledBody in scaledBodies)
             {
+                if (!scaledBody.Loaded)
+                {
+                    continue;
+                }
+                
                 // Prevent "donut" object rendering around small bodies from causing intense shadow flickering - stop rendering the attenuation mesh
                 // Only set opacity on the current planet, or it'll set all scaled planet opacities to 0 if on pqs
                 if (FlightGlobals.currentMainBody != null && RuntimeOperations.currentPlanetOpacity <= 0 && FlightGlobals.currentMainBody.name == scaledBody.planetName)

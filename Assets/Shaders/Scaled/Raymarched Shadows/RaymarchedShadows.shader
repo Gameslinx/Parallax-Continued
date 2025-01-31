@@ -266,9 +266,6 @@
                 o.screenPos = ComputeScreenPos(o.pos);
 
                 o.uv = v.uv;
-
-                o.pos = ParallaxClipSpaceShadowCasterPos(o.worldPos, worldNormal);
-                o.pos = UnityApplyLinearShadowBias(o.pos);
                 return o;
             }
 

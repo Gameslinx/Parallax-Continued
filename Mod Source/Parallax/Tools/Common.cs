@@ -517,6 +517,9 @@ namespace Parallax
             shadowCasterMaterial.SetFloat("_ScaleFactor", scalingFactor);
             shadowCasterMaterial.SetInt("_DisableDisplacement", disableDeformity ? 1 : 0);
 
+            // Computed at runtime, but the default is computed from Kerbin's SMA around the Sun
+            shadowCasterMaterial.SetFloat("_LightWidth", 0.0384f);
+
             // Setup environment
             scaledMaterial.SetTexture("_Skybox", SkyboxControl.cubeMap);
         }

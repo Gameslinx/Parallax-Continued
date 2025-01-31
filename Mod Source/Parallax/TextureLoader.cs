@@ -135,15 +135,7 @@ namespace Parallax
         }
         public static Texture2D LoadDDSTexture(string url, bool linear, bool markUnreadable)
         {
-            float totalSaving = 0;
-            float totalElapsed = 0;
-            System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
             byte[] data = File.ReadAllBytes(url);
-            sw.Stop();
-
-            Debug.Log("Load from disk: " + sw.Elapsed.Milliseconds.ToString("F2"));
-            totalSaving += sw.Elapsed.Milliseconds;
-            totalElapsed += sw.Elapsed.Milliseconds;
 
             if (data.Length < 128)
             {
@@ -169,6 +161,7 @@ namespace Parallax
             int mipMapCount = BitConverter.ToInt32(data, 28);
             uint pixelFormatFlags = BitConverter.ToUInt32(data, 80);
             uint fourCC = BitConverter.ToUInt32(data, 84);
+            uint BitCount = BitConverter.ToUInt32(data, 88); // Get bitdepth
 
             TextureFormat format;
 
@@ -189,11 +182,18 @@ namespace Parallax
             }
             else if ((pixelFormatFlags & 0x40) != 0 && fourCC == 0) // DDPF_ALPHAPIXELS (standard L8)
             {
-                format = TextureFormat.Alpha8; // Equivalent to L8
+                format = TextureFormat.Alpha8;
             }
             else if ((pixelFormatFlags & 0x20000) != 0 && fourCC == 0) // DDPF_FOURCC with no FourCC (alternate L8)
             {
-                format = TextureFormat.R8; // Equivalent to L8
+                if (BitCount == 16)
+                {
+                    format = TextureFormat.R16;
+                }
+                else
+                {
+                    format = TextureFormat.R8;
+                }
             }
             else
             {
@@ -236,12 +236,21 @@ namespace Parallax
         }
         public static Texture2D Texture2DFromData(Texture2D texture, byte[] bytes, in TextureLoaderData data)
         {
-
             //Texture2D texture = new Texture2D(data.width, data.height, data.format, data.mips, data.linear);
             // Load texture data
             try
             {
-                texture.LoadRawTextureData(bytes);
+                if (texture.format == TextureFormat.DXT5 || texture.format == TextureFormat.DXT1 || texture.format == TextureFormat.R8 || texture.format == TextureFormat.Alpha8 || texture.format == TextureFormat.R16)
+                {
+                    // Could be faster
+                    NativeArray<byte> rawData = texture.GetRawTextureData<byte>();
+                    rawData.CopyFrom(bytes);
+                }
+                else
+                {
+                    texture.LoadRawTextureData(bytes);
+                }
+
             }
             catch (Exception e)
             {

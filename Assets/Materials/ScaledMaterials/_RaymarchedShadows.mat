@@ -133,7 +133,7 @@ Material:
     - _Glossiness: 0.5
     - _GlossyReflections: 1
     - _Hapke: 1
-    - _LightWidth: 0.029
+    - _LightWidth: 0.3
     - _LowMidBlendEnd: 0.5003
     - _LowMidBlendStart: 0.50002503
     - _MaxTessellation: 6
@@ -151,6 +151,7 @@ Material:
     - _PlanetOpacity: 1
     - _PlanetRadius: 0
     - _RefractionIntensity: 1
+    - _ScaledPlanetOpacity: 1
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SpecularIntensity: 1

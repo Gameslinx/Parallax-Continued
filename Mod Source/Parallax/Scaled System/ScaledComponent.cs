@@ -16,8 +16,10 @@ namespace Parallax.Scaled_System
     /// </summary>
     public class ScaledOnDemandComponent : MonoBehaviour
     {
+        // Set immediately from component initialisation
         public ParallaxScaledBody scaledBody;
         public CelestialBody celestialBody;
+        public CelestialBody parentStar;
 
         public static float loadAngle = 0.02f;
         public static float unloadAngle = 0.005f;
@@ -31,15 +33,39 @@ namespace Parallax.Scaled_System
 
         void Start()
         {
+            // Locate the parent star for shadows
+            CelestialBody parentBody = celestialBody.referenceBody;
+            while (parentBody != null && !parentBody.isStar)
+            {
+                // Step up
+                parentBody = parentBody.referenceBody;
+            }
+
+            if (parentBody == null)
+            {
+                ParallaxDebug.Log("Warning: Unable to find the parent star for: " + celestialBody.name);
+                ParallaxDebug.Log("Shadow penumbra angle will be defaulted");
+            }
+            else
+            {
+                parentStar = parentBody;
+                Debug.Log("Located parent star: " + parentStar.name);
+            }
+
             // Kick off immediately
             Update();
         }
         void Update()
         {
+            UpdateVisibility();
+            UpdateShadows();
+        }
+        void UpdateVisibility()
+        {
             // Calculate "size on screen" (really the angle subtended by the sphere radius)
-            float halfAngle = CalculateAngleBetweenSphereAndCamera(ScaledSpace.LocalToScaledSpace(celestialBody.gameObject.transform.position), scaledBody.worldSpaceMeshRadius, ScaledCamera.Instance.cam);
+            float angle = CalculateSubtendedAngle(ScaledSpace.LocalToScaledSpace(celestialBody.gameObject.transform.position), ScaledCamera.Instance.cam.transform.position, scaledBody.worldSpaceMeshRadius, ScaledCamera.Instance.cam.fieldOfView);
 
-            if (halfAngle > loadAngle)
+            if (angle > loadAngle)
             {
                 // Prevent an unload if we just dipped into it and back out
                 pendingUnload = false;
@@ -49,7 +75,7 @@ namespace Parallax.Scaled_System
                     StartCoroutine(scaledBody.LoadAsync());
                 }
             }
-            if (halfAngle < unloadAngle && FlightGlobals.currentMainBody != celestialBody)
+            if (angle < unloadAngle && FlightGlobals.currentMainBody != celestialBody)
             {
                 if (scaledBody.Loaded)
                 {
@@ -67,33 +93,38 @@ namespace Parallax.Scaled_System
                 }
             }
         }
-        float CalculateAngleBetweenSphereAndCamera(Vector3 center, float radius, Camera cam)
+        void UpdateShadows()
         {
-
-            // Get the camera position and up vector in world space
-            Vector3 cameraPos = cam.transform.position;
-            Vector3 worldUp = Vector3.up;
-
-            Vector3 cameraToSphere = (center - cameraPos).normalized;
-
-            // Handle edge case where we're looking down / up and cross product will fail
-            if (Mathf.Abs(Vector3.Dot(worldUp, cameraToSphere)) > 0.95f)
+            if (!scaledBody.Loaded)
             {
-                worldUp = Vector3.right;
+                return;
             }
-            Vector3 orthogonalVector = Vector3.Normalize(Vector3.Cross(cameraToSphere, worldUp));
 
-            // Calculate the point on the sphere directly "above" the center
-            Vector3 pointOnSphere = center + radius * orthogonalVector;
+            float penumbraAngle = CalculateSubtendedAngle(celestialBody.transform.position, parentStar.transform.position, (float)parentStar.Radius);
 
-            // Calculate the vector from the camera to the point on the sphere
-            Vector3 cameraToPointOnSphere = Vector3.Normalize(pointOnSphere - cameraPos);
+            scaledBody.shadowCasterMaterial.SetFloat("_LightWidth", penumbraAngle);
+        }
+        /// <summary>
+        /// Calculates the angle between origin-to-target and target-to-targetradius
+        /// </summary>
+        /// <param name="origin"></param>
+        /// <param name="target"></param>
+        /// <param name="targetRadius"></param>
+        /// <returns></returns>
+        float CalculateSubtendedAngle(Vector3 origin, Vector3 target, float targetRadius)
+        {
+            return Mathf.Atan2(targetRadius, (origin - target).magnitude) * 2.0f;
+        }
+        float CalculateSubtendedAngle(Vector3 origin, Vector3 target, float targetRadius, float fov)
+        {
+            float angle = Mathf.Atan2(targetRadius, (origin - target).magnitude) * 2.0f;
 
-            // Calculate the angle between the two vectors
-            float angleRadians = Vector3.Angle(cameraToSphere, cameraToPointOnSphere);
+            // 90 degree FOV baseline
+            float fovScalingFactor = fov / 90.0f;
 
-            // Return the angle in degrees
-            return angleRadians;
+            // Naively scale the angle depending on fov
+            // Not an accurate or perfect calculation but gets the job done
+            return angle * fovScalingFactor;
         }
         void OnDisable()
         {
