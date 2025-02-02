@@ -11,6 +11,9 @@ namespace Parallax.Scaled_System
     [KSPAddon(KSPAddon.Startup.SpaceCentre, true)]
     public class RaymarchedShadowsRenderer : MonoBehaviour
     {
+        /// <summary>
+        /// The raymarched shadows manager. Can be null if scaledGlobalSettings.scaledSpaceShadows is false.
+        /// </summary>
         public static RaymarchedShadowsRenderer Instance;
 
         // Meshes to draw
@@ -35,7 +38,11 @@ namespace Parallax.Scaled_System
         public List<MeshRenderer> meshRenderers = new List<MeshRenderer>();
         void Awake()
         {
-
+            if (!ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledSpaceShadows)
+            {
+                Destroy(this);
+                return;
+            }
             Instance = this;
             GameObject.DontDestroyOnLoad(this);
         }

@@ -24,6 +24,7 @@ namespace Parallax
         public TerrainGlobalSettings terrainGlobalSettings = new TerrainGlobalSettings();
         public ScatterGlobalSettings scatterGlobalSettings = new ScatterGlobalSettings();
         public LightingGlobalSettings lightingGlobalSettings = new LightingGlobalSettings();
+        public ScaledGlobalSetings scaledGlobalSettings = new ScaledGlobalSetings();
         public DebugGlobalSettings debugGlobalSettings = new DebugGlobalSettings();
         public ObjectPoolSettings objectPoolSettings = new ObjectPoolSettings();
 
@@ -36,6 +37,7 @@ namespace Parallax
             ConfigNode terrainShaderSettingsNode = new ConfigNode("TerrainShaderSettings");
             ConfigNode scatterSystemSettingsNode = new ConfigNode("ScatterSystemSettings");
             ConfigNode lightingSettingsNode = new ConfigNode("LightingSettings");
+            ConfigNode scaledSettingsNode = new ConfigNode("ScaledSettings");
             ConfigNode debugSettingsNode = new ConfigNode("DebugSettings");
             ConfigNode objectPoolSettingsNode = new ConfigNode("ObjectPoolSettings");
 
@@ -52,6 +54,9 @@ namespace Parallax
             lightingSettingsNode.AddValue("lightShadows", lightingGlobalSettings.lightShadows);
             lightingSettingsNode.AddValue("lightShadowQuality", lightingGlobalSettings.lightShadowsQuality.ToString());
 
+            scaledSettingsNode.AddValue("scaledSpaceShadows", scaledGlobalSettings.scaledSpaceShadows);
+            scaledSettingsNode.AddValue("loadTexturesImmediately", scaledGlobalSettings.loadTexturesImmediately);
+
             debugSettingsNode.AddValue("wireframeTerrain", debugGlobalSettings.wireframeTerrain);
 
             objectPoolSettingsNode.AddValue("cachedColliderCount", objectPoolSettings.cachedColliderCount);
@@ -59,10 +64,11 @@ namespace Parallax
             globalNode.AddNode(terrainShaderSettingsNode);
             globalNode.AddNode(scatterSystemSettingsNode);
             globalNode.AddNode(lightingSettingsNode);
+            globalNode.AddNode(scaledSettingsNode);
             globalNode.AddNode(debugSettingsNode);
             globalNode.AddNode(objectPoolSettingsNode);
 
-            rootNode.Save(KSPUtil.ApplicationRootPath + "GameData/ParallaxContinued/Config/ParallaxGlobalSettings2.cfg");
+            rootNode.Save(KSPUtil.ApplicationRootPath + "GameData/ParallaxContinued/Config/ParallaxGlobalSettings.cfg");
 
         }
     }
@@ -85,6 +91,11 @@ namespace Parallax
     {
         public bool lightShadows;
         public LightShadowResolution lightShadowsQuality;
+    }
+    public struct ScaledGlobalSetings
+    {
+        public bool scaledSpaceShadows;
+        public bool loadTexturesImmediately;
     }
     public struct DebugGlobalSettings
     {

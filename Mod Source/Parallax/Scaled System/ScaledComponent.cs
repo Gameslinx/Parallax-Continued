@@ -72,7 +72,14 @@ namespace Parallax.Scaled_System
                 if (!scaledBody.Loaded && !scaledBody.IsLoading)
                 {
                     // We don't need to wait for this
-                    StartCoroutine(scaledBody.LoadAsync());
+                    if (!ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.loadTexturesImmediately)
+                    {
+                        StartCoroutine(scaledBody.LoadAsync());
+                    }
+                    else
+                    {
+                        scaledBody.Load();
+                    }
                 }
             }
             if (angle < unloadAngle && FlightGlobals.currentMainBody != celestialBody)

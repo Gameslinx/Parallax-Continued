@@ -297,8 +297,8 @@ public class TerrainScatters : MonoBehaviour
         scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD1", scatterRenderer.outputLOD1);
         scatterShader.SetBuffer(evaluateKernel, "instancingDataLOD2", scatterRenderer.outputLOD2);
 
-        scatterShader.SetFloat("_Lod01Split", 0.9f);
-        scatterShader.SetFloat("_Lod12Split", 0.99f);
+        scatterShader.SetFloat("_Lod01Split", 0.4f);
+        scatterShader.SetFloat("_Lod12Split", 0.7f);
     }
     public void Evaluate()
     {
@@ -313,7 +313,7 @@ public class TerrainScatters : MonoBehaviour
         scatterShader.SetFloats("_CameraFrustumPlanes", CameraUtils.scatterPlaneNormals);
         scatterShader.SetFloat("_CullRadius", frustumRange);
         scatterShader.SetFloat("_CullLimit", frustumLimit);
-        scatterShader.SetFloat("_MaxRange", 35);
+        scatterShader.SetFloat("_MaxRange", 25);
 
         scatterShader.DispatchIndirect(evaluateKernel, dispatchArgs, 0);
     }

@@ -28,7 +28,7 @@ namespace Parallax
             ParamCreator.ChangeMethod callback = body.UpdateBaseMaterialParamsFromGUI;
             ProcessGenericMaterialParams(body.scaledMaterialParams, callback, true, body.scaledMaterial, "ParallaxScaledShaderProperties");
 
-            if (GUILayout.Button("Reload"))
+            if (GUILayout.Button("Reload", HighLogic.Skin.button))
             {
                 body.Unload();
                 body.Load();

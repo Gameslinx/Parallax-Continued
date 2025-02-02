@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: InstanceTest
   m_Shader: {fileID: 4800000, guid: c26be5ad2dbe5714e9df106a69036cfa, type: 3}
-  m_ShaderKeywords: ALPHA_CUTOFF BILLBOARD SUBSURFACE_THICKNESS_TEXTURE
+  m_ShaderKeywords: SUBSURFACE_THICKNESS_TEXTURE
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0

@@ -5,7 +5,8 @@
 // This macro separates the matrix into the colour and a clean local to world matrix
 #define DECODE_INSTANCE_DATA(transformAndColorMatrix, outColor)                                                                          \
     float3 outColor = float3(transformAndColorMatrix[3][0], transformAndColorMatrix[3][1], transformAndColorMatrix[3][2]);               \
-    transformAndColorMatrix[3] = float4(0, 0, 0, transformAndColorMatrix[3][3]);
+    float outFade = transformAndColorMatrix[3][3];                                                                                       \
+    transformAndColorMatrix[3] = float4(0, 0, 0, 1);
 
 #define DECODE_INSTANCE_DATA_SHADOW(transformAndColorMatrix)                                                                             \
     transformAndColorMatrix[3] = float4(0, 0, 0, transformAndColorMatrix[3][3]);

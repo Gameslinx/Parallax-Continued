@@ -261,6 +261,10 @@ namespace Parallax
             parallaxGlobalSettings.lightingGlobalSettings.lightShadows = bool.Parse(lightingSettingsNode.GetValue("lightShadows"));
             parallaxGlobalSettings.lightingGlobalSettings.lightShadowsQuality = (LightShadowResolution)Enum.Parse(typeof(LightShadowResolution), lightingSettingsNode.GetValue("lightShadowQuality"));
 
+            ConfigNode scaledSettingsNode = config.config.GetNode("ScaledSystemSettings");
+            parallaxGlobalSettings.scaledGlobalSettings.scaledSpaceShadows = bool.Parse(scaledSettingsNode.GetValue("scaledSpaceShadows"));
+            parallaxGlobalSettings.scaledGlobalSettings.loadTexturesImmediately = bool.Parse(scaledSettingsNode.GetValue("loadTexturesImmediately"));
+
             ConfigNode debugSettingsNode = config.config.GetNode("DebugSettings");
             parallaxGlobalSettings.debugGlobalSettings.wireframeTerrain = bool.Parse(debugSettingsNode.GetValue("wireframeTerrain"));
 
