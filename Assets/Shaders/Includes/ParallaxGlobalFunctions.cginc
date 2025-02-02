@@ -1,6 +1,3 @@
-// Upgrade NOTE: replaced 'unity_World2Shadow' with 'unity_WorldToShadow'
-
-// Upgrade NOTE: replaced 'unity_World2Shadow' with 'unity_WorldToShadow'
 
 //
 //  Required Variables
@@ -18,6 +15,11 @@ float _Hapke;
 //
 //  Utility Functions
 //
+
+// Used in scaled parallax
+
+#define TEX2D(tex, texSampler, uv)                     tex.Sample(texSampler, uv)
+#define TEX2DLOD(tex, texSampler, uv)                  tex.SampleLevel(texSampler, uv.xy, uv.w)
 
 float3 SampleNormal(sampler2D tex, float2 uv)
 {
@@ -122,7 +124,7 @@ float3 SubsurfaceScattering(float3 worldPos, float3 worldNormal, float3 viewDir,
 #endif
 
 #if defined (EMISSION) && defined (DIRECTIONAL) && !defined (PARALLAX_DEFERRED_PASS)
-    #define APPLY_EMISSION  result.rgb = result.rgb += _EmissionColor * (1 - finalNormal.a);
+    #define APPLY_EMISSION  result.rgb += _EmissionColor * (1 - finalNormal.a);
 #else
     #define APPLY_EMISSION
 #endif

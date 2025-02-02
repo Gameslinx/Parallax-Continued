@@ -14,6 +14,7 @@ Shader "Custom/ParallaxScaled"
         _ColorMap("Planet Color Map", 2D) = "white" {}
         _BumpMap("Planet Bump Map", 2D) = "bump" {}
         _HeightMap("Planet Height Map", 2D) = "black" {}
+        _EmissiveMap("Planet Emissive Map", 2D) = "black" {}
         _OceanColor("Planet Ocean Color", COLOR) = (0,0,0,1)
         _AtmosphereRimMap("Atmosphere Rim", 2D) = "black" {}
         _AtmosphereThickness("Transition Width", Range(0.0001, 5)) = 2
@@ -76,6 +77,7 @@ Shader "Custom/ParallaxScaled"
         _SpecularIntensity("Specular Intensity", Range(0.0, 5.0)) = 1
         _OceanSpecularPower("Ocean Specular Power", Range(0.001, 200)) = 1
         _OceanSpecularIntensity("Ocean Specular Intensity", Range(0.0, 5.0)) = 1
+        _EmissiveIntensity("Emissive Intensity", Range(0.0, 5.0)) = 1
         _FresnelPower("Fresnel Power", Range(0.001, 20)) = 1
         _EnvironmentMapFactor("Environment Map Factor", Range(0.0, 2.0)) = 1
         _RefractionIntensity("Refraction Intensity", Range(0, 2)) = 1
@@ -110,6 +112,7 @@ Shader "Custom/ParallaxScaled"
             CGPROGRAM
 
             #define SCALED
+            #define INFLUENCE_MAPPING
 
             // Single:  One surface texture
             // Double:  Blend between two altitude based textures
@@ -119,9 +122,11 @@ Shader "Custom/ParallaxScaled"
             // For anyone wondering, the _ after multi_compile tells unity the keyword is a toggle, and avoids creating variants "_ON" and "_OFF"
             // I would move this to ParallaxStructs.cginc but as we're on unity 2019 you can't have preprocessor directives in cgincludes. Sigh
             #pragma multi_compile_local            PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
-            #pragma multi_compile_local _          INFLUENCE_MAPPING
             #pragma multi_compile_local _          ADVANCED_BLENDING
             #pragma multi_compile_local _          EMISSION
+            #pragma multi_compile_local _          OCEAN OCEAN_FROM_COLORMAP
+            #pragma multi_compile_local _          ATMOSPHERE
+            #pragma multi_compile_local _          SCALED_EMISSIVE_MAP
             //#pragma skip_variants POINT_COOKIE LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING VERTEXLIGHT_ON
 
             #include "UnityCG.cginc"
@@ -219,8 +224,11 @@ Shader "Custom/ParallaxScaled"
                 o.uv = BARYCENTRIC_INTERPOLATE(uv);
                 float4 landMask = BARYCENTRIC_INTERPOLATE(landMask);
 
-                float displacement = tex2Dlod(_HeightMap, float4(o.uv, 0, 0));
+                // Defines 'displacedWorldPos'
+                float displacement = tex2Dlod(_HeightMap, float4(o.uv, 0, 0)).r;
                 CALCULATE_HEIGHTMAP_DISPLACEMENT_SCALED(o, displacement);
+
+                o.biplanarTextureCoords = mul(unity_WorldToObject, float4(o.worldPos, 1)).xyz;
 
                 o.pos = UnityWorldToClipPos(o.worldPos);
 
@@ -241,11 +249,19 @@ Shader "Custom/ParallaxScaled"
                 i.worldBinormal = normalize(i.worldBinormal);
                 float3 viewDir = normalize(i.viewDir);
 
+                // Height value
+                float planetHeight = tex2D(_HeightMap, i.uv).r;
+                planetHeight = lerp(_MinRadialAltitude, _MaxRadialAltitude, planetHeight);
+
+                // Atmosphere
+                float3 atmosphereColor = GetAtmosphereColor(i.worldNormal, viewDir);
+
                 // Construct TBN matrix
                 float3 planetNormal = UnpackScaleNormal(tex2D(_BumpMap, i.uv), _PlanetBumpScale);
                 float3x3 TBN = BuildTBN(i.worldTangent, i.worldBinormal, i.worldNormal);
 
                 // Get planet normal in world and local space
+                float3 flatWorldNormal = i.worldNormal;
                 float3 worldPlanetNormal = normalize(mul(TBN, float4(planetNormal.xyz, 0)));
                 float3 localPlanetNormal = normalize(mul(unity_WorldToObject, float4(worldPlanetNormal, 0))).xyz;
                 i.worldNormal = worldPlanetNormal;
@@ -267,7 +283,7 @@ Shader "Custom/ParallaxScaled"
 
                 // Red low-mid blend, green mid-high blend, blue steep, alpha midpoint which distinguishes low from high
                 // We need to get this mask again on a pixel level because the blending looks much nicer
-                float4 landMask = GetScaledLandMask(i.worldPos, i.worldNormal);
+                float4 landMask = GetScaledLandMask(planetHeight, flatWorldNormal, i.worldNormal);
 
                 // Declares float4 'globalInfluence' if influence mapping is enabled
                 DECLARE_INFLUENCE_TEXTURE_SCALED
@@ -286,38 +302,53 @@ Shader "Custom/ParallaxScaled"
                 float4 diffuseColor = tex2D(_ColorMap, i.uv);
                 float3 vertexColor = diffuseColor.rgb;
 
-                //
-                // Localised altitude based textures
-                // Totals 16 texture samples, BUH!
-                //
-
-                // These declarations perform the texture samples, and within them are checks to see if they should be skipped or not
-                // They will be optimized out if unused
                 DECLARE_LOW_TEXTURE_SET_SCALED(lowDiffuse, lowNormal, _MainTexLow, _BumpMapLow)
                 DECLARE_MID_TEXTURE_SET_SCALED(midDiffuse, midNormal, _MainTexMid, _BumpMapMid)
                 DECLARE_HIGH_TEXTURE_SET_SCALED(highDiffuse, highNormal, _MainTexHigh, _BumpMapHigh)
                 DECLARE_STEEP_TEXTURE_SET_SCALED(steepDiffuse, steepNormal, _MainTexSteep, _BumpMapSteep)
 
-                //
-                //  Displacement Based Texture Blending
-                //
+                DECLARE_AMBIENT_OCCLUSION_TEXTURE_SCALED(occlusion, _OcclusionMap)
 
+                // Only if displacement blending is enabled
                 DECLARE_DISPLACEMENT_TEXTURE_SCALED(displacement, _DisplacementMap)
                 CALCULATE_ADVANCED_BLENDING_FACTORS_SCALED(landMask, displacement)
-                
+
                 fixed4 altitudeDiffuse = BLEND_TEXTURES(landMask, lowDiffuse, midDiffuse, highDiffuse);
                 NORMAL_FLOAT altitudeNormal = BLEND_TEXTURES(landMask, lowNormal, midNormal, highNormal);
 
                 fixed4 finalDiffuse = lerp(altitudeDiffuse, steepDiffuse, landMask.b);
-                NORMAL_FLOAT finalNormal = lerp(altitudeNormal, steepNormal, landMask.b); 
+                NORMAL_FLOAT finalNormal = lerp(altitudeNormal, steepNormal, landMask.b);
 
+                // Ocean
+                #if defined (OCEAN) || defined (OCEAN_FROM_COLORMAP)
+
+                GET_OCEAN_DIFFUSE
+                float3 oceanNormal = normalize(localPos);
+
+                if (planetHeight <= _OceanAltitude)
+                {
+                    finalDiffuse = oceanDiffuse;
+                    finalNormal.xyz = oceanNormal;
+
+                    #if defined (EMISSION)
+                    finalNormal.a = 1;
+                    #endif
+
+                    // Rough deferred to forward spec power conversion
+                    _SpecularPower = _OceanSpecularPower * 150.0f;
+                    _SpecularIntensity = _OceanSpecularIntensity * 1.44;
+                }
+
+                #endif
+                
                 // Convert local normal back into world space
                 finalNormal.xyz = normalize(mul(unity_ObjectToWorld, float4(finalNormal.xyz, 0)).xyz);
 
                 float3 result = CalculateLighting(finalDiffuse, finalNormal.xyz, viewDir, GET_SHADOW, _WorldSpaceLightPos0);
                 UNITY_APPLY_FOG(i.fogCoord, result);
                 APPLY_EMISSION
-                return float4(result, 1 - _PlanetOpacity);
+                APPLY_SCALED_EMISSION
+                return float4(result + atmosphereColor, 1);
             }
             ENDCG
         }
@@ -333,6 +364,7 @@ Shader "Custom/ParallaxScaled"
             CGPROGRAM
         
             #define SCALED
+            #define INFLUENCE_MAPPING
 
             #pragma multi_compile_local PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
             #pragma multi_compile_shadowcaster
@@ -451,9 +483,12 @@ Shader "Custom/ParallaxScaled"
             CGPROGRAM
         
             #define SCALED
+            #define INFLUENCE_MAPPING
 
             #pragma multi_compile_local           PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
-            #pragma multi_compile_local _         INFLUENCE_MAPPING
+            #pragma multi_compile_local _         OCEAN OCEAN_FROM_COLORMAP
+            #pragma multi_compile_local _         ATMOSPHERE
+            #pragma multi_compile_local _         ADVANCED_BLENDING
             #pragma multi_compile_fwdadd_fullshadows
         
             #pragma vertex Vertex_Shader
@@ -552,9 +587,12 @@ Shader "Custom/ParallaxScaled"
                 
                 float4 landMask = BARYCENTRIC_INTERPOLATE(landMask);
 
-                // Defines 'displacedWorldPos' 
-                float displacement = tex2Dlod(_HeightMap, float4(v.uv, 0, 0));
+                // Defines 'displacedWorldPos'
+                float displacement = tex2Dlod(_HeightMap, float4(v.uv, 0, 0)).r;
                 CALCULATE_HEIGHTMAP_DISPLACEMENT_SCALED(v, displacement);
+
+                v.pos = UnityWorldToClipPos(v.worldPos);
+                v.biplanarTextureCoords = mul(unity_WorldToObject, float4(v.worldPos, 1)).xyz;
 
                 v.pos = UnityWorldToClipPos(v.worldPos); 
                 
@@ -575,11 +613,19 @@ Shader "Custom/ParallaxScaled"
                 float3 viewDir = normalize(i.viewDir);
                 float3 lightDir = normalize(i.lightDir);
 
+                // Height value
+                float planetHeight = tex2D(_HeightMap, i.uv).r;
+                planetHeight = lerp(_MinRadialAltitude, _MaxRadialAltitude, planetHeight);
+
+                // Atmosphere
+                float3 atmosphereColor = GetAtmosphereColor(i.worldNormal, viewDir);
+
                 // Construct TBN matrix
                 float3 planetNormal = UnpackScaleNormal(tex2D(_BumpMap, i.uv), _PlanetBumpScale);
                 float3x3 TBN = BuildTBN(i.worldTangent, i.worldBinormal, i.worldNormal);
 
                 // Get planet normal in world and local space
+                float3 flatWorldNormal = i.worldNormal;
                 float3 worldPlanetNormal = normalize(mul(TBN, float4(planetNormal.xyz, 0)));
                 float3 localPlanetNormal = normalize(mul(unity_WorldToObject, float4(worldPlanetNormal, 0))).xyz;
                 i.worldNormal = worldPlanetNormal;
@@ -601,7 +647,7 @@ Shader "Custom/ParallaxScaled"
 
                 // Red low-mid blend, green mid-high blend, blue steep, alpha midpoint which distinguishes low from high
                 // We need to get this mask again on a pixel level because the blending looks much nicer
-                float4 landMask = GetScaledLandMask(i.worldPos, i.worldNormal);
+                float4 landMask = GetScaledLandMask(planetHeight, flatWorldNormal, i.worldNormal);
 
                 // Declares float4 'globalInfluence' if influence mapping is enabled
                 DECLARE_INFLUENCE_TEXTURE_SCALED
@@ -620,30 +666,43 @@ Shader "Custom/ParallaxScaled"
                 float4 diffuseColor = tex2D(_ColorMap, i.uv);
                 float3 vertexColor = diffuseColor.rgb;
 
-                //
-                // Localised altitude based textures
-                // Totals 16 texture samples, BUH!
-                //
-
-                // These declarations perform the texture samples, and within them are checks to see if they should be skipped or not
-                // They will be optimized out if unused
                 DECLARE_LOW_TEXTURE_SET_SCALED(lowDiffuse, lowNormal, _MainTexLow, _BumpMapLow)
                 DECLARE_MID_TEXTURE_SET_SCALED(midDiffuse, midNormal, _MainTexMid, _BumpMapMid)
                 DECLARE_HIGH_TEXTURE_SET_SCALED(highDiffuse, highNormal, _MainTexHigh, _BumpMapHigh)
                 DECLARE_STEEP_TEXTURE_SET_SCALED(steepDiffuse, steepNormal, _MainTexSteep, _BumpMapSteep)
 
-                //
-                //  Displacement Based Texture Blending
-                //
+                DECLARE_AMBIENT_OCCLUSION_TEXTURE_SCALED(occlusion, _OcclusionMap)
 
+                // Only if displacement blending is enabled
                 DECLARE_DISPLACEMENT_TEXTURE_SCALED(displacement, _DisplacementMap)
                 CALCULATE_ADVANCED_BLENDING_FACTORS_SCALED(landMask, displacement)
 
                 fixed4 altitudeDiffuse = BLEND_TEXTURES(landMask, lowDiffuse, midDiffuse, highDiffuse);
-                float3 altitudeNormal = BLEND_TEXTURES(landMask, lowNormal, midNormal, highNormal);
+                NORMAL_FLOAT altitudeNormal = BLEND_TEXTURES(landMask, lowNormal, midNormal, highNormal);
 
                 fixed4 finalDiffuse = lerp(altitudeDiffuse, steepDiffuse, landMask.b);
-                float3 finalNormal = lerp(altitudeNormal, steepNormal, landMask.b); 
+                NORMAL_FLOAT finalNormal = lerp(altitudeNormal, steepNormal, landMask.b);
+
+                // Ocean
+                #if defined (OCEAN) || defined (OCEAN_FROM_COLORMAP)
+
+                GET_OCEAN_DIFFUSE
+                float3 oceanNormal = normalize(localPos);
+
+                if (planetHeight <= _OceanAltitude)
+                {
+                    finalDiffuse = oceanDiffuse;
+                    finalNormal.xyz = oceanNormal;
+
+                    #if defined (EMISSION)
+                    finalNormal.a = 1;
+                    #endif
+
+                    _SpecularPower = _OceanSpecularPower * 150.0f;
+                    _SpecularIntensity = _OceanSpecularIntensity * 1.44;
+                }
+
+                #endif
 
                 // Convert local normal back into world space
                 finalNormal.xyz = normalize(mul(unity_ObjectToWorld, float4(finalNormal.xyz, 0)).xyz);
@@ -651,7 +710,7 @@ Shader "Custom/ParallaxScaled"
                 float atten = LIGHT_ATTENUATION(i);
                 float3 result = CalculateLighting(finalDiffuse, finalNormal, viewDir, GET_SHADOW, lightDir);
 
-                return float4(result, atten * (1 - _PlanetOpacity));
+                return float4(result + atmosphereColor, atten);
             }
             ENDCG
         }
@@ -680,16 +739,17 @@ Shader "Custom/ParallaxScaled"
 
             #define PARALLAX_DEFERRED_PASS
             #define SCALED
+            #define INFLUENCE_MAPPING
 
             // For anyone wondering, the _ after multi_compile tells unity the keyword is a toggle, and avoids creating variants "_ON" and "_OFF"
             // I would move this to ParallaxStructs.cginc but as we're on unity 2019 you can't have preprocessor directives in cgincludes. Sigh
             #pragma multi_compile_local            PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
-            #pragma multi_compile_local _          INFLUENCE_MAPPING
             #pragma multi_compile_local _          EMISSION
             #pragma multi_compile_local _          ADVANCED_BLENDING
             #pragma multi_compile_local _          AMBIENT_OCCLUSION
             #pragma multi_compile_local _          OCEAN OCEAN_FROM_COLORMAP
             #pragma multi_compile_local _          ATMOSPHERE
+            #pragma multi_compile_local _          SCALED_EMISSIVE_MAP
             #pragma multi_compile _ UNITY_HDR_ON
 
             #include "UnityCG.cginc"
@@ -894,6 +954,11 @@ Shader "Custom/ParallaxScaled"
                 {
                     finalDiffuse = oceanDiffuse;
                     finalNormal.xyz = oceanNormal;
+
+                    #if defined (EMISSION)
+                    finalNormal.a = 1;
+                    #endif
+
                     _SpecularPower = _OceanSpecularPower;
                     _SpecularIntensity = _OceanSpecularIntensity;
                 }
@@ -906,7 +971,8 @@ Shader "Custom/ParallaxScaled"
                 BLEND_OCCLUSION(landMask, occlusion)
 
                 // Deferred functions
-                SurfaceOutputStandardSpecular surfaceInput = GetPBRStruct(finalDiffuse, GET_EMISSION, finalNormal.xyz, i.worldPos ADDITIONAL_PBR_PARAMS);
+                // Output diffuse, normals, specular
+                SurfaceOutputStandardSpecular surfaceInput = GetPBRStruct(finalDiffuse, 0, finalNormal.xyz, i.worldPos ADDITIONAL_PBR_PARAMS);
                 UnityGI gi = GetUnityGI();
                 UnityGIInput giInput = GetGIInput(i.worldPos, viewDir);
                 LightingStandardSpecular_GI(surfaceInput, giInput, gi);
@@ -915,70 +981,24 @@ Shader "Custom/ParallaxScaled"
                 SET_OUT_SHADOWMASK(i)
 
                 //
+                //  Environment Reflections (can't just use reflection probe)
+                //  And atmosphere
                 //
-                //
-                //
-                //
-
-                //outGBuffer0.xyz = 1;
-                //outGBuffer2.xyz = i.biplanarTextureCoords * 0.5f + 0.5f;
-
-                float3 worldPos = i.worldPos;
-
-                //half4 gbuffer0 = tex2D (_CameraGBufferTexture0, uv);
-                //half4 gbuffer1 = tex2D (_CameraGBufferTexture1, uv);
-                //half4 gbuffer2 = tex2D (_CameraGBufferTexture2, uv);
-                //UnityStandardData data = UnityStandardDataFromGbuffer(gbuffer0, gbuffer1, gbuffer2);
 
                 float3 eyeVec = -viewDir;
                 eyeVec = mul(_SkyboxRotation, eyeVec);
-                finalNormal = mul(_SkyboxRotation, finalNormal);
+                finalNormal.xyz = mul(_SkyboxRotation, finalNormal);
 
-                // Rotate eyevec by the skybox rotation
-                //eyeVec = normalize(mul(_SkyboxRotation, eyeVec).xyz);
+                Unity_GlossyEnvironmentData g = UnityGlossyEnvironmentSetup(outGBuffer2.w, -eyeVec, finalNormal.xyz, outGBuffer1.rgb);
 
-                half oneMinusReflectivity = 1 - max (max (outGBuffer1.r, outGBuffer1.g), outGBuffer1.b);
-
-                // Unused member don't need to be initialized
-                UnityGIInput d;
-                d.worldPos = worldPos;
-                d.worldViewDir = -eyeVec;
-                d.probeHDR[0] = _Skybox_HDR;
-                d.probeHDR[1] = _Skybox_HDR;
-                d.boxMin[0].w = 0; // 1 in .w allow to disable blending in UnityGI_IndirectSpecular call since it doesn't work in Deferred
-                d.boxMin[1] = 0;
-                d.boxMax[0] = 0;
-                d.boxMax[1] = 0;
-
-                d.light.color = 0;
-                d.light.dir = half3(0, 1, 0);
-                d.light.ndotl = 0;
-                d.atten = 1;
-                d.lightmapUV = 0.0f;
-                d.ambient.rgb = 0;
-
-                d.probePosition[0] = 0;
-                d.probePosition[1] = 0;
-
-
-                Unity_GlossyEnvironmentData g = UnityGlossyEnvironmentSetup(outGBuffer2.w, -eyeVec, finalNormal, outGBuffer1.rgb);
-
-                float occlusion2 = 1;
-                half3 env0 = UnityGI_IndirectSpecularBasic(d, outGBuffer1.w, g);
-
-                UnityLight light;
-                light.color = half3(0, 0, 0);
-                light.dir = half3(0, 1, 0);
-                
-                UnityIndirect ind;
-                ind.diffuse = 0;
-                ind.specular = env0;
-                
-                half3 rgb = UNITY_BRDF_PBS (0, outGBuffer1.xyz, oneMinusReflectivity, outGBuffer2.w, finalNormal, -eyeVec, light, ind).rgb;
+                half3 envColor = UnityGI_IndirectSpecularBasic(_Skybox_HDR, outGBuffer1.w, g);
+                half3 rgb = BRDF_EnvironmentReflection(outGBuffer1.xyz, outGBuffer2.w, finalNormal.xyz, -eyeVec, envColor).rgb;
                 
                 rgb *= _EnvironmentMapFactor;
-                
                 rgb += atmosphereColor;
+                rgb += GET_EMISSION;
+                rgb += GET_SCALED_EMISSION;
+
                 SET_OUT_EMISSION(float4(rgb, 1));
             }
             ENDCG

@@ -39,7 +39,14 @@ public class RaymarchedShadows : MonoBehaviour
         shadowCommandBuffer.ClearRenderTarget(true, true, Color.clear);
         shadowCommandBuffer.DrawMesh(customShadowObject.GetComponent<MeshFilter>().sharedMesh, customShadowObject.transform.localToWorldMatrix, shadowMaterial);
 
-        Camera.main.AddCommandBuffer(CameraEvent.BeforeLighting, shadowCommandBuffer);
+        if (Camera.main.renderingPath == RenderingPath.DeferredShading)
+        {
+            Camera.main.AddCommandBuffer(CameraEvent.BeforeLighting, shadowCommandBuffer);
+        }
+        else
+        {
+            Camera.main.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, shadowCommandBuffer);
+        }
     }
 
     void SetupLightCommandBuffer(Material blitMaterial)

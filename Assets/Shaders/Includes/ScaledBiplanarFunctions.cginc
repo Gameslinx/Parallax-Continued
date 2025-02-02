@@ -71,11 +71,11 @@ float GetMipLevel(float3 texCoord, float3 dpdx, float3 dpdy)
     return 0.5f * log2(md);
 }
 
-float4 SampleBiplanarTexture(sampler2D tex, PixelBiplanarParams params, float3 worldPos)
+float4 SampleBiplanarTexture(Texture2D tex, PixelBiplanarParams params, float3 worldPos)
 {
     // Sample zoom level 0
-    float4 x = tex2Dgrad(tex, TEX2D_GRAD_COORDS(params.ma, params, worldPos));
-    float4 y = tex2Dgrad(tex, TEX2D_GRAD_COORDS(params.me, params, worldPos));
+    float4 x = tex.SampleGrad(PARALLAX_SAMPLER_STATE, TEX2D_GRAD_COORDS(params.ma, params, worldPos)); //TEX2DGRAD(tex, PARALLAX_SAMPLER_STATE, TEX2D_GRAD_COORDS(params.ma, params, worldPos));
+    float4 y = tex.SampleGrad(PARALLAX_SAMPLER_STATE, TEX2D_GRAD_COORDS(params.me, params, worldPos));
     
     // Compute blend weights
     float2 w = float2(params.absWorldNormal[params.ma.x], params.absWorldNormal[params.me.x]);
@@ -88,11 +88,11 @@ float4 SampleBiplanarTexture(sampler2D tex, PixelBiplanarParams params, float3 w
     return (x * w.x + y * w.y) / (w.x + w.y);
 }
 
-float4 SampleBiplanarTextureLOD(sampler2D tex, VertexBiplanarParams params, float3 worldPos)
+float4 SampleBiplanarTextureLOD(Texture2D tex, VertexBiplanarParams params, float3 worldPos)
 {
     // Project and fetch
-    float4 x = tex2Dlod(tex, TEX2D_LOD_COORDS(params.ma, worldPos, 0));
-    float4 y = tex2Dlod(tex, TEX2D_LOD_COORDS(params.me, worldPos, 0));
+    float4 x = TEX2DLOD(tex, PARALLAX_SAMPLER_STATE, TEX2D_LOD_COORDS(params.ma, worldPos, 0));
+    float4 y = TEX2DLOD(tex, PARALLAX_SAMPLER_STATE, TEX2D_LOD_COORDS(params.me, worldPos, 0));
     
     // Compute blend weights
     float2 w = float2(params.absWorldNormal[params.ma.x], params.absWorldNormal[params.me.x]);
@@ -115,11 +115,11 @@ NORMAL_FLOAT ParallaxUnpackNormalEmission(float4 normalTexture)
 #endif
 }
 
-NORMAL_FLOAT SampleBiplanarNormal(sampler2D tex, PixelBiplanarParams params, float3 worldPos, float3 worldNormal)
+NORMAL_FLOAT SampleBiplanarNormal(Texture2D tex, PixelBiplanarParams params, float3 worldPos, float3 worldNormal)
 {
     // Sample textures
-    float4 texLevelx = tex2Dgrad(tex, TEX2D_GRAD_COORDS(params.ma, params, worldPos));
-    float4 texLevely = tex2Dgrad(tex, TEX2D_GRAD_COORDS(params.me, params, worldPos));
+    float4 texLevelx = tex.SampleGrad(PARALLAX_SAMPLER_STATE, TEX2D_GRAD_COORDS(params.ma, params, worldPos));
+    float4 texLevely = tex.SampleGrad(PARALLAX_SAMPLER_STATE, TEX2D_GRAD_COORDS(params.me, params, worldPos));
 
     // Unpack normals
     NORMAL_FLOAT x = ParallaxUnpackNormalEmission(texLevelx);

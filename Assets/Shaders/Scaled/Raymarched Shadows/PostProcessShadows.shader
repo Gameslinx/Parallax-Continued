@@ -33,7 +33,6 @@
             };
 
             sampler2D _MainTex;
-            sampler2D _ShadowDistances;
             sampler2D _ShadowDepth;
 
             sampler2D _CameraDepthTexture; 
@@ -73,39 +72,13 @@
                 return o;
             }
 
-            float GuassianBlur(float2 uv, float blurStrength)
-            {
-                return 1;
-            }
-
-            float boxBlur(float2 uv, float2 texelSize)
-            {
-                // blur x
-                float res = 0;
-                int kernelSize = 25;
-                for (int i = -kernelSize; i < kernelSize; i++)
-                {
-                    for (int b = -kernelSize; b < kernelSize; b++)
-                    {
-                        res += tex2Dlod(_MainTex, float4(uv + texelSize * float2(i, b), 0, 0));
-                    }
-                }
-                res /= (kernelSize * kernelSize);
-                return res;
-            }
-
             #define SHADOW_KERNEL_SPREAD 0.01
             fixed4 frag (v2f i) : SV_Target
             {
                 float2 screenUV = i.screenPos.xy / i.screenPos.w;
 
-                // Blur kernel weight
-                float shadowDistance = tex2Dlod(_ShadowDistances, float4(screenUV, 0, 0)).r;
-
                 float screenSpaceShadowAttenuation = tex2Dlod(_MainTex, float4(i.uv, 0, 0)).r; //tex2Dlod(_MainTex, float4(i.uv, 0, mip -1 )).r;
-                
-                
-                
+
                 // Sample scene depth
                 float sceneDepth = LinearEyeDepth(tex2D(_CameraDepthTexture, screenUV).r);
                 
@@ -122,9 +95,6 @@
                     // Discard shadow: return white (no shadow attenuation)
                     //return fixed4(1.0, 1.0, 1.0, 1.0);
                 }
-
-                //return shadowCasterDepth;
-                //return screenSpaceShadowAttenuation;
                 return tex2Dlod(_MainTex, float4(i.uv, 0, 0)).r;
             }
             ENDCG

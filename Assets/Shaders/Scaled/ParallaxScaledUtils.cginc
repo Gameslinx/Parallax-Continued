@@ -1,3 +1,4 @@
+
 #include "ScaledDisplacementUtils.cginc"
 
 // Calculate the heightmap displacement
@@ -99,6 +100,18 @@ float4 GetScaledLandMask(float altitude, float3 flatWorldNormal, float3 worldNor
     #define GET_OCEAN_DIFFUSE float4 oceanDiffuse = diffuseColor;
 #endif
 
+#if defined (SCALED_EMISSIVE_MAP) && defined (DIRECTIONAL) && !defined (PARALLAX_DEFERRED_PASS)
+    #define APPLY_SCALED_EMISSION result.rgb += tex2D(_EmissiveMap, i.uv).rgb * _EmissiveIntensity;
+#else
+    #define APPLY_SCALED_EMISSION
+#endif
+
+#if defined (SCALED_EMISSIVE_MAP) && defined (PARALLAX_DEFERRED_PASS)
+    #define GET_SCALED_EMISSION tex2D(_EmissiveMap, i.uv).rgb * _EmissiveIntensity
+#else
+    #define GET_SCALED_EMISSION 0
+#endif
+
 #define PI 3.1415f
 
 #if defined (ATMOSPHERE)
@@ -123,14 +136,33 @@ float4 GetScaledLandMask(float altitude, float3 flatWorldNormal, float3 worldNor
 
 
 // Fake reflections as emission
-inline half3 UnityGI_IndirectSpecularBasic(UnityGIInput data, half occlusion, Unity_GlossyEnvironmentData glossIn)
+inline half3 UnityGI_IndirectSpecularBasic(float4 probeHDR, half occlusion, Unity_GlossyEnvironmentData glossIn)
 {
     half3 specular;
 
-    half3 env0 = Unity_GlossyEnvironment(UNITY_PASS_TEXCUBE(_Skybox), data.probeHDR[0], glossIn);
+    half3 env0 = Unity_GlossyEnvironment(UNITY_PASS_TEXCUBE(_Skybox), probeHDR, glossIn);
     specular = env0;
 
     return specular * occlusion;
+}
+
+// Adjustment of Unity's BRDF1_Unity_PBS, just stripped down to remove unused calculations
+half3 BRDF_EnvironmentReflection(half3 specColor, half smoothness, float3 normal, float3 viewDir, float3 envColor)
+{
+    float perceptualRoughness = SmoothnessToPerceptualRoughness(smoothness);
+    float roughness = PerceptualRoughnessToRoughness(perceptualRoughness);
+        roughness = max(roughness, 0.002); // Prevents division errors
+    
+    half nv = abs(dot(normal, viewDir));
+    
+    #ifdef UNITY_COLORSPACE_GAMMA
+            half surfaceReduction = 1.0 - 0.28 * roughness * perceptualRoughness;
+    #else
+    half surfaceReduction = 1.0 / (roughness * roughness + 1.0);
+    #endif
+    
+    half grazingTerm = saturate(smoothness + (1 - max(specColor.r, max(specColor.g, specColor.b))));
+    return surfaceReduction * envColor * FresnelLerp(specColor, grazingTerm, nv);
 }
 
 //

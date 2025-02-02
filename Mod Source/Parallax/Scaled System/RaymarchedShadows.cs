@@ -8,7 +8,7 @@ using UnityEngine.Rendering;
 
 namespace Parallax.Scaled_System
 {
-    [KSPAddon(KSPAddon.Startup.TrackingStation, true)]
+    [KSPAddon(KSPAddon.Startup.SpaceCentre, true)]
     public class RaymarchedShadowsRenderer : MonoBehaviour
     {
         public static RaymarchedShadowsRenderer Instance;
@@ -32,19 +32,22 @@ namespace Parallax.Scaled_System
         CommandBuffer lightCommandBuffer;
 
         public List<ParallaxScaledBody> scaledBodies = new List<ParallaxScaledBody>();
+        public List<MeshRenderer> meshRenderers = new List<MeshRenderer>();
         void Awake()
         {
+
             Instance = this;
             GameObject.DontDestroyOnLoad(this);
-
+        }
+        public void Start()
+        {
             // Setup
             foreach (KeyValuePair<string, ParallaxScaledBody> pair in ConfigLoader.parallaxScaledBodies)
             {
                 scaledBodies.Add(pair.Value);
+                meshRenderers.Add(FlightGlobals.GetBodyByName(pair.Value.planetName).scaledBody.GetComponent<MeshRenderer>());
             }
-        }
-        public void Start()
-        {
+
             // Ensure the screenspace mask is generated
             mainLight = Sun.Instance.scaledSunLight;
             mainLight.shadows = LightShadows.Soft;
@@ -63,8 +66,14 @@ namespace Parallax.Scaled_System
             shadowCommandBuffer = new CommandBuffer { name = "Render Custom Shadows" };
             lightCommandBuffer = new CommandBuffer { name = "Composite Shadows" };
 
-            Debug.Log("Command buffer added");
-            ScaledCamera.Instance.cam.AddCommandBuffer(CameraEvent.BeforeLighting, shadowCommandBuffer);
+            if (ScaledCamera.Instance.cam.renderingPath == RenderingPath.DeferredShading)
+            {
+                ScaledCamera.Instance.cam.AddCommandBuffer(CameraEvent.BeforeLighting, shadowCommandBuffer);
+            }
+            else
+            {
+                ScaledCamera.Instance.cam.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, shadowCommandBuffer);
+            }
 
             SetupRenderTextures();
             SetupMaterials();
@@ -112,8 +121,10 @@ namespace Parallax.Scaled_System
             shadowCommandBuffer.ClearRenderTarget(true, true, Color.white);
 
             // Only render what we can see and is loaded
-            foreach (ParallaxScaledBody scaledBody in scaledBodies)
+            for (int i = 0; i < scaledBodies.Count; i++)
             {
+                ParallaxScaledBody scaledBody = scaledBodies[i];
+                MeshRenderer meshRenderer = meshRenderers[i];
                 if (!scaledBody.Loaded)
                 {
                     continue;
@@ -127,8 +138,8 @@ namespace Parallax.Scaled_System
                 }
                 else
                 {
-                    shadowCommandBuffer.SetGlobalMatrix("_WorldRotation", Matrix4x4.Inverse(Matrix4x4.Rotate(FlightGlobals.GetBodyByName(scaledBody.planetName).scaledBody.GetComponent<MeshRenderer>().localToWorldMatrix.rotation)));
-                    shadowCommandBuffer.DrawRenderer(FlightGlobals.GetBodyByName(scaledBody.planetName).scaledBody.GetComponent<MeshRenderer>(), scaledBody.shadowCasterMaterial, 0);
+                    shadowCommandBuffer.SetGlobalMatrix("_WorldRotation", Matrix4x4.Inverse(Matrix4x4.Rotate(meshRenderer.localToWorldMatrix.rotation)));
+                    shadowCommandBuffer.DrawRenderer(meshRenderer, scaledBody.shadowCasterMaterial, 0);
                     
                     // Set planet opacity for current and other scaled planets
                     if (FlightGlobals.currentMainBody != null && FlightGlobals.currentMainBody.name == scaledBody.planetName)
@@ -150,7 +161,7 @@ namespace Parallax.Scaled_System
         }
 
         bool debug = false;
-        void Update()
+        void LateUpdate()
         {
             RenderShadows();
 

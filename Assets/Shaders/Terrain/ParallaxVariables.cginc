@@ -1,4 +1,6 @@
 // Samplers
+#if !defined (SCALED)
+
 sampler2D _MainTexLow;
 sampler2D _BumpMapLow;
 
@@ -15,10 +17,33 @@ sampler2D _DisplacementMap;
 sampler2D _InfluenceMap;
 
 #if defined (AMBIENT_OCCLUSION)
+    sampler2D _OcclusionMap;
+#endif
 
-sampler2D _OcclusionMap;
+#else
+
+Texture2D _MainTexLow;
+Texture2D _BumpMapLow;
+
+Texture2D _MainTexMid;
+Texture2D _BumpMapMid;
+
+Texture2D _MainTexHigh;
+Texture2D _BumpMapHigh;
+
+Texture2D _MainTexSteep;
+Texture2D _BumpMapSteep;
+
+Texture2D _DisplacementMap;
+Texture2D _InfluenceMap;
+
+#if defined (AMBIENT_OCCLUSION)
+    Texture2D _OcclusionMap;
+#endif
 
 #endif
+
+
 
 float2 _MainTex_ST;
 

@@ -237,12 +237,10 @@ namespace Parallax
 
             foreach (KeyValuePair<string, string> textureValue in terrainShaderProperties.shaderTextures)
             {
-                Debug.Log("Attempting load: " + textureValue.Key + " at " + textureValue.Value);
                 Texture2D tex;
                 if (loadedTextures.ContainsKey(textureValue.Key))
                 {
                     tex = loadedTextures[textureValue.Key];
-                    Debug.Log(" - already contained");
                 }
                 else
                 {
@@ -251,7 +249,6 @@ namespace Parallax
 
                     // Add to active textures
                     loadedTextures.Add(textureValue.Key, tex);
-                    Debug.Log(" - loaded from disk");
                 }
                 // Bump maps need to be linear, while everything else sRGB
                 // This could be handled better, tbh, but at least we're accounting for linear textures this time around
@@ -266,8 +263,6 @@ namespace Parallax
                 parallaxMaterials.parallaxFull.SetTexture(textureValue.Key, tex);
             }
             loaded = true;
-
-            Debug.Log("Elapsed (terrain): " + sw.Elapsed.Milliseconds.ToString("F3"));
         }
         public IEnumerator LoadAsync()
         {
@@ -279,12 +274,10 @@ namespace Parallax
 
             foreach (KeyValuePair<string, string> textureValue in terrainShaderProperties.shaderTextures)
             {
-                Debug.Log("Attempting load: " + textureValue.Key + " at " + textureValue.Value);
                 Texture2D tex;
                 if (loadedTextures.ContainsKey(textureValue.Key))
                 {
                     tex = loadedTextures[textureValue.Key];
-                    Debug.Log(" - already contained");
                 }
                 else
                 {
@@ -293,7 +286,6 @@ namespace Parallax
 
                     // Add to active textures
                     loadedTextures.Add(textureValue.Key, tex);
-                    Debug.Log(" - loaded from disk");
                     yield return null;
                 }
                 // Bump maps need to be linear, while everything else sRGB
@@ -309,8 +301,6 @@ namespace Parallax
                 parallaxMaterials.parallaxFull.SetTexture(textureValue.Key, tex);
             }
             loaded = true;
-
-            Debug.Log("Elapsed (terrain): " + sw.Elapsed.Milliseconds.ToString("F3"));
         }
         public static Texture2D LoadTexIfUnloaded(ParallaxTerrainBody body, string path, string key)
         {
@@ -410,13 +400,7 @@ namespace Parallax
         /// </summary>
         public void ReadTerrainShaderProperties()
         {
-            Debug.Log("Terrain shader properties appended");
             scaledMaterialParams.shaderProperties.Append(terrainBody.terrainShaderProperties);
-
-            foreach (KeyValuePair<string, string> tex in scaledMaterialParams.shaderProperties.shaderTextures)
-            {
-                Debug.Log("SMP: " + tex.Key + " = " + tex.Value);
-            }
         }
         public void LoadInitial(string shader)
         {
@@ -441,17 +425,6 @@ namespace Parallax
             scaledMaterial.SetFloat("_MaxTessellation", ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.maxTessellation / 6);
             scaledMaterial.SetFloat("_TessellationEdgeLength", ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength / 4);
             scaledMaterial.SetFloat("_MaxTessellationRange", float.MaxValue);
-
-            // Set all textures to black initially
-            foreach (string texturePropertyName in scaledMaterialParams.shaderProperties.shaderTextures.Keys)
-            {
-                if (texturePropertyName.Contains("Bump") || texturePropertyName.Contains("Normal"))
-                {
-                    continue;
-                }
-                scaledMaterial.SetTexture(texturePropertyName, Texture2D.blackTexture);
-            }
-
         }
         public void UpdateBaseMaterialParams()
         {
@@ -566,13 +539,11 @@ namespace Parallax
             // Now load the textures needed here
             foreach (KeyValuePair<string, string> textureValue in scaledMaterialParams.shaderProperties.shaderTextures)
             {
-                Debug.Log("Attempting load: " + textureValue.Key + " at " + textureValue.Value);
                 Texture2D tex;
 
                 // Texture already loaded? Use it
                 if (loadedTextures.ContainsKey(textureValue.Key))
                 {
-                    Debug.Log(" - already contained in scaled");
                     tex = loadedTextures[textureValue.Key];
                 }
                 else
@@ -583,7 +554,6 @@ namespace Parallax
                         // Point to the terrain texture
                         tex = terrainBody.loadedTextures[textureValue.Key];
                         loadedTextures.Add(textureValue.Key, tex);
-                        Debug.Log(" - already contained in terrain");
                     }
                     else
                     {
@@ -593,7 +563,6 @@ namespace Parallax
 
                         // Add to active textures
                         loadedTextures.Add(textureValue.Key, tex);
-                        Debug.Log(" - loaded from disk");
                     }
                 }
 
@@ -635,7 +604,6 @@ namespace Parallax
                 // Base planet texture
                 if (textureValue.Key == "_HeightMap" || textureValue.Key == "_NormalMap" || textureValue.Key == "_BumpMap" || textureValue.Key == "_ColorMap")
                 {
-                    Debug.Log("Attempting load: " + textureValue.Key + " at " + textureValue.Value);
                     Texture2D tex;
                     if (loadedTextures.ContainsKey(textureValue.Key))
                     {
@@ -674,18 +642,14 @@ namespace Parallax
                 yield return new WaitUntil(() => terrainBody.Loaded == true);
             }
 
-            System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
-
             // Now load the textures needed here
             foreach (KeyValuePair<string, string> textureValue in scaledMaterialParams.shaderProperties.shaderTextures)
             {
-                Debug.Log("Attempting load: " + textureValue.Key + " at " + textureValue.Value);
                 Texture2D tex;
 
                 // Texture already loaded? Use it
                 if (loadedTextures.ContainsKey(textureValue.Key))
                 {
-                    Debug.Log(" - already contained in scaled");
                     tex = loadedTextures[textureValue.Key];
                 }
                 else
@@ -696,7 +660,6 @@ namespace Parallax
                         // Point to the terrain texture
                         tex = terrainBody.loadedTextures[textureValue.Key];
                         loadedTextures.Add(textureValue.Key, tex);
-                        Debug.Log(" - already contained in terrain");
                     }
                     else
                     {
@@ -706,7 +669,6 @@ namespace Parallax
 
                         // Add to active textures
                         loadedTextures.Add(textureValue.Key, tex);
-                        Debug.Log(" - loaded from disk");
                         yield return null;
                     }
                 }
@@ -738,15 +700,12 @@ namespace Parallax
                 }
             }
 
-            Debug.Log("Elapsed (scaled): " + sw.Elapsed.Milliseconds.ToString("F3"));
-
             loaded = true;
             isLoading = false;
         }
 
         public void Unload()
         {
-            Debug.Log("Scaled unload requested: " + planetName);
             // First destroy our textures
             Texture2D[] textures = loadedTextures.Values.ToArray();
             string[] keys = loadedTextures.Keys.ToArray();
@@ -759,7 +718,6 @@ namespace Parallax
                 }
                 else
                 {
-                    Debug.Log("Destroying texture: " + keys[i]);
                     UnityEngine.Object.Destroy(textures[i]);
                 }
             }

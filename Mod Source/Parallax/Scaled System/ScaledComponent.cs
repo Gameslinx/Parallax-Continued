@@ -34,6 +34,7 @@ namespace Parallax.Scaled_System
         void Start()
         {
             // Locate the parent star for shadows
+            ParallaxDebug.Log("Searching for parent star");
             CelestialBody parentBody = celestialBody.referenceBody;
             while (parentBody != null && !parentBody.isStar)
             {
@@ -41,15 +42,15 @@ namespace Parallax.Scaled_System
                 parentBody = parentBody.referenceBody;
             }
 
-            if (parentBody == null)
-            {
-                ParallaxDebug.Log("Warning: Unable to find the parent star for: " + celestialBody.name);
-                ParallaxDebug.Log("Shadow penumbra angle will be defaulted");
-            }
-            else
+            if (parentBody != null)
             {
                 parentStar = parentBody;
                 Debug.Log("Located parent star: " + parentStar.name);
+            }
+            else
+            {
+                ParallaxDebug.Log("Warning: Unable to find the parent star for: " + celestialBody.name);
+                ParallaxDebug.Log("Shadow penumbra angle will be defaulted");
             }
 
             // Kick off immediately
@@ -64,7 +65,6 @@ namespace Parallax.Scaled_System
         {
             // Calculate "size on screen" (really the angle subtended by the sphere radius)
             float angle = CalculateSubtendedAngle(ScaledSpace.LocalToScaledSpace(celestialBody.gameObject.transform.position), ScaledCamera.Instance.cam.transform.position, scaledBody.worldSpaceMeshRadius, ScaledCamera.Instance.cam.fieldOfView);
-            Debug.Log("Angle: " + celestialBody.name + ": " + angle.ToString("F5"));
             if (angle > loadAngle)
             {
                 // Prevent an unload if we just dipped into it and back out

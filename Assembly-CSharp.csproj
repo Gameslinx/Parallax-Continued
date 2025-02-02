@@ -93,7 +93,6 @@
      <None Include="Assets\Shaders\Scatters\ScatterUtils.cginc" />
      <None Include="Assets\Shaders\Debug\SphericalCoords.shader" />
      <None Include="Assets\Shaders\Debug\ShowNoise.shader" />
-     <None Include="Assets\Shaders\Debug\DummyDisplacement.shader" />
      <None Include="Assets\Shaders\Debug\SDF Visualiser.shader" />
      <None Include="Assets\Shaders\Scatters\InstancingShaders\InstancedBiplanar.shader" />
      <None Include="Assets\Shaders\Scatters\InstancingShaders\InstancedSolid.shader" />
@@ -103,7 +102,7 @@
      <None Include="Assets\Shaders\Scatters\InstancingShaders\Bubble.shader" />
      <None Include="Assets\Shaders\Scaled\ParallaxVariables.cginc" />
      <None Include="Assets\Shaders\Debug\DistanceTest.shader" />
-     <None Include="Assets\Shaders\Debug\ShowCubemap.shader" />
+     <None Include="Assets\Shaders\Debug\Aniso.shader" />
      <None Include="Assets\Shaders\Scaled\Raymarched Shadows\RaymarchedShadowFuncs.cginc" />
      <None Include="Assets\Shaders\Terrain\DiscardAll.shader" />
      <None Include="Assets\Shaders\Scaled\ParallaxScaledStructs.cginc" />
@@ -129,7 +128,6 @@
      <None Include="Assets\Shaders\Scaled\Raymarched Shadows\RaymarchedShadows.shader" />
      <None Include="Assets\Shaders\Debug\ShowNoiseEditor.shader" />
      <None Include="Assets\Shaders\Scatters\InstancingShaders\Barebones.shader" />
-     <None Include="Assets\Shaders\Debug\BlendTest.shader" />
      <None Include="Assets\Shaders\Debug\ShowWind.shader" />
      <None Include="Assets\Shaders\Scaled\Raymarched Shadows\PostProcessShadows.shader" />
      <None Include="Assets\Shaders\Includes\ParallaxGlobalFunctions.cginc" />
