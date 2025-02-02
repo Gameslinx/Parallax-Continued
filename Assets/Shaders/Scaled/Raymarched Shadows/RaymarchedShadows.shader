@@ -36,6 +36,7 @@
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_fwdbase nolightmap nodirlightmap nodynlightmap novertexlight
+            #pragma multi_compile_local _          OCEAN OCEAN_FROM_COLORMAP
 
             #define STEP_COUNT 48
             #define SHADOW_BIAS 0.001
@@ -54,6 +55,7 @@
             float _ScaleFactor;
             float _LightWidth;
             float _ScaledPlanetOpacity;
+            float _OceanAltitude;
 
             // Parallax includes
             #include "../../Includes/ParallaxGlobalFunctions.cginc" 
@@ -120,7 +122,13 @@
                 float2 uv = DirectionToEquirectangularUV(dirFromCenter);
                 float heightValue = tex2Dlod(_HeightMap, float4(uv, 0, 0)).r;
         
-                return lerp(_MinRadialAltitude, _MaxRadialAltitude, heightValue);
+                float altitude = lerp(_MinRadialAltitude, _MaxRadialAltitude, heightValue);
+
+                #if defined (OCEAN) || defined (OCEAN_FROM_COLORMAP)
+                altitude = max(altitude, _OceanAltitude);
+                #endif
+
+                return altitude;
             }
         
             float GetAltitudeAt(float3 pos, float3 origin)
@@ -128,7 +136,9 @@
                 float altitude = length(pos - origin) / _ScaleFactor;
                 float altAboveRadius = altitude - (_WorldPlanetRadius / _ScaleFactor);
 
-                return altAboveRadius * _ScaleFactor;
+                float realAltitude = altAboveRadius * _ScaleFactor;
+
+                return realAltitude;
             }
 
             // Shadow umbra and penumbra calculation reference: https://iquilezles.org/articles/rmshadows/
@@ -140,8 +150,12 @@
                 float3 origin = mul(unity_ObjectToWorld, float4(0, 0, 0, 1)).xyz;
 
                 // Initial height position, add a small amount to prevent immediate self shadow
-                // Set it to 1/100 of the total altitude range
-                float initialHeight = lerp(_MinRadialAltitude, _MaxRadialAltitude, tex2Dlod(_HeightMap, float4(i.uv, 0, 0)) + SHADOW_BIAS);
+                float initialHeight = lerp(_MinRadialAltitude, _MaxRadialAltitude, tex2Dlod(_HeightMap, float4(i.uv, 0, 0)));
+                #if defined (OCEAN) || defined (OCEAN_FROM_COLORMAP)
+                initialHeight = max(initialHeight, _OceanAltitude);
+                #endif
+
+                initialHeight += SHADOW_BIAS;
 
                 // Setup ray params
                 // Shadow bias
@@ -210,6 +224,7 @@
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_shadowcaster
+            #pragma multi_compile_local _          OCEAN OCEAN_FROM_COLORMAP
 
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
@@ -219,6 +234,8 @@
             float _WorldPlanetRadius;
             float _MinRadialAltitude;
             float _MaxRadialAltitude;
+
+            float _OceanAltitude;
 
             // Parallax includes
             #include "../../Includes/ParallaxGlobalFunctions.cginc" 

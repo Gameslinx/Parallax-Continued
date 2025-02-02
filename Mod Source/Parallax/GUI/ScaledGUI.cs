@@ -13,8 +13,10 @@ namespace Parallax
     public partial class ParallaxGUI
     {
         static bool showExporter = false;
-        static float lightWidth = 0.001f;
-        static float maxRadAlt = 5000.0f;
+
+        static float currentMinAltitude = -100000;
+        static float currentMaxAltitude = -100000;
+        static string currentMinMaxBody = "";
         static void ScaledMenu(ParallaxScaledBody body)
         {
             GUILayout.Label("Scaled Shader Properties ( " + body.planetName + "):", HighLogic.Skin.label);
@@ -25,14 +27,6 @@ namespace Parallax
         {
             ParamCreator.ChangeMethod callback = body.UpdateBaseMaterialParamsFromGUI;
             ProcessGenericMaterialParams(body.scaledMaterialParams, callback, true, body.scaledMaterial, "ParallaxScaledShaderProperties");
-
-            // Debugs
-            lightWidth = GUILayout.HorizontalSlider(lightWidth, 0.000001f, 0.75f);
-            maxRadAlt = GUILayout.HorizontalSlider(maxRadAlt, 0.0f, 1.0f);
-
-            body.shadowCasterMaterial.SetFloat("_LightWidth", lightWidth);
-            body.shadowCasterMaterial.SetFloat("_MaxRadialAltitude", maxRadAlt);
-            body.scaledMaterial.SetFloat("_MaxRadialAltitude", maxRadAlt);
 
             if (GUILayout.Button("Reload"))
             {
@@ -66,7 +60,18 @@ namespace Parallax
                 ParamCreator.CreateParam("Export Normal", ref exportOptions.exportNormal, GUIHelperFunctions.BoolField, null);
                 GUILayout.Space(10);
                 ParamCreator.CreateParam("Multithreaded Export", ref exportOptions.multithread, GUIHelperFunctions.BoolField, null);
-
+                GUILayout.Space(10);
+                if (currentMinMaxBody != planetName)
+                {
+                    GUILayout.Label("To see min/max altitudes to use in configs, export the planet textures first");
+                }
+                else
+                {
+                    GUILayout.Label("Min Altitude: " + currentMinAltitude.ToString("F2"));
+                    GUILayout.Label("Max Altitude: " + currentMaxAltitude.ToString("F2"));
+                }
+                
+                GUILayout.Space(10);
                 if (GUILayout.Button("Export", HighLogic.Skin.button))
                 {
                     Coroutine co = ScaledManager.Instance.StartCoroutine(TextureExporter.GenerateTextures(exportOptions, body));
@@ -76,6 +81,12 @@ namespace Parallax
                     GenerateEntireSystem();
                 }
             }
+        }
+        public static void SetMinMaxAltitudeLabels(string body, float min, float max)
+        {
+            currentMinMaxBody = body;
+            currentMinAltitude = min;
+            currentMaxAltitude = max;
         }
         public static void GenerateEntireSystem()
         {

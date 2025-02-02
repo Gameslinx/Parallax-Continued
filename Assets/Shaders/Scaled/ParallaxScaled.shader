@@ -965,8 +965,6 @@ Shader "Custom/ParallaxScaled"
 
                 float occlusion2 = 1;
                 half3 env0 = UnityGI_IndirectSpecularBasic(d, outGBuffer1.w, g);
-                
-                //env0 = DecodeHDR(float4(env0, 1), _Skybox_HDR);
 
                 UnityLight light;
                 light.color = half3(0, 0, 0);
@@ -978,14 +976,7 @@ Shader "Custom/ParallaxScaled"
                 
                 half3 rgb = UNITY_BRDF_PBS (0, outGBuffer1.xyz, oneMinusReflectivity, outGBuffer2.w, finalNormal, -eyeVec, light, ind).rgb;
                 
-                // make this more elegant
-                #if defined (ATMOSPHERE)
-                rgb = 0;
-                #endif
-
-                // Calculate falloff value, so reflections on the edges of the probe would gradually blend to previous reflection.
-                // Also this ensures that pixels not located in the reflection probe AABB won't
-                // accidentally pick up reflections from this probe.
+                rgb *= _EnvironmentMapFactor;
                 
                 rgb += atmosphereColor;
                 SET_OUT_EMISSION(float4(rgb, 1));

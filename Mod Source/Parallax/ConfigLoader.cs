@@ -48,6 +48,9 @@ namespace Parallax
         // Debug wireframe material
         public static Material wireframeMaterial;
 
+        /// <summary>
+        /// GameData path. Includes a trailing forward slash - GameData/
+        /// </summary>
         public static string GameDataPath;
 
         // Configs that start with 'Parallax' as the root node

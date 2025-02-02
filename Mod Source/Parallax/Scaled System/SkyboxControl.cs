@@ -11,13 +11,27 @@ namespace Parallax.Scaled_System
     /// <summary>
     /// Class to extract the skybox and create a cubemap from it
     /// </summary>
-    [KSPAddon(KSPAddon.Startup.SpaceCentre, true)]
+    [KSPAddon(KSPAddon.Startup.AllGameScenes, false)]
     public class SkyboxControl : MonoBehaviour
     {
         public static RenderTexture equirectangularSkybox;
         public static Cubemap cubeMap;
+        public static bool alreadyGenerated = false;
+
         void Awake()
         {
+            // We can only successfully get the skybox in flight or tracking station, which works well enough
+            if (!HighLogic.LoadedSceneIsFlight && !(HighLogic.LoadedScene == GameScenes.TRACKSTATION))
+            {
+                return;
+            }
+
+            if (alreadyGenerated)
+            {
+                return;
+            }
+
+            GameObject.DontDestroyOnLoad(this);
             ParallaxDebug.Log("Scaled: Processing skybox");
             float startTime = Time.realtimeSinceStartup;
             GalaxyCubeControl skybox = GalaxyCubeControl.Instance;
@@ -105,6 +119,10 @@ namespace Parallax.Scaled_System
             Graphics.CopyTexture(destTextures[5], 0, cube, 5);
 
             cubeMap = cube;
+
+            GameObject.DontDestroyOnLoad(cubeMap);
+
+            alreadyGenerated = true;
 
             float timeTaken = Time.realtimeSinceStartup - startTime;
             ParallaxDebug.Log("Skybox processing took " + timeTaken.ToString("F2") + " seconds");

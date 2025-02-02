@@ -270,8 +270,17 @@ namespace Parallax
             // Two configured but we're on the wrong one
             if (terrain && scatters && !scaled && editorMode == GUIEditorMode.Scaled)
             {
-                
+                return GUIEditorMode.Terrain;
             }
+            if (terrain && scaled && !scatters && editorMode == GUIEditorMode.Scatter)
+            {
+                return GUIEditorMode.Terrain;
+            }
+            if (scatters && scaled && !terrain && editorMode == GUIEditorMode.Terrain)
+            {
+                return GUIEditorMode.Scatter;
+            }
+
             return GUIEditorMode.Terrain;
         }
         static void ProcessSaveButton(Scatter scatter)

@@ -21,8 +21,8 @@ namespace Parallax.Scaled_System
         public CelestialBody celestialBody;
         public CelestialBody parentStar;
 
-        public static float loadAngle = 0.02f;
-        public static float unloadAngle = 0.005f;
+        public static float loadAngle = 0.008f;
+        public static float unloadAngle = 0.003f;
 
         public bool pendingUnload = false;
         public static float unloadDelaySeconds = 10.0f;
@@ -64,7 +64,7 @@ namespace Parallax.Scaled_System
         {
             // Calculate "size on screen" (really the angle subtended by the sphere radius)
             float angle = CalculateSubtendedAngle(ScaledSpace.LocalToScaledSpace(celestialBody.gameObject.transform.position), ScaledCamera.Instance.cam.transform.position, scaledBody.worldSpaceMeshRadius, ScaledCamera.Instance.cam.fieldOfView);
-
+            Debug.Log("Angle: " + celestialBody.name + ": " + angle.ToString("F5"));
             if (angle > loadAngle)
             {
                 // Prevent an unload if we just dipped into it and back out

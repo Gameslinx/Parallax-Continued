@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Parallax
 {
@@ -441,6 +442,16 @@ namespace Parallax
             scaledMaterial.SetFloat("_TessellationEdgeLength", ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength / 4);
             scaledMaterial.SetFloat("_MaxTessellationRange", float.MaxValue);
 
+            // Set all textures to black initially
+            foreach (string texturePropertyName in scaledMaterialParams.shaderProperties.shaderTextures.Keys)
+            {
+                if (texturePropertyName.Contains("Bump") || texturePropertyName.Contains("Normal"))
+                {
+                    continue;
+                }
+                scaledMaterial.SetTexture(texturePropertyName, Texture2D.blackTexture);
+            }
+
         }
         public void UpdateBaseMaterialParams()
         {
@@ -510,12 +521,19 @@ namespace Parallax
                 scaledMaterial.SetInt("_DisableDisplacement", 0);
             }
 
-            // Setup shadow caster
+            // Setup shadow caster - must set this manually
             shadowCasterMaterial.SetFloat("_MinRadialAltitude", (_MinAltitude) * scalingFactor);
             shadowCasterMaterial.SetFloat("_MaxRadialAltitude", (_MaxAltitude) * scalingFactor);
             shadowCasterMaterial.SetFloat("_WorldPlanetRadius", _MeshRadius);
             shadowCasterMaterial.SetFloat("_ScaleFactor", scalingFactor);
             shadowCasterMaterial.SetInt("_DisableDisplacement", disableDeformity ? 1 : 0);
+
+            if (scaledMaterialParams.shaderKeywords.Contains("OCEAN") || scaledMaterialParams.shaderKeywords.Contains("OCEAN_FROM_COLORMAP"))
+            {
+                // Colormap doesn't matter for the shadow caster, just enable one of them
+                shadowCasterMaterial.EnableKeyword("OCEAN");
+                shadowCasterMaterial.SetFloat("_OceanAltitude", scaledMaterialParams.shaderProperties.shaderFloats["_OceanAltitude"]);
+            }
 
             // Computed at runtime, but the default is computed from Kerbin's SMA around the Sun
             shadowCasterMaterial.SetFloat("_LightWidth", 0.0384f);
@@ -603,8 +621,51 @@ namespace Parallax
             loaded = true;
         }
 
+        /// <summary>
+        /// Spread the load over a few frames. Not fully async, due to Unity Texture2D limitation
+        /// </summary>
+        /// <returns></returns>
         public IEnumerator LoadAsync()
         {
+            // Instantly load the height, color and normal maps to get a 'base' level of detail
+            // Then wait for the rest "higher detail" to load - most of the load time will be spent loading terrain textures
+
+            foreach (KeyValuePair<string, string> textureValue in scaledMaterialParams.shaderProperties.shaderTextures)
+            {
+                // Base planet texture
+                if (textureValue.Key == "_HeightMap" || textureValue.Key == "_NormalMap" || textureValue.Key == "_BumpMap" || textureValue.Key == "_ColorMap")
+                {
+                    Debug.Log("Attempting load: " + textureValue.Key + " at " + textureValue.Value);
+                    Texture2D tex;
+                    if (loadedTextures.ContainsKey(textureValue.Key))
+                    {
+                        tex = loadedTextures[textureValue.Key];
+                    }
+                    else
+                    {
+                        bool linear = TextureUtils.IsLinear(textureValue.Key);
+                        tex = TextureLoader.LoadTexture(textureValue.Value, linear);
+
+                        // Add to active textures to prevent load later on
+                        loadedTextures.Add(textureValue.Key, tex);
+                    }
+
+                    // Set on the material immediately
+                    scaledMaterial.SetTexture(textureValue.Key, tex);
+                    if (textureValue.Key == "_HeightMap")
+                    {
+                        shadowCasterMaterial.SetTexture("_HeightMap", tex);
+                    }
+                }
+            }
+
+            // Wait a frame - above was pretty expensive
+            yield return null;
+
+            //
+            //  Base maps loaded, now load the terrain in a coroutine
+            //
+
             isLoading = true;
             // First check for terrain body's terrain textures and load them
             if (!terrainBody.Loaded)
@@ -657,16 +718,24 @@ namespace Parallax
                 }
             }
 
-            // Set ocean color
-            if (scaledMaterialParams.shaderKeywords.Contains("OCEAN"))
+            bool hasOcean = scaledMaterialParams.shaderKeywords.Contains("OCEAN");
+            bool hasOceanColormap = scaledMaterialParams.shaderKeywords.Contains("OCEAN_FROM_COLORMAP");
+            if (hasOcean || hasOceanColormap)
             {
-                if (FlightGlobals.GetBodyByName(planetName).pqsController == null)
+                if (hasOcean)
                 {
-                    ParallaxDebug.LogError("Planet " + planetName + " scaled material has OCEAN keyword but the planet doesn't have any PQS");
-                    yield break;
+                    // Set ocean color
+                    if (FlightGlobals.GetBodyByName(planetName).pqsController == null)
+                    {
+                        ParallaxDebug.LogError("Planet " + planetName + " scaled material has OCEAN keyword but the planet doesn't have any PQS");
+                        yield break;
+                    }
+                    Color pqsMapOceanColor = FlightGlobals.GetBodyByName(planetName).pqsController.mapOceanColor;
+                    scaledMaterial.SetColor("_OceanColor", pqsMapOceanColor);
+
+                    // Set shadow material keyword
+
                 }
-                Color pqsMapOceanColor = FlightGlobals.GetBodyByName(planetName).pqsController.mapOceanColor;
-                scaledMaterial.SetColor("_OceanColor", pqsMapOceanColor);
             }
 
             Debug.Log("Elapsed (scaled): " + sw.Elapsed.Milliseconds.ToString("F3"));

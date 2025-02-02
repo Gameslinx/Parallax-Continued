@@ -15,6 +15,8 @@ namespace Parallax.Scaled_System
         public static int PlanetRadiusParam = Shader.PropertyToID("_PlanetRadius");
         public static ScaledManager Instance;
 
+        Vector3 rotation = new Vector3(0, 180, 0);
+
         /// <summary>
         /// Stores the scaled space planet meshes, rendered using DrawMesh for the shadows pass
         /// </summary>
@@ -49,7 +51,7 @@ namespace Parallax.Scaled_System
         public void Update()
         {
             // Send inverse of skybox rotation to shader
-            Shader.SetGlobalMatrix(SkyboxRotationShaderParam, Matrix4x4.Rotate(Quaternion.Euler(new Vector3(0, 180, 0) - GalaxyCubeControl.Instance.transform.rotation.eulerAngles)));
+            Shader.SetGlobalMatrix(SkyboxRotationShaderParam, Matrix4x4.Rotate(Quaternion.Euler(rotation - GalaxyCubeControl.Instance.transform.rotation.eulerAngles)));
         }
         void OnDisable()
         {

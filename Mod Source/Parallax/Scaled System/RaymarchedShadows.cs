@@ -45,6 +45,7 @@ namespace Parallax.Scaled_System
         }
         public void Start()
         {
+            // Ensure the screenspace mask is generated
             mainLight = Sun.Instance.scaledSunLight;
             mainLight.shadows = LightShadows.Soft;
             mainLight.shadowStrength = 1;

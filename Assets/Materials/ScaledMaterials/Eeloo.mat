@@ -1,0 +1,164 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Eeloo
+  m_Shader: {fileID: 4800000, guid: 3c05f23d39e47ad438585d779ea28a16, type: 3}
+  m_ShaderKeywords: ADVANCED_BLENDING INFLUENCE_MAPPING PARALLAX_FULL
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap:
+    QUEUE: Geometry
+    RenderType: Opaque
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _AtmosphereRimMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMap:
+        m_Texture: {fileID: 2800000, guid: b6fd9b6ca494ae44d8fc1440550ac3ed, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMapHigh:
+        m_Texture: {fileID: 2800000, guid: b80bc5f1495ada7468ad2d08dc05faec, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMapLow:
+        m_Texture: {fileID: 2800000, guid: 548fbc9c05c0788458e0aa5d73a907b6, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMapMid:
+        m_Texture: {fileID: 2800000, guid: 548fbc9c05c0788458e0aa5d73a907b6, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMapSteep:
+        m_Texture: {fileID: 2800000, guid: ef4147015c93e0e4d9996bb55d1aa3a7, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ColorMap:
+        m_Texture: {fileID: 2800000, guid: 87dcd12351f657a41884d6ccb279e2bd, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailAlbedoMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailNormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DisplacementMap:
+        m_Texture: {fileID: 2800000, guid: 9be9bfa04c37fb246818dda07b076df2, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmissionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _HeightMap:
+        m_Texture: {fileID: 2800000, guid: 939658141d3e4bc47a533afa8ba850e1, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _InfluenceMap:
+        m_Texture: {fileID: 2800000, guid: 9e1db6c8148d1914596b27068749e847, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTexHigh:
+        m_Texture: {fileID: 2800000, guid: 2a0b3ce404f346946896af22ba3b4c5a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTexLow:
+        m_Texture: {fileID: 2800000, guid: 9902cb7256ce12843b6b829a7a88f696, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTexMid:
+        m_Texture: {fileID: 2800000, guid: 9902cb7256ce12843b6b829a7a88f696, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTexSteep:
+        m_Texture: {fileID: 2800000, guid: 55906916ce61ff4409efc106f6bdcb3c, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OcclusionMap:
+        m_Texture: {fileID: 2800000, guid: f747e84699433444cad0deb9e71e818e, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ParallaxMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Skybox:
+        m_Texture: {fileID: 8900000, guid: dbd4791fb36c99f42b857172ac311e9c, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Floats:
+    - _AtmosphereThickness: 2
+    - _BiplanarBlendFactor: 1
+    - _BumpScale: 1
+    - _Cutoff: 0.5
+    - _Debug: 0
+    - _DetailNormalMapScale: 1
+    - _DisableDisplacement: 0
+    - _DstBlend: 0
+    - _EnvironmentMapFactor: 1
+    - _FresnelPower: 1
+    - _GlossMapScale: 1
+    - _Glossiness: 0.5
+    - _GlossyReflections: 1
+    - _Hapke: 1
+    - _LowMidBlendEnd: 0.49762142
+    - _LowMidBlendStart: 0.49761903
+    - _MaxTessellation: 6
+    - _MaxTessellationRange: 100
+    - _Metallic: 0
+    - _MidHighBlendEnd: 0.5007414
+    - _MidHighBlendStart: 0.49988285
+    - _Mode: 0
+    - _OcclusionStrength: 1
+    - _OceanAltitude: 0
+    - _OceanSpecularIntensity: 1
+    - _OceanSpecularPower: 1
+    - _Parallax: 0.02
+    - _PlanetBumpScale: 1
+    - _PlanetRadius: 0
+    - _RefractionIntensity: 1
+    - _SmoothnessTextureChannel: 0
+    - _SpecularHighlights: 1
+    - _SpecularIntensity: 0.19
+    - _SpecularPower: 68
+    - _SrcBlend: 1
+    - _SteepContrast: 1
+    - _SteepMidpoint: 0.5
+    - _SteepPower: 8.4
+    - _TessellationEdgeLength: 1
+    - _Tiling: 3
+    - _UVSec: 0
+    - _WorldPlanetRadius: 0.5
+    - _ZWrite: 1
+    m_Colors:
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _OceanColor: {r: 0, g: 0, b: 0, a: 1}
+    - _PlanetOrigin: {r: 0, g: 0, b: 0, a: 0}

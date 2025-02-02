@@ -178,6 +178,8 @@ namespace Parallax.Tools
             double minPQSHeight = minHeightPerBlock.Min();
             double maxPQSHeight = maxHeightPerBlock.Max();
 
+            ParallaxGUI.SetMinMaxAltitudeLabels(body.name, (float)(minPQSHeight - body.Radius), (float)(maxPQSHeight - body.Radius));
+
             if (options.exportNormal)
             {
                 Texture2D normalMap = new Texture2D(resX, resY, TextureFormat.RGB24, false);
@@ -247,6 +249,7 @@ namespace Parallax.Tools
 
             AdvanceExportProgress();
         }
+
         static void SaveMap(Texture2D texture, string planetName, string name)
         {
             string folderPath = KSPUtil.ApplicationRootPath + "GameData/ParallaxContinued_PLANET_EXPORTS/" + planetName + "/PluginData/";
@@ -461,6 +464,7 @@ namespace Parallax.Tools
             }
 
         }
+
     }
     [KSPAddon(KSPAddon.Startup.TrackingStation, false)]
     public class ThreadSafeProgressReporter : MonoBehaviour
