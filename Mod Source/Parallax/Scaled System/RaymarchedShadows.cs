@@ -38,15 +38,15 @@ namespace Parallax.Scaled_System
         public List<MeshRenderer> meshRenderers = new List<MeshRenderer>();
         void Awake()
         {
-            if (!ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledSpaceShadows)
-            {
-                Destroy(this);
-                return;
-            }
             Instance = this;
             GameObject.DontDestroyOnLoad(this);
+
+            if (!ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledSpaceShadows)
+            {
+                this.enabled = false;
+            }
         }
-        public void Start()
+        void Start()
         {
             // Setup
             foreach (KeyValuePair<string, ParallaxScaledBody> pair in ConfigLoader.parallaxScaledBodies)
@@ -85,6 +85,11 @@ namespace Parallax.Scaled_System
             SetupRenderTextures();
             SetupMaterials();
             SetupLightCommandBuffer(compositorMaterial);
+        }
+        public void Enable()
+        {
+            this.enabled = true;
+            Start();
         }
         void SetupRenderTextures()
         {
@@ -172,6 +177,10 @@ namespace Parallax.Scaled_System
         {
             RenderShadows();
 
+            DebugShadowComponent();
+        }
+        void DebugShadowComponent()
+        {
             // Debug shadow attenuation render
             if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.Alpha7))
             {
@@ -196,16 +205,33 @@ namespace Parallax.Scaled_System
                 }
             }
         }
-
+        public void Disable()
+        {
+            OnDestroy();
+            this.enabled = false;
+        }
         public void OnDestroy()
         {
-            Debug.Log("Command buffer removed");
+            ParallaxDebug.Log("Raymarched shadows shutting down");
+
+            debug = false;
+            DebugShadowComponent();
+
             ScaledCamera.Instance.cam.RemoveCommandBuffer(CameraEvent.BeforeLighting, shadowCommandBuffer);
             mainLight.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
+
             lightCommandBuffer.Dispose();
             shadowCommandBuffer.Dispose();
 
+            scaledBodies.Clear();
+            meshRenderers.Clear();
+
+            shadowAttenuationRT.Release();
+            shadowDistanceRT.Release();
+            shadowObjectDepthRT.Release();
+
             UnityEngine.Object.Destroy(scaledMesh);
+            UnityEngine.Object.Destroy(compositorMaterial);
         }
     }
 

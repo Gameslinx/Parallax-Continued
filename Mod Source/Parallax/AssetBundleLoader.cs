@@ -54,17 +54,22 @@ namespace Parallax
             {
                 // Fall back to linux and cry
                 filePath = filePath + "-linux.unity3d";
-                ParallaxDebug.LogError("Unable to determine platform (Windows, MacOSX, Linux)");
+                ParallaxDebug.LogCritical("Unable to determine platform (Windows, MacOSX, Linux) - Falling back to Linux");
             }
             return filePath;
         }
         // Get all shaders from asset bundle
         static void LoadAssetBundles<T>(string filePath, Dictionary<string, T> dest) where T : UnityEngine.Object
         {
+            if (!File.Exists(filePath))
+            {
+                ParallaxDebug.LogCritical("Asset bundle load requested, but the file doesn't exist on disk! " + filePath);
+                return;
+            }
             var assetBundle = AssetBundle.LoadFromFile(filePath);
             if (assetBundle == null)
             {
-                ParallaxDebug.Log("Failed to load bundle at path: " + filePath);
+                ParallaxDebug.LogCritical("Failed to load bundle at path: " + filePath);
             }
             else
             {

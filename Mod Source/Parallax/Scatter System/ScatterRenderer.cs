@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace Parallax
@@ -170,16 +171,68 @@ namespace Parallax
 
         void Initialize()
         {
-            // Create output buffers - Evaluate() function on quads will fill these
             if (!scatter.isShared)
             {
-                int lod0Count = EstimatePerLODMaxCount(scatter.optimizationParams.maxRenderableObjects, scatter.distributionParams.range, scatter.distributionParams.lod1.range * scatter.distributionParams.range);
-                int lod1Count = EstimatePerLODMaxCount(scatter.optimizationParams.maxRenderableObjects, scatter.distributionParams.range, scatter.distributionParams.lod2.range * scatter.distributionParams.range);
-                int lod2Count = scatter.optimizationParams.maxRenderableObjects;
+                // Already has global range multiplier applied
+                float range = scatter.distributionParams.range;
+                float densityMultiplier = Mathf.Max(ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier, 0.33f);
 
-                lod0Count = (int)((float)lod0Count * ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier * ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier);
-                lod1Count = (int)((float)lod1Count * ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier * ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier);
-                lod2Count = (int)((float)lod2Count * ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier * ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier);
+                float lod0Range = scatter.distributionParams.lod1.range * range;
+                float lod1Range = scatter.distributionParams.lod2.range * range;
+                float lod2Range = scatter.distributionParams.range;
+
+                // Fixup ranges to prevent OOB
+                lod0Range = Mathf.Min(lod0Range, scatter.distributionParams.range);
+                lod1Range = Mathf.Min(lod1Range, scatter.distributionParams.range);
+
+                // Weight by area
+                float lod0Area = Mathf.PI * lod0Range * lod0Range;
+                float lod1Area = Mathf.PI * lod1Range * lod1Range;
+                float lod2Area = Mathf.PI * lod2Range * lod2Range;
+
+                // Multiplier to max renderable objects - Pre setting multipliers
+                float lod0CountFraction = lod0Area / lod2Area;
+                float lod1CountFraction = lod1Area / lod2Area;
+                float lod2CountFraction = 1;
+
+                // Constrain fraction for LOD0, which often approaches extremely small values
+                // Unless LODs set by some dingus this should compensate aptly for tiny ranges
+                lod0CountFraction = Mathf.Max(lod0CountFraction, 0.04f);
+                lod1CountFraction = Mathf.Max(lod1CountFraction, 0.05f);
+                lod2CountFraction = Mathf.Max(lod2CountFraction, 0.07f);
+                
+                float baseLOD0Count = Mathf.CeilToInt(scatter.optimizationParams.maxRenderableObjects * lod0CountFraction);
+                float baseLOD1Count = Mathf.CeilToInt(scatter.optimizationParams.maxRenderableObjects * lod1CountFraction);
+                float baseLOD2Count = Mathf.CeilToInt(scatter.optimizationParams.maxRenderableObjects * lod2CountFraction);
+
+                // Now calculate multipliers to area from range/density mults - note range mult only affects lod2 range, does not adjust LOD distances
+                float lod0OriginalRange = lod0Range / ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier;
+                float lod1OriginalRange = lod1Range / ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier;
+                float lod2OriginalRange = lod2Range / ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier;
+
+                // Fixup ranges to prevent OOB
+                lod0OriginalRange = Mathf.Min(lod0OriginalRange, scatter.distributionParams.range / ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier);
+                lod1OriginalRange = Mathf.Min(lod1OriginalRange, scatter.distributionParams.range / ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier);
+
+                float lod0OriginalArea = Mathf.PI * lod0OriginalRange * lod0OriginalRange;
+                float lod1OriginalArea = Mathf.PI * lod1OriginalRange * lod1OriginalRange;
+                float lod2OriginalArea = Mathf.PI * lod2OriginalRange * lod2OriginalRange;
+
+                float lod0AreaFactor = lod0Area / lod0OriginalArea;
+                float lod1AreaFactor = lod1Area / lod1OriginalArea;
+                float lod2AreaFactor = lod2Area / lod2OriginalArea;
+
+                if (ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier < 0.6)
+                {
+                    // Too unstable, and the VRAM savings are tiny at this point. Just force a higher buffer size to be on the safe side
+                    lod0AreaFactor = 1;
+                    lod1AreaFactor = 1;
+                    lod2AreaFactor = 1;
+                }
+
+                int lod0Count = Mathf.CeilToInt(baseLOD0Count * densityMultiplier * lod0AreaFactor);
+                int lod1Count = Mathf.CeilToInt(baseLOD1Count * densityMultiplier * lod1AreaFactor);
+                int lod2Count = Mathf.CeilToInt(baseLOD2Count * densityMultiplier * lod2AreaFactor);
 
                 outputLOD0 = new ComputeBuffer(lod0Count, TransformData.Size(), ComputeBufferType.Append);
                 outputLOD1 = new ComputeBuffer(lod1Count, TransformData.Size(), ComputeBufferType.Append);
@@ -187,47 +240,36 @@ namespace Parallax
             }
             else
             {
-                // Get buffers from its renderer
                 ScatterRenderer renderer = ScatterManager.Instance.GetSharedScatterRenderer(scatter as SharedScatter);
                 outputLOD0 = renderer.outputLOD0;
                 outputLOD1 = renderer.outputLOD1;
                 outputLOD2 = renderer.outputLOD2;
             }
 
-            // Set the instance data on the material
             instancedMaterialLOD0.SetBuffer("_InstanceData", outputLOD0);
             instancedMaterialLOD1.SetBuffer("_InstanceData", outputLOD1);
             instancedMaterialLOD2.SetBuffer("_InstanceData", outputLOD2);
 
-            // Must initialize the count to 0
             outputLOD0.SetCounterValue(0);
             outputLOD1.SetCounterValue(0);
             outputLOD2.SetCounterValue(0);
 
             rendererBounds = new Bounds(Vector3.zero, Vector3.one * 50000.0f);
         }
-        /// <summary>
-        /// Estimates the number of objects as a portion of maxObjects that will be visible at one time.
-        /// Computed using simple differences in areas
-        /// </summary>
-        /// <param name="actualMaxCount"></param>
-        /// <param name="range"></param>
-        /// <param name="maxRange"></param>
-        /// <returns></returns>
+
         int EstimatePerLODMaxCount(int actualMaxCount, float maxRange, float lodRange)
         {
-            // This function needs to be generous - Find the minimum count that can be visible given the maximum area
-
             float maxArea = Mathf.PI * maxRange * maxRange;
 
-            // We can be dealing with pretty low numbers that can make things unreliable
-            // Triple the radius, which should account for distribution noise differences
-            float thisArea = Mathf.PI * (lodRange * 3) * (lodRange * 3);
-            float fraction = thisArea / maxArea;
+            // Adjust safety margin to prevent undershooting
+            float adjustedLodRange = lodRange;
+            float thisArea = Mathf.PI * adjustedLodRange * adjustedLodRange;
 
+            float fraction = Mathf.Clamp01(thisArea / maxArea);
             float estimation = Mathf.CeilToInt(actualMaxCount * fraction);
 
-            return (int)Mathf.Min(actualMaxCount, estimation);
+            // Undershoot safety
+            return (int)Mathf.Max(estimation, Mathf.CeilToInt(actualMaxCount * 0.1f));
         }
         void FirstTimeArgs()
         {

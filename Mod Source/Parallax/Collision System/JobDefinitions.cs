@@ -148,6 +148,7 @@ namespace Parallax
         // Vessel data
         [ReadOnly] public NativeList<float3> vesselPositions;
         [ReadOnly] public NativeList<float> vesselBounds;
+        [ReadOnly] public NativeList<float4> vesselVelocitiesMagnitude;
         [ReadOnly] public int vesselCount;
 
         // Quad data
@@ -211,6 +212,20 @@ namespace Parallax
             {
                 // Generous distance calculation that assumes worst case mesh and craft alignment
                 distance = SqrMagnitude(vesselPositions[i] - worldPos) - vesselBounds[i] - sqrMeshSize;
+
+                // Evaluate look-ahead
+                // Vessel to position vector
+                float3 colliderDir = math.normalizesafe(worldPos - vesselPositions[i]);
+                float3 vesselVelocityDir = vesselVelocitiesMagnitude[i].xyz;
+
+                // Bias heading slightly
+                float heading = math.pow(math.saturate(math.dot(vesselVelocityDir, colliderDir)), 4);
+
+                // Distance we're about to travel in the next frame scaled by heading (in direction of rock = 1x)
+                // Scaled by how many frames we want to look ahead by (5 seconds)
+                float lookAheadDistance = heading * vesselVelocitiesMagnitude[i].w;
+                distance -= lookAheadDistance * lookAheadDistance;
+
                 if (distance < closest)
                 {
                     closest = distance;

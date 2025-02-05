@@ -723,13 +723,6 @@ Shader "Custom/ParallaxScaled"
         {
             Tags { "LightMode" = "Deferred" }
 
-            //Stencil
-			//{
-			//    Ref 2
-			//    Comp Always
-			//    Pass Replace
-			//}
-
             CGPROGRAM
 
             // Single:  One surface texture

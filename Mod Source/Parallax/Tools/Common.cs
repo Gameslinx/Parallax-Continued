@@ -50,6 +50,7 @@ namespace Parallax
             scatterSystemSettingsNode.AddValue("rangeMultiplier", scatterGlobalSettings.rangeMultiplier);
             scatterSystemSettingsNode.AddValue("fadeOutStartRange", scatterGlobalSettings.fadeOutStartRange);
             scatterSystemSettingsNode.AddValue("collisionLevel", scatterGlobalSettings.collisionLevel);
+            scatterSystemSettingsNode.AddValue("colliderLookaheadTime", scatterGlobalSettings.colliderLookaheadTime);
 
             lightingSettingsNode.AddValue("lightShadows", lightingGlobalSettings.lightShadows);
             lightingSettingsNode.AddValue("lightShadowQuality", lightingGlobalSettings.lightShadowsQuality.ToString());
@@ -58,6 +59,7 @@ namespace Parallax
             scaledSettingsNode.AddValue("loadTexturesImmediately", scaledGlobalSettings.loadTexturesImmediately);
 
             debugSettingsNode.AddValue("wireframeTerrain", debugGlobalSettings.wireframeTerrain);
+            debugSettingsNode.AddValue("suppressCriticalMessages", debugGlobalSettings.suppressCriticalMessages);
 
             objectPoolSettingsNode.AddValue("cachedColliderCount", objectPoolSettings.cachedColliderCount);
 
@@ -85,7 +87,8 @@ namespace Parallax
         public float densityMultiplier;
         public float rangeMultiplier;
         public float fadeOutStartRange;
-        public float collisionLevel;
+        public int collisionLevel;
+        public float colliderLookaheadTime;
     }
     public struct LightingGlobalSettings
     {
@@ -100,6 +103,7 @@ namespace Parallax
     public struct DebugGlobalSettings
     {
         public bool wireframeTerrain;
+        public bool suppressCriticalMessages;
     }
     public struct ObjectPoolSettings
     {

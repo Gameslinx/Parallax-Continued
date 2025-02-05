@@ -76,6 +76,7 @@ namespace Parallax
 
         // Vessel requirements
         static NativeList<float3> vesselPositions;
+        static NativeList<float4> vesselVelocitiesMagnitude;
         static NativeList<float> sqrVesselBounds;
 
         // Quad requirements
@@ -108,8 +109,9 @@ namespace Parallax
             PQSStartPatch.onPQSUnload += DominantBodyUnloaded;
             PQSStartPatch.onPQSRestart += SameBodyLoaded;
 
-            // Allow 100 vessels max before we ignore any extra
+            // Allow 100 vessels max before we ignore any extra - includes debris
             vesselPositions = new NativeList<float3>(100, Allocator.Persistent);
+            vesselVelocitiesMagnitude = new NativeList<float4>(100, Allocator.Persistent);
             sqrVesselBounds = new NativeList<float>(100, Allocator.Persistent);
 
             quadPositions = new NativeList<float3>(1000, Allocator.Persistent);
@@ -206,12 +208,29 @@ namespace Parallax
         static void UpdateCraftData()
         {
             vesselPositions.Clear();
+            vesselVelocitiesMagnitude.Clear();
             sqrVesselBounds.Clear();
 
             numVesselsLoaded = FlightGlobals.VesselsLoaded.Count;
+
+            float4 vesselVelocitySpeed = new float4(0, 0.001f, 0, 1);
+
             foreach (Vessel vessel in FlightGlobals.VesselsLoaded)
             {
                 vesselPositions.Add(vessel.transform.position);
+
+                // Limit the lookahead distance to 125 meters
+                if (ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.colliderLookaheadTime > 0)
+                {
+                    vesselVelocitySpeed.xyz = Vector3.Normalize(vessel.velocityD);
+                    vesselVelocitySpeed.w = Mathf.Min((float)vessel.speed * ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.colliderLookaheadTime, 125.0f);
+                    vesselVelocitiesMagnitude.Add(vesselVelocitySpeed);
+                }
+                else
+                {
+                    vesselVelocitiesMagnitude.Add(vesselVelocitySpeed);
+                }
+
                 float maxBound = Mathf.Max(vessel.vesselSize.x, vessel.vesselSize.y, vessel.vesselSize.z);
                 sqrVesselBounds.Add(maxBound * maxBound);
             }
@@ -366,6 +385,7 @@ namespace Parallax
                 lastDistances = data.lastDistances,
 
                 vesselPositions = CollisionManager.vesselPositions,
+                vesselVelocitiesMagnitude = CollisionManager.vesselVelocitiesMagnitude,
                 vesselBounds = CollisionManager.sqrVesselBounds,
                 vesselCount = CollisionManager.numVesselsLoaded,
 
@@ -449,6 +469,7 @@ namespace Parallax
             GameObject go = ConfigLoader.colliderPool.Fetch();
 
             go.GetComponent<MeshCollider>().sharedMesh = scatter.renderer.meshLOD1;
+            go.GetComponent<MeshFilter>().sharedMesh = scatter.renderer.meshLOD1;
 
             go.transform.SetParent(scatterSystemQuad.quad.gameObject.transform, false);
 
@@ -528,6 +549,7 @@ namespace Parallax
 
             // Dispose native resources
             vesselPositions.Dispose();
+            vesselVelocitiesMagnitude.Dispose();
             sqrVesselBounds.Dispose();
 
             quadPositions.Dispose();

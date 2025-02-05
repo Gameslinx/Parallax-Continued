@@ -255,7 +255,8 @@ namespace Parallax
             parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier = float.Parse(scatterSettingsNode.GetValue("densityMultiplier"));
             parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier = float.Parse(scatterSettingsNode.GetValue("rangeMultiplier"));
             parallaxGlobalSettings.scatterGlobalSettings.fadeOutStartRange = float.Parse(scatterSettingsNode.GetValue("fadeOutStartRange"));
-            parallaxGlobalSettings.scatterGlobalSettings.collisionLevel = float.Parse(scatterSettingsNode.GetValue("collisionLevel"));
+            parallaxGlobalSettings.scatterGlobalSettings.collisionLevel = int.Parse(scatterSettingsNode.GetValue("collisionLevel"));
+            parallaxGlobalSettings.scatterGlobalSettings.colliderLookaheadTime = float.Parse(scatterSettingsNode.GetValue("colliderLookaheadTime"));
 
             ConfigNode lightingSettingsNode = config.config.GetNode("LightingSettings");
             parallaxGlobalSettings.lightingGlobalSettings.lightShadows = bool.Parse(lightingSettingsNode.GetValue("lightShadows"));
@@ -267,6 +268,7 @@ namespace Parallax
 
             ConfigNode debugSettingsNode = config.config.GetNode("DebugSettings");
             parallaxGlobalSettings.debugGlobalSettings.wireframeTerrain = bool.Parse(debugSettingsNode.GetValue("wireframeTerrain"));
+            parallaxGlobalSettings.debugGlobalSettings.suppressCriticalMessages = bool.Parse(debugSettingsNode.GetValue("suppressCriticalMessages"));
 
             ConfigNode objectPoolsNode = config.config.GetNode("ObjectPoolSettings");
             parallaxGlobalSettings.objectPoolSettings.cachedColliderCount = int.Parse(objectPoolsNode.GetValue("cachedColliderCount"));
@@ -308,7 +310,7 @@ namespace Parallax
 
                         if (keywordNode == null) 
                         { 
-                            ParallaxDebug.LogError("Keyword " + keyword + " could not be found!");
+                            ParallaxDebug.LogCritical("Template shader config error: Keyword " + keyword + " could not be found!");
                             continue;
                         }
 
@@ -389,6 +391,7 @@ namespace Parallax
                     if (parallaxTerrainBodies.ContainsKey(planetName))
                     {
                         ParallaxDebug.LogError("Parallax Terrain config for " + planetName + " already exists, skipping!");
+                        ParallaxDebug.LogError("Sanity check - Are you using a module manager patch? Check you're not patching a ParallaxTerrain or ParallaxScatters node, or it will apply whatever you're doing to every config!");
                         continue;
                     }
 
@@ -436,7 +439,7 @@ namespace Parallax
                 }
                 if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + configValue))
                 {
-                    Debug.Log("Exception: This texture file doesn't exist: " + configValue + " on planet: " + body.planetName);
+                    ParallaxDebug.LogError("This texture file doesn't exist: " + configValue + " on planet: " + body.planetName);
                 }
                 body.terrainShaderProperties.shaderTextures[propertyName] = configValue;
             }
@@ -474,6 +477,7 @@ namespace Parallax
             if (parallaxScaledBodies.ContainsKey(body.planetName))
             {
                 ParallaxDebug.LogError("Parallax Scaled config for " + body.planetName + " already exists, skipping!");
+                ParallaxDebug.LogError("Sanity check - Are you using a module manager patch? Check you're not patching a ParallaxTerrain or ParallaxScatters node, or it will apply whatever you're doing to every config!");
                 return;
             }
 
@@ -486,7 +490,7 @@ namespace Parallax
             if (!success)
             {
                 bodyMode = ParallaxScaledBodyMode.FromTerrain;
-                ParallaxDebug.LogError("Unable to parse the scaled body mode '" + mode + "'. Defaulting to 'FromTerrain'");
+                ParallaxDebug.LogCritical("Unable to parse the scaled body mode '" + mode + "'. Possible values are 'FromTerrain' and 'Custom'. 'Defaulting to 'FromTerrain'");
             }
             scaledBody.mode = bodyMode;
 
@@ -650,11 +654,11 @@ namespace Parallax
                 foreach (ConfigNode bodyNode in bodyNodes)
                 {
                     string body = bodyNode.GetValue("name");
-                    ParallaxDebug.Log("Parsing new scatter body: " + body);
 
                     if (parallaxScatterBodies.ContainsKey(body))
                     {
                         ParallaxDebug.LogError("Parallax Scatter config for " + body + " already exists, skipping!");
+                        ParallaxDebug.LogError("Sanity check - Are you using a module manager patch? Check you're not patching a ParallaxTerrain or ParallaxScatters node, or it will apply whatever you're doing to every config!");
                         continue;
                     }
 
@@ -681,6 +685,7 @@ namespace Parallax
                         if (scatterBody.scatters.ContainsKey(scatterName))
                         {
                             ParallaxDebug.LogError("Scatter " + scatterName + " already exists on " + body + ", skipping!");
+                            ParallaxDebug.LogError("Sanity check - Are you using a module manager patch? Check you're not patching a ParallaxTerrain or ParallaxScatters node, or it will apply whatever you're doing to every config!");
                             continue;
                         }
 
@@ -897,7 +902,7 @@ namespace Parallax
             ConfigNode[] lodNodes = lods.GetNodes("LOD");
             if (lodNodes.Length < 2)
             {
-                ParallaxDebug.LogError("Unable to locate the required amount of 2 LOD nodes for this scatter");
+                ParallaxDebug.LogCritical("Unable to locate the required amount of 2 LOD nodes for a scatter on " + planetName);
             }
             distributionParams.lod1 = ParseLOD(planetName, lodNodes[0], baseMaterial);
             distributionParams.lod2 = ParseLOD(planetName, lodNodes[1], baseMaterial);
@@ -1123,15 +1128,15 @@ namespace Parallax
             // Check if the models actually exist
             if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + scatter.modelPath + ".mu"))
             {
-                Debug.Log("[Exception] This model file doesn't exist: " + scatter.modelPath + " on scatter: " + scatter.scatterName);
+                ParallaxDebug.LogCritical("This model file doesn't exist: " + scatter.modelPath + " on scatter: " + scatter.scatterName);
             }
             if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + scatter.distributionParams.lod1.modelPathOverride + ".mu"))
             {
-                Debug.Log("[Exception] This model file doesn't exist: " + scatter.distributionParams.lod1.modelPathOverride + " on scatter: " + scatter.scatterName);
+                ParallaxDebug.LogCritical("This model file doesn't exist: " + scatter.distributionParams.lod1.modelPathOverride + " on scatter: " + scatter.scatterName);
             }
             if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + scatter.distributionParams.lod2.modelPathOverride + ".mu"))
             {
-                Debug.Log("[Exception] This model file doesn't exist: " + scatter.distributionParams.lod2.modelPathOverride + " on scatter: " + scatter.scatterName);
+                ParallaxDebug.LogCritical("This model file doesn't exist: " + scatter.distributionParams.lod2.modelPathOverride + " on scatter: " + scatter.scatterName);
             }
 
             // Cube the normal deviance, as it gives better results and becomes more sensitive to larger values

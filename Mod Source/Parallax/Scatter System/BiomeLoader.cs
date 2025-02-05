@@ -35,11 +35,13 @@ namespace Parallax
             // Process all bodies
             foreach (CelestialBody body in FlightGlobals.Bodies)
             {
+                ParallaxDebug.Log("Body: " + body.name);
                 string bodyName = body.name;
                 // Process all scatter bodies if the body is included
                 if (ConfigLoader.parallaxScatterBodies.ContainsKey(bodyName))
                 {
                     ParallaxScatterBody scatterBody = ConfigLoader.parallaxScatterBodies[bodyName];
+                    Debug.Log("Biome map null? " + FlightGlobals.GetBodyByName(bodyName).BiomeMap == null);
                     CBAttributeMapSO.MapAttribute[] biomeMapAttributes = FlightGlobals.GetBodyByName(bodyName).BiomeMap.Attributes;
 
                     // Process all scatters on this scatter body

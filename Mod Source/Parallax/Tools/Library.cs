@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using static GameEvents;
+using static KSP.UI.Screens.MessageSystem;
 
 namespace Parallax
 {
@@ -17,8 +18,16 @@ namespace Parallax
         {
             Debug.Log("[Parallax] " + message);
         }
-        public static void LogError(string message) 
+        public static void LogError(string message)
         {
+            Debug.LogError("[Parallax] " + message);
+        }
+        public static void LogCritical(string message) 
+        {
+            if (!ConfigLoader.parallaxGlobalSettings.debugGlobalSettings.suppressCriticalMessages)
+            {
+                PopupDialog dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), "Critical Parallax Error", "Critical Parallax Error", message, "Okay", true, HighLogic.UISkin);
+            }
             Debug.LogError("[Parallax] " + message);
         }
         public static void LogParseError(string name, string planetName, string type, string value)
