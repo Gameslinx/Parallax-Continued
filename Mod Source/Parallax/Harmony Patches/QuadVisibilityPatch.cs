@@ -69,8 +69,6 @@ namespace Parallax.Harmony_Patches
     {
         public delegate void OnQuadInvisible(PQ quad);
 
-        public static event OnQuadInvisible onQuadInvisible;
-
         static bool Prefix(PQ __instance)
         {
             if (__instance.isVisible)

@@ -1,7 +1,9 @@
 #if !defined (SCALED)
     #include "../Includes/BiplanarFunctions.cginc"
 #else
-    #include "../Includes/ScaledBiplanarFunctions.cginc"
+    #if !defined (BAKED)
+        #include "../Includes/ScaledBiplanarFunctions.cginc"
+    #endif
 #endif
 
 //

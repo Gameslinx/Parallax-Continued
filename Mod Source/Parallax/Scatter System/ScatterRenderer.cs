@@ -31,8 +31,6 @@ namespace Parallax
 
         Bounds rendererBounds;
 
-        public delegate void EvaluateScatters();
-        public event EvaluateScatters onEvaluateScatters;
         public void Enable()
         {
             Prerequisites();

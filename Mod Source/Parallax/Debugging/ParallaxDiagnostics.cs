@@ -8,8 +8,45 @@ using UnityEngine;
 
 namespace Parallax.Debugging
 {
-    public class ParallaxDiagnostics
+    [KSPAddon(KSPAddon.Startup.MainMenu, false)]
+    public class ParallaxDiagnostics : MonoBehaviour
     {
+        //
+        //  Runtime checks
+        //
+
+        void Start()
+        {
+            CheckPQSMods();
+        }
+
+        // Check if pqsmods are set up properly
+        void CheckPQSMods()
+        {
+            foreach (CelestialBody body in FlightGlobals.Bodies)
+            {
+                bool isTerrainBody = ConfigLoader.parallaxTerrainBodies.ContainsKey(body.name);
+                bool isScatterBody = ConfigLoader.parallaxScatterBodies.ContainsKey(body.name);
+
+                if (isTerrainBody || isScatterBody)
+                {
+                    // Requires the Parallax PQSMod
+                    PQS pqs = body.pqsController;
+                    if (!pqs.mods.OfType<PQSMod_Parallax>().Any())
+                    {
+                        ParallaxDebug.LogCritical("Celestial body " + body.name + " is missing the Parallax PQSMod");
+                    }
+                    else if (pqs.mods.OfType<PQSMod_Parallax>().Count() > 1)
+                    {
+                        ParallaxDebug.LogCritical("Celestial body " + body.name + " contains multiple Parallax PQSMods");
+                    }
+                }
+            }
+        }
+
+        //
+        //  Other functions
+        //
         public static void LogComputeShaderResourceUsage()
         {
             string body = FlightGlobals.currentMainBody.name;

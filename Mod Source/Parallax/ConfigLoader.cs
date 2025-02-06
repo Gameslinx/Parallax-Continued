@@ -439,7 +439,7 @@ namespace Parallax
                 }
                 if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + configValue))
                 {
-                    ParallaxDebug.LogError("This texture file doesn't exist: " + configValue + " on planet: " + body.planetName);
+                    ParallaxDebug.LogCritical("This texture file doesn't exist: " + configValue + " for planet: " + body.planetName);
                 }
                 body.terrainShaderProperties.shaderTextures[propertyName] = configValue;
             }
@@ -545,7 +545,13 @@ namespace Parallax
             }
             if (mode == ParallaxScaledBodyMode.Baked)
             {
+                body.scaledMaterialParams.shader = "Custom/ParallaxScaledBaked";
 
+                // Read material properties - For FromTerrain this'll be _ColorMap, _HeightMap, _BumpMap
+                body.scaledMaterialParams.shaderProperties = LookupTemplateConfig(GetConfigByName("ParallaxScaledShaderProperties"), body.scaledMaterialParams.shader, keywords);
+
+                // Populate the values from this material
+                PopulateMaterialValues(ref body.scaledMaterialParams, materialNode, body.planetName);
             }
             if (mode == ParallaxScaledBodyMode.Custom)
             {
@@ -1059,6 +1065,12 @@ namespace Parallax
             foreach (string key in textureKeys)
             {
                 string configValue = ConfigUtils.TryGetConfigValue(node, key);
+
+                if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + configValue))
+                {
+                    ParallaxDebug.LogCritical("This texture file doesn't exist: " + configValue + " for planet: " + planetName);
+                }
+
                 materialParams.shaderProperties.shaderTextures[key] = (string)ConfigUtils.TryParse(planetName, key, configValue, typeof(string));
             }
 

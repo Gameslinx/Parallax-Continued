@@ -544,7 +544,7 @@ namespace Parallax
         public void Load()
         {
             // First check for terrain body's terrain textures and load them
-            if (!terrainBody.Loaded)
+            if (!terrainBody.Loaded && mode != ParallaxScaledBodyMode.Baked)
             {
                 terrainBody.Load();
             }
@@ -651,7 +651,7 @@ namespace Parallax
 
             isLoading = true;
             // First check for terrain body's terrain textures and load them
-            if (!terrainBody.Loaded)
+            if (!terrainBody.Loaded && mode != ParallaxScaledBodyMode.Baked)
             {
                 ScaledManager.Instance.StartCoroutine(terrainBody.LoadAsync());
                 yield return new WaitUntil(() => terrainBody.Loaded == true);

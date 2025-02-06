@@ -72,7 +72,7 @@ namespace Parallax.Scaled_System
                 if (!scaledBody.Loaded && !scaledBody.IsLoading)
                 {
                     // We don't need to wait for this
-                    if (!ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.loadTexturesImmediately)
+                    if (!ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.loadTexturesImmediately && !(HighLogic.LoadedScene == GameScenes.MAINMENU))
                     {
                         StartCoroutine(scaledBody.LoadAsync());
                     }

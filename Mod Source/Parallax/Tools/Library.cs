@@ -32,7 +32,14 @@ namespace Parallax
         }
         public static void LogParseError(string name, string planetName, string type, string value)
         {
-            LogError("Error parsing " + name + " on planet: " + planetName + " - Tried parsing as a " + type + " but no matching conversion was found. Value = " + value);
+            string adjustedValue = value;
+            if (value == null)
+            {
+                adjustedValue = "UNDEFINED (is this missing from the config?)";
+            }
+            string message = ("Error parsing " + name + " on planet: " + planetName + " - Tried parsing as a " + type + " but no matching conversion was found. Value = " + adjustedValue);
+            LogError(message);
+            LogCritical(message);
         }
     }
     // Config loader try-parse vars

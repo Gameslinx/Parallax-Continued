@@ -262,9 +262,6 @@ namespace Parallax
             dispatchArgs = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
             dispatchArgs.SetData(count);
 
-            // Ready to start evaluating
-            scatterRenderer.onEvaluateScatters += Evaluate;
-
             // This function may never execute because the quad tries to cleanup before the readback is complete
             // So add this guard to prevent trying to remove the event before it was ever added
             eventAdded = true;
@@ -312,9 +309,6 @@ namespace Parallax
 
             dispatchArgs = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
             dispatchArgs.SetData(count);
-
-            // Ready to start evaluating
-            scatterRenderer.onEvaluateScatters += Evaluate;
 
             // This function may never execute because the quad tries to cleanup before the readback is complete
             // So add this guard to prevent trying to remove the event before it was ever added
@@ -471,7 +465,6 @@ namespace Parallax
 
                 if (eventAdded)
                 {
-                    scatterRenderer.onEvaluateScatters -= Evaluate;
                     eventAdded = false;
                 }
             }
@@ -498,7 +491,6 @@ namespace Parallax
             // Remove event
             if (eventAdded)
             {
-                scatterRenderer.onEvaluateScatters -= Evaluate;
                 eventAdded = false;
             }
 

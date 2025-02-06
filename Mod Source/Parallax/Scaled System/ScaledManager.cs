@@ -23,7 +23,7 @@ namespace Parallax.Scaled_System
         public static List<Mesh> scaledPlanetMeshes = new List<Mesh>();
         public void Awake()
         {
-            if (!HighLogic.LoadedSceneIsFlight && !(HighLogic.LoadedScene == GameScenes.TRACKSTATION))
+            if (!HighLogic.LoadedSceneIsFlight && !(HighLogic.LoadedScene == GameScenes.TRACKSTATION) && !(HighLogic.LoadedScene == GameScenes.MAINMENU))
             {
                 Destroy(this);
             }
@@ -31,6 +31,16 @@ namespace Parallax.Scaled_System
         }
         public void Start()
         {
+            Debug.Log("Scaled light init");
+            Light[] lights = (Light[])Light.FindObjectsOfType(typeof(Light));
+            foreach (Light light in lights)
+            {
+                    Debug.Log("Light located: " + light.name);
+                    Debug.Log("- Light colour: " + light.color.ToString("F2"));
+                    Debug.Log("- Light color temp" + light.colorTemperature.ToString("F2"));
+                    Debug.Log("- Light intensity" + light.intensity);
+            }
+
             foreach (ParallaxScaledBody body in ConfigLoader.parallaxScaledBodies.Values)
             {
                 CelestialBody kspBody = FlightGlobals.GetBodyByName(body.planetName);
