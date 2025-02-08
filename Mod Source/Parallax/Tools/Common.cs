@@ -39,7 +39,7 @@ namespace Parallax
             ConfigNode terrainShaderSettingsNode = new ConfigNode("TerrainShaderSettings");
             ConfigNode scatterSystemSettingsNode = new ConfigNode("ScatterSystemSettings");
             ConfigNode lightingSettingsNode = new ConfigNode("LightingSettings");
-            ConfigNode scaledSettingsNode = new ConfigNode("ScaledSettings");
+            ConfigNode scaledSettingsNode = new ConfigNode("ScaledSystemSettings");
             ConfigNode debugSettingsNode = new ConfigNode("DebugSettings");
             ConfigNode objectPoolSettingsNode = new ConfigNode("ObjectPoolSettings");
 
@@ -47,6 +47,7 @@ namespace Parallax
             terrainShaderSettingsNode.AddValue("tessellationEdgeLength", terrainGlobalSettings.tessellationEdgeLength);
             terrainShaderSettingsNode.AddValue("maxTessellationRange", terrainGlobalSettings.maxTessellationRange);
             terrainShaderSettingsNode.AddValue("useAdvancedTextureBlending", terrainGlobalSettings.advancedTextureBlending);
+            terrainShaderSettingsNode.AddValue("useAmbientOcclusion", terrainGlobalSettings.ambientOcclusion);
 
             scatterSystemSettingsNode.AddValue("densityMultiplier", scatterGlobalSettings.densityMultiplier);
             scatterSystemSettingsNode.AddValue("rangeMultiplier", scatterGlobalSettings.rangeMultiplier);

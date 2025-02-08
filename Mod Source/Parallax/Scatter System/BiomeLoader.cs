@@ -35,13 +35,12 @@ namespace Parallax
             // Process all bodies
             foreach (CelestialBody body in FlightGlobals.Bodies)
             {
-                ParallaxDebug.Log("Body: " + body.name);
+                ParallaxDebug.Log("Biome Loader: Body: " + body.name);
                 string bodyName = body.name;
                 // Process all scatter bodies if the body is included
                 if (ConfigLoader.parallaxScatterBodies.ContainsKey(bodyName))
                 {
                     ParallaxScatterBody scatterBody = ConfigLoader.parallaxScatterBodies[bodyName];
-                    Debug.Log("Biome map null? " + FlightGlobals.GetBodyByName(bodyName).BiomeMap == null);
                     CBAttributeMapSO.MapAttribute[] biomeMapAttributes = FlightGlobals.GetBodyByName(bodyName).BiomeMap.Attributes;
 
                     // Process all scatters on this scatter body
@@ -55,8 +54,6 @@ namespace Parallax
                         Texture2D biomeControltexture = new Texture2D(1, numberOfEligibleBiomes, TextureFormat.RGBA32, false);
                         int pixelIndex = 0;
 
-                        Debug.Log("Biome control texture dimensions: " + biomeControltexture.height);
-
                         foreach (CBAttributeMapSO.MapAttribute attribute in biomeMapAttributes)
                         {
                             Color biomeColor = attribute.mapColor;
@@ -65,7 +62,6 @@ namespace Parallax
                             // This biome is eligible
                             if (!blacklistedBiomes.Contains(biomeName))
                             {
-                                Debug.Log("Enabling biome in control texture: pixel = " + pixelIndex + ", name = " + biomeName);
                                 biomeControltexture.SetPixel(0, pixelIndex, biomeColor);
                                 pixelIndex++;
                             }

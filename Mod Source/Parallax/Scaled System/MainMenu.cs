@@ -12,6 +12,7 @@ using Kopernicus.Configuration;
 using UnityEngine.Rendering;
 using static VehiclePhysics.Retarder;
 using Unity.Mathematics;
+using KSP.UI;
 
 namespace Parallax.Scaled_System
 {
@@ -34,6 +35,8 @@ namespace Parallax.Scaled_System
         GameObject mainMenuPlanet;
         ParallaxScaledBody mainMenuBody;
         Material scaledMaterial;
+
+        Camera mainCamera;
 
         // For skybox
         Vector3 rotation = new Vector3(0, 180, 0);
@@ -84,9 +87,6 @@ namespace Parallax.Scaled_System
             mainLight = RenderSettings.sun;
             originalShadowDistance = QualitySettings.shadowDistance;
 
-            planetLight = GameObject.Find("PlanetLight").GetComponent<Light>();
-            fillLight = GameObject.Find("FillLight").GetComponent<Light>();
-
             MainMenu mainMenu = FindObjectOfType<MainMenu>();
             mainMenu.startBtn.onTap += new Callback(MenuAdvancedForwards);
             mainMenu.backBtn.onTap += new Callback(MenuAdvancedBackwards);
@@ -111,6 +111,10 @@ namespace Parallax.Scaled_System
             {
                 yield return new WaitForFixedUpdate();
             }
+
+            planetLight = GameObject.Find("PlanetLight").GetComponent<Light>();
+            fillLight = GameObject.Find("FillLight").GetComponent<Light>();
+            mainCamera = Camera.main;
 
             MainMenu main = FindObjectOfType<MainMenu>();
             MainMenuEnvLogic logic = main.envLogic;
@@ -149,8 +153,8 @@ namespace Parallax.Scaled_System
             // Really pleasing main menu sun direction
             Vector3 direction = new Vector3(0.7f, -0.4f, -0.6f);
 
-            GameObject.Find("PlanetLight").GetComponent<Light>().transform.forward = direction;
-            GameObject.Find("FillLight").GetComponent<Light>().transform.forward = direction;
+            planetLight.transform.forward = direction;
+            fillLight.transform.forward = direction;
             RenderSettings.sun.transform.forward = direction;
 
             //
@@ -170,15 +174,15 @@ namespace Parallax.Scaled_System
             RenderSettings.sun.lightShadowCasterMode = LightShadowCasterMode.Everything;
             RenderSettings.sun.shadowResolution = LightShadowResolution.VeryHigh;
             
-            GameObject.Find("PlanetLight").GetComponent<Light>().shadows = LightShadows.Soft;
-            GameObject.Find("PlanetLight").GetComponent<Light>().shadowStrength = 1;
-            GameObject.Find("PlanetLight").GetComponent<Light>().lightShadowCasterMode = LightShadowCasterMode.Everything;
-            GameObject.Find("PlanetLight").GetComponent<Light>().shadowResolution = LightShadowResolution.VeryHigh;
+            planetLight.shadows = LightShadows.Soft;
+            planetLight.shadowStrength = 1;
+            planetLight.lightShadowCasterMode = LightShadowCasterMode.Everything;
+            planetLight.shadowResolution = LightShadowResolution.VeryHigh;
 
-            GameObject.Find("FillLight").GetComponent<Light>().shadows = LightShadows.Soft;
-            GameObject.Find("FillLight").GetComponent<Light>().shadowStrength = 1;
-            GameObject.Find("FillLight").GetComponent<Light>().lightShadowCasterMode = LightShadowCasterMode.Everything;
-            GameObject.Find("FillLight").GetComponent<Light>().shadowResolution = LightShadowResolution.VeryHigh;
+            fillLight.shadows = LightShadows.Soft;
+            fillLight.shadowStrength = 1;
+            fillLight.lightShadowCasterMode = LightShadowCasterMode.Everything;
+            fillLight.shadowResolution = LightShadowResolution.VeryHigh;
 
 
 
@@ -187,13 +191,13 @@ namespace Parallax.Scaled_System
             lightCommandBuffer = new CommandBuffer { name = "Composite Shadows" };
 
             // Render path
-            if (Camera.main.renderingPath == RenderingPath.DeferredShading)
+            if (mainCamera.renderingPath == RenderingPath.DeferredShading)
             {
-                Camera.main.AddCommandBuffer(CameraEvent.BeforeLighting, shadowCommandBuffer);
+                mainCamera.AddCommandBuffer(CameraEvent.BeforeLighting, shadowCommandBuffer);
             }
             else
             {
-                Camera.main.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, shadowCommandBuffer);
+                mainCamera.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, shadowCommandBuffer);
             }
 
             // Set up RT descs
@@ -227,8 +231,8 @@ namespace Parallax.Scaled_System
             lightCommandBuffer.Blit(shadowAttenuationRT, BuiltinRenderTextureType.CurrentActive, compositorMaterial);
 
             RenderSettings.sun.AddCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
-            GameObject.Find("PlanetLight").GetComponent<Light>().AddCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
-            GameObject.Find("FillLight").GetComponent<Light>().AddCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
+            planetLight.AddCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
+            fillLight.AddCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
 
             QualitySettings.shadowDistance = 10000.0f;
 
@@ -431,7 +435,7 @@ namespace Parallax.Scaled_System
                 if (!addedShadowDebug)
                 {
                     addedShadowDebug = true;
-                    ShadowDebug shadowDebug = Camera.main.gameObject.AddComponent<ShadowDebug>();
+                    ShadowDebug shadowDebug = mainCamera.gameObject.AddComponent<ShadowDebug>();
                     shadowDebug.shadowTex = shadowAttenuationRT;
                 }
             }
@@ -439,7 +443,7 @@ namespace Parallax.Scaled_System
             {
                 if (addedShadowDebug)
                 {
-                    Destroy(Camera.main.gameObject.GetComponent<ShadowDebug>());
+                    Destroy(mainCamera.gameObject.GetComponent<ShadowDebug>());
                     addedShadowDebug = false;
                 }
             }
@@ -451,8 +455,19 @@ namespace Parallax.Scaled_System
                 mainMenuBody.Unload();
             }
 
-            Camera.main.RemoveCommandBuffer(CameraEvent.BeforeLighting, shadowCommandBuffer);
-            RenderSettings.sun.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
+            if (mainCamera != null && mainCamera.renderingPath == RenderingPath.DeferredShading)
+            {
+                mainCamera.RemoveCommandBuffer(CameraEvent.BeforeLighting, shadowCommandBuffer);
+            }
+            else if (mainCamera != null)
+            {
+                mainCamera.RemoveCommandBuffer(CameraEvent.BeforeForwardOpaque, shadowCommandBuffer);
+            }
+
+            RenderSettings.sun?.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
+            planetLight?.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
+            fillLight?.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
+
             lightCommandBuffer.Dispose();
             shadowCommandBuffer.Dispose();
             shadowAttenuationRT.Release();

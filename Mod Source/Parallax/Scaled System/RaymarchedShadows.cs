@@ -217,7 +217,15 @@ namespace Parallax.Scaled_System
             debug = false;
             DebugShadowComponent();
 
-            ScaledCamera.Instance.cam.RemoveCommandBuffer(CameraEvent.BeforeLighting, shadowCommandBuffer);
+            if (ScaledCamera.Instance.cam.renderingPath == RenderingPath.DeferredShading)
+            {
+                ScaledCamera.Instance.cam.RemoveCommandBuffer(CameraEvent.BeforeLighting, shadowCommandBuffer);
+            }
+            else
+            {
+                ScaledCamera.Instance.cam.RemoveCommandBuffer(CameraEvent.BeforeForwardOpaque, shadowCommandBuffer);
+            }
+            
             mainLight.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
 
             lightCommandBuffer.Dispose();
