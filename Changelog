@@ -1,5 +1,33 @@
 # Parallax Continued Changelog
 
+## Release 3.0
+
+Features / Improvements
+ - Added Parallax Scaled system - Scaled planets have overhauled shaders and textures
+ - Added raymarched shadows implementation to the Scaled scene
+ - Added environment reflections to the Scaled scene
+ - Made the transitions between planets' surface and scaled views much smoother
+ - Overhauled Eeloo completely to make it resemble KSP2 Eeloo. It still has the same number of biomes
+ - Tweaked the main menu sun direction and animation
+ - Added texture exporter (Ctrl+P in the tracking station)
+
+GUI / Accessibility / QoL
+ - Added new global setting 'Collider Lookahead Time' (see Scatters section)
+ - Added new global setting 'Scaled Planet Self Shadows'
+ - Added new global setting 'Load Scaled Textures Immediately'
+
+Scatters
+ - Added collider lookahead in seconds, which will spawn colliders along the craft's velocity vector prematurely. Useful for radar/laser distance mods, or pathfinding
+ - Slightly improve memory usage for scatters, which has a compounding effect when using rescale configs
+
+Bug Fixes
+ - Fixed global settings config not saving properly
+ - For non-patrons compiling from source - Fixed crashes caused by a missing return in code
+ - Fixed scatter system never processing the final biome for a planet due to a texel coordinate sampling error in the scatters compute shader
+
+For Modders
+ - Added new config node to the Body node in ParllaxTerrain configs 'ParallaxScaledProperties'
+
 ## Release 2.0
 
 Features / Improvements
