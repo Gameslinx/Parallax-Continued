@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,21 +21,26 @@ namespace Parallax.Scaled_System
 
         void Awake()
         {
-            // We can only successfully get the skybox in flight or tracking station, which works well enough
+            // This runs for tracking and flight
+            // Main menu needs a separate approach - see below
             if (!HighLogic.LoadedSceneIsFlight && !(HighLogic.LoadedScene == GameScenes.TRACKSTATION))
             {
                 return;
             }
-
-            if (alreadyGenerated)
+            ExtractSkyboxFrom(GalaxyCubeControl.Instance?.gameObject);
+            GameObject.DontDestroyOnLoad(this);
+        }
+        public static void ExtractSkyboxFrom(GameObject skybox)
+        {
+            // We can only successfully get the skybox in flight or tracking station, which works well enough
+            if (alreadyGenerated && !(HighLogic.LoadedScene == GameScenes.MAINMENU))
             {
                 return;
             }
-
-            GameObject.DontDestroyOnLoad(this);
+            
             ParallaxDebug.Log("Scaled: Processing skybox");
             float startTime = Time.realtimeSinceStartup;
-            GalaxyCubeControl skybox = GalaxyCubeControl.Instance;
+            //GalaxyCubeControl skybox = GalaxyCubeControl.Instance;
             Renderer[] renderers = skybox.GetComponentsInChildren<Renderer>(true);
             
             // Should be 6
@@ -122,10 +128,32 @@ namespace Parallax.Scaled_System
 
             GameObject.DontDestroyOnLoad(cubeMap);
 
-            alreadyGenerated = true;
+            if (HighLogic.LoadedScene != GameScenes.MAINMENU)
+            {
+                alreadyGenerated = true;
+            }
 
             float timeTaken = Time.realtimeSinceStartup - startTime;
             ParallaxDebug.Log("Skybox processing took " + timeTaken.ToString("F2") + " seconds");
+        }
+    }
+    [KSPAddon(KSPAddon.Startup.MainMenu, false)]
+    public class SkyboxControlMainMenu : MonoBehaviour
+    {
+        void Start()
+        {
+            StartCoroutine(PostApplySkybox());
+        }
+        IEnumerator PostApplySkybox()
+        {
+            // Wait for skybox mods to apply
+            int frameDelay = 5;
+            for (int i = 0; i < frameDelay; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+            ParallaxDebug.Log("Extracting skybox from the main menu scene");
+            SkyboxControl.ExtractSkyboxFrom(GameObject.Find("MainMenuGalaxy"));
         }
     }
 }

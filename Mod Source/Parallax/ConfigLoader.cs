@@ -91,6 +91,7 @@ namespace Parallax
             sw.Stop();
             ParallaxDebug.Log("Loading took " + sw.Elapsed.TotalSeconds.ToString("F2") + " seconds");
 
+            ApplyCompatibilityPatches();
             CheckSettings();
         }
 
@@ -110,7 +111,12 @@ namespace Parallax
         }
         public static UrlDir.UrlConfig GetConfigByName(string name)
         {
-            return GameDatabase.Instance.GetConfigs(name)[0];
+            UrlDir.UrlConfig[] configs = GameDatabase.Instance.GetConfigs(name);
+            if (configs != null && configs.Length > 0)
+            {
+                return configs[0];
+            }
+            return null;
         }
         public static UrlDir.UrlConfig GetBaseParallaxNode(string planetName)
         {
@@ -1162,6 +1168,57 @@ namespace Parallax
 
             // Calculate the LOD1 mesh's largest bound for colliders
             scatter.sqrMeshBound = scatter.CalculateSqrLargestBound(scatter.distributionParams.lod1.modelPathOverride);
+        }
+        static void ApplyCompatibilityPatches()
+        {
+            // Sigma Dimensions
+            UrlDir.UrlConfig sigDimConfig = GetConfigByName("SigmaDimensions");
+
+            if (sigDimConfig == null)
+            {
+                return;
+            }
+            else
+            {
+                ParallaxDebug.Log("Sigma Dimensions detected, applying rescale values");
+            }
+
+            ConfigNode sigmaDimensionsNode = sigDimConfig.config;
+
+            float resizeValue = float.Parse(sigmaDimensionsNode.GetValue("Resize"));
+            float landscapeValue = float.Parse(sigmaDimensionsNode.GetValue("landscape"));
+
+            foreach (ParallaxScaledBody scaledBody in parallaxScaledBodies.Values)
+            {
+                scaledBody.minTerrainAltitude *= resizeValue * landscapeValue;
+                scaledBody.maxTerrainAltitude *= resizeValue * landscapeValue;
+
+                // Just approximate the normal strength changes, it won't be perfect, but we can't derive it without regenerating the normals
+                scaledBody.scaledMaterial.SetFloat("_PlanetBumpScale", Mathf.Pow(landscapeValue, 0.333f));
+
+                if (scaledBody.mode == ParallaxScaledBodyMode.FromTerrain)
+                {
+                    scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendStart"] *= resizeValue * landscapeValue;
+                    scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendEnd"] *= resizeValue * landscapeValue;
+                    scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_MidHighBlendStart"] *= resizeValue * landscapeValue;
+                    scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_MidHighBlendEnd"] *= resizeValue * landscapeValue;
+
+                    scaledBody.scaledMaterial.SetFloat("_LowMidBlendStart", scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendStart"]);
+                    scaledBody.scaledMaterial.SetFloat("_LowMidBlendEnd", scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendEnd"]);
+                    scaledBody.scaledMaterial.SetFloat("_MidHighBlendStart", scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_MidHighBlendStart"]);
+                    scaledBody.scaledMaterial.SetFloat("_MidHighBlendEnd", scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_MidHighBlendEnd"]);
+                }
+            }
+
+            foreach (ParallaxTerrainBody terrainBody in parallaxTerrainBodies.Values)
+            {
+                terrainBody.terrainShaderProperties.shaderFloats["_LowMidBlendStart"] *= resizeValue * landscapeValue;
+                terrainBody.terrainShaderProperties.shaderFloats["_LowMidBlendEnd"] *= resizeValue * landscapeValue;
+                terrainBody.terrainShaderProperties.shaderFloats["_MidHighBlendStart"] *= resizeValue * landscapeValue;
+                terrainBody.terrainShaderProperties.shaderFloats["_MidHighBlendEnd"] *= resizeValue * landscapeValue;
+
+                terrainBody.SetMaterialValues();
+            }
         }
         void OnDestroy()
         {

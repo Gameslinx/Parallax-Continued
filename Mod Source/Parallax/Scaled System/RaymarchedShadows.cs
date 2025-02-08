@@ -243,20 +243,6 @@ namespace Parallax.Scaled_System
         {
             shadowMaterial = new Material(AssetBundleLoader.parallaxDebugShaders["Unlit/DummyBlit"]);
         }
-        void Update()
-        {
-            Debug.Log("Looking for lights");
-            Light[] lights = FindObjectsOfType<Light>();
-            foreach (Light light in lights)
-            {
-                Debug.Log("Light name: " + light.name);
-                Debug.Log(" - type: " + light.type.ToString());
-                if (light == ScaledSun.Instance.gameObject.GetComponent<Light>() || light == Sun.Instance.scaledSunLight)
-                {
-                    Debug.Log("is sun light");
-                }
-            }
-        }
         void OnRenderImage(RenderTexture source, RenderTexture destination)
         {
             Graphics.Blit(shadowTex, destination, shadowMaterial);

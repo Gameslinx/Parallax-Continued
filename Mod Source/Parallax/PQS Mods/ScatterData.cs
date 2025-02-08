@@ -244,6 +244,7 @@ namespace Parallax
             if (realCount == 0)
             {
                 parent.KillChild(this);
+                return;
             }
 
             // Process collider data, if this scatter is collideable
@@ -285,6 +286,7 @@ namespace Parallax
             if (realCount == 0)
             {
                 parent.KillChild(this);
+                return;
             }
 
             // Process collider data, if this scatter is collideable

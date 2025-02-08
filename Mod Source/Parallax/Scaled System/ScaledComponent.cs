@@ -23,6 +23,7 @@ namespace Parallax.Scaled_System
 
         public static float loadAngle = 0.008f;
         public static float unloadAngle = 0.003f;
+        public static float forceUnloadAngle = 0.00005f;
 
         public bool pendingUnload = false;
         public static float unloadDelaySeconds = 10.0f;
@@ -82,7 +83,7 @@ namespace Parallax.Scaled_System
                     }
                 }
             }
-            if (angle < unloadAngle && FlightGlobals.currentMainBody != celestialBody)
+            if ((angle < unloadAngle || angle < forceUnloadAngle) && FlightGlobals.currentMainBody != celestialBody)
             {
                 if (scaledBody.Loaded)
                 {
@@ -92,8 +93,12 @@ namespace Parallax.Scaled_System
                         pendingUnload = true;
                         timeUnloadRequestedSeconds = Time.time;
                     }
-                    if (Time.time - timeUnloadRequestedSeconds > unloadDelaySeconds)
+                    if (Time.time - timeUnloadRequestedSeconds > unloadDelaySeconds || angle < forceUnloadAngle)
                     {
+                        if (angle < forceUnloadAngle)
+                        {
+                            ParallaxDebug.Log("Force unloading " + scaledBody.planetName);
+                        }
                         pendingUnload = false;
                         scaledBody.Unload();
                     }

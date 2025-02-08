@@ -45,8 +45,19 @@ public class CreateAssetBundles
                             shaderAssets.Add(shader);
                         }
                     }
+
+                    string[] computeShaderPaths = AssetDatabase.FindAssets("t:ComputeShader", new[] { pathToObject });
+                    foreach (string shaderGUID in computeShaderPaths)
+                    {
+                        string shaderPath = AssetDatabase.GUIDToAssetPath(shaderGUID);
+                        ComputeShader shader = AssetDatabase.LoadAssetAtPath<ComputeShader>(shaderPath);
+                        if (shader != null)
+                        {
+                            shaderAssets.Add(shader);
+                        }
+                    }
                 }
-                else if (obj is Shader)
+                else if (obj is Shader || obj is ComputeShader)
                 {
                     shaderAssets.Add(obj);
                 }

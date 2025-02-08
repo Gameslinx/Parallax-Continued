@@ -1423,7 +1423,7 @@ MonoBehaviour:
   _MidHighBlendEnd: 5090
   _PlanetRadius: 60000
   _PlanetRadius2: 0
-  _SkyboxRotation: 0
+  _SkyboxRotation: -46.5
 --- !u!114 &1341547970
 MonoBehaviour:
   m_ObjectHideFlags: 0

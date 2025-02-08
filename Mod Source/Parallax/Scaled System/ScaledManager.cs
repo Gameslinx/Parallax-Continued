@@ -11,8 +11,6 @@ namespace Parallax.Scaled_System
     public class ScaledManager : MonoBehaviour
     {
         public static int SkyboxRotationShaderParam = Shader.PropertyToID("_SkyboxRotation");
-        public static int PlanetOriginShaderParam = Shader.PropertyToID("_PlanetOrigin");
-        public static int PlanetRadiusParam = Shader.PropertyToID("_PlanetRadius");
         public static ScaledManager Instance;
 
         Vector3 rotation = new Vector3(0, 180, 0);
@@ -31,16 +29,6 @@ namespace Parallax.Scaled_System
         }
         public void Start()
         {
-            Debug.Log("Scaled light init");
-            Light[] lights = (Light[])Light.FindObjectsOfType(typeof(Light));
-            foreach (Light light in lights)
-            {
-                    Debug.Log("Light located: " + light.name);
-                    Debug.Log("- Light colour: " + light.color.ToString("F2"));
-                    Debug.Log("- Light color temp" + light.colorTemperature.ToString("F2"));
-                    Debug.Log("- Light intensity" + light.intensity);
-            }
-
             foreach (ParallaxScaledBody body in ConfigLoader.parallaxScaledBodies.Values)
             {
                 CelestialBody kspBody = FlightGlobals.GetBodyByName(body.planetName);

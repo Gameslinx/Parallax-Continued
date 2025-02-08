@@ -469,7 +469,6 @@ namespace Parallax
             GameObject go = ConfigLoader.colliderPool.Fetch();
 
             go.GetComponent<MeshCollider>().sharedMesh = scatter.renderer.meshLOD1;
-            go.GetComponent<MeshFilter>().sharedMesh = scatter.renderer.meshLOD1;
 
             go.transform.SetParent(scatterSystemQuad.quad.gameObject.transform, false);
 

@@ -13,7 +13,7 @@ namespace Parallax.Debugging
     public class FlyCamera : MonoBehaviour
     {
         public float acceleration = 20; // how fast you accelerate
-        public float accSprintMultiplier = 4; // how much faster you go when "sprinting"
+        public float accSprintMultiplier = 80; // how much faster you go when "sprinting"
         public float lookSensitivity = 1; // mouse look sensitivity
         public float dampingCoefficient = 5; // how quickly you break to a halt after you stop your input
         public bool focusOnEnable = true; // whether or not to focus and lock cursor immediately on enable
@@ -96,10 +96,6 @@ namespace Parallax.Debugging
     {
         bool movementEnabled = false;
         bool componentAdded = false;
-        void Start()
-        {
-            
-        }
         void Update()
         {
             if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.M))
@@ -108,12 +104,13 @@ namespace Parallax.Debugging
             }
             if (movementEnabled)
             {
+                Debug.Log("Camera position: " + Camera.main.transform.position);
+                
                 if (!componentAdded)
                 {
                     componentAdded = true;
                     Camera.main.gameObject.AddComponent<FlyCamera>();
                     MainMenuEnvLogic component = GameObject.FindObjectsOfType<MainMenuEnvLogic>().FirstOrDefault();
-                    component.cameraChaseSpeed = 0.000001f;
                     component.enabled = false;
                 }
             }
@@ -125,7 +122,6 @@ namespace Parallax.Debugging
                     Destroy(Camera.main.gameObject.GetComponent<FlyCamera>());
 
                     MainMenuEnvLogic component = GameObject.FindObjectsOfType<MainMenuEnvLogic>().FirstOrDefault();
-                    component.cameraChaseSpeed = 2.0f;
                     component.enabled = true;
                 }
             }

@@ -115,10 +115,11 @@ namespace Parallax
             GUILayout.Space(15);
             // Scaled settings
             GUILayout.Label("Scaled System Settings", HighLogic.Skin.label);
-            ParamCreator.ChangeMethod scaledCallback = UpdateScaledSystemSettings;
+            ParamCreator.ChangeMethod scaledShadowCallback = UpdateScaledShadowSettings;
+            ParamCreator.ChangeMethod scaledTextureCallback = UpdateScaledTextureSettings;
 
-            ParamCreator.CreateParam("Scaled Planet Self Shadows", ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledSpaceShadows, GUIHelperFunctions.BoolField, scaledCallback);
-            ParamCreator.CreateParam("Load Scaled Textures Immediately", ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.loadTexturesImmediately, GUIHelperFunctions.BoolField, scaledCallback);
+            ParamCreator.CreateParam("Scaled Planet Self Shadows", ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledSpaceShadows, GUIHelperFunctions.BoolField, scaledShadowCallback);
+            ParamCreator.CreateParam("Load Scaled Textures Immediately", ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.loadTexturesImmediately, GUIHelperFunctions.BoolField, scaledTextureCallback);
 
             GUILayout.Space(15);
             // Save button
@@ -207,8 +208,14 @@ namespace Parallax
             // Nothing needed here for now
             // All that updates is the collider lookahead but that auto updates next frame anyway
         }
-        
-        static void UpdateScaledSystemSettings()
+
+        static void UpdateScaledTextureSettings()
+        {
+            // Nothing needed here for now
+        }
+
+
+        static void UpdateScaledShadowSettings()
         {
             // Shadows just turned off
             if (!ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledSpaceShadows)

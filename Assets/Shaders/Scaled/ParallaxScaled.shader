@@ -133,10 +133,11 @@ Shader "Custom/ParallaxScaled"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
             
+            #include "ParallaxScaledVariables.cginc"
             #include "../Includes/ParallaxGlobalFunctions.cginc" 
             #include "ParallaxScaledStructs.cginc"
             #include "../Terrain/ParallaxVariables.cginc"
-            #include "ParallaxScaledVariables.cginc"
+            
             #include "../Terrain/ParallaxUtils.cginc"
             #include "ParallaxScaledUtils.cginc"
 
@@ -348,6 +349,7 @@ Shader "Custom/ParallaxScaled"
                 UNITY_APPLY_FOG(i.fogCoord, result);
                 APPLY_EMISSION
                 APPLY_SCALED_EMISSION
+
                 return float4(result + atmosphereColor, 1);
             }
             ENDCG
@@ -380,10 +382,10 @@ Shader "Custom/ParallaxScaled"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
         
+            #include "ParallaxScaledVariables.cginc"
             #include "../Includes/ParallaxGlobalFunctions.cginc" 
             #include "ParallaxScaledStructs.cginc"
             #include "../Terrain/ParallaxVariables.cginc"
-            #include "ParallaxScaledVariables.cginc"
             #include "../Terrain/ParallaxUtils.cginc"
             #include "ParallaxScaledUtils.cginc"
 
@@ -500,10 +502,10 @@ Shader "Custom/ParallaxScaled"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
         
+            #include "ParallaxScaledVariables.cginc"
             #include "../Includes/ParallaxGlobalFunctions.cginc" 
             #include "ParallaxScaledStructs.cginc"
             #include "../Terrain/ParallaxVariables.cginc"
-            #include "ParallaxScaledVariables.cginc"
             #include "../Terrain/ParallaxUtils.cginc"
             #include "ParallaxScaledUtils.cginc"
         
@@ -750,9 +752,9 @@ Shader "Custom/ParallaxScaled"
             #include "AutoLight.cginc"
             #include "UnityPBSLighting.cginc"
             
+            #include "ParallaxScaledVariables.cginc"
             #include "ParallaxScaledStructs.cginc"
             #include "../Terrain/ParallaxVariables.cginc"
-            #include "ParallaxScaledVariables.cginc"
             #include "../Includes/ParallaxGlobalFunctions.cginc" 
             #include "../Terrain/ParallaxUtils.cginc"
             #include "ParallaxScaledUtils.cginc"

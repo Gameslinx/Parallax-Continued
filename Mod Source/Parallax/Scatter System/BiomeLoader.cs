@@ -55,6 +55,8 @@ namespace Parallax
                         Texture2D biomeControltexture = new Texture2D(1, numberOfEligibleBiomes, TextureFormat.RGBA32, false);
                         int pixelIndex = 0;
 
+                        Debug.Log("Biome control texture dimensions: " + biomeControltexture.height);
+
                         foreach (CBAttributeMapSO.MapAttribute attribute in biomeMapAttributes)
                         {
                             Color biomeColor = attribute.mapColor;
@@ -63,6 +65,7 @@ namespace Parallax
                             // This biome is eligible
                             if (!blacklistedBiomes.Contains(biomeName))
                             {
+                                Debug.Log("Enabling biome in control texture: pixel = " + pixelIndex + ", name = " + biomeName);
                                 biomeControltexture.SetPixel(0, pixelIndex, biomeColor);
                                 pixelIndex++;
                             }

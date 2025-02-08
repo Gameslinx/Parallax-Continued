@@ -86,7 +86,8 @@ void Distribute (uint3 id : SV_DispatchThreadID)
     int biomesEligible = 0;
     for (int b = 0; b < _NumberOfBiomes; b++)
     {
-        float3 biomeColor = scatterBiomes.SampleLevel(pointClampSampler, float2(0, (float)b / (float)_NumberOfBiomes), 0).rgb;
+        // + 0.5 to move sample position to the center of the pixel
+        float3 biomeColor = scatterBiomes.SampleLevel(pointClampSampler, float2(0.5f, ((float)b + 0.5f) / (float) _NumberOfBiomes), 0).rgb;
         biomesEligible += BiomeEligible(biome, biomeColor);
     }
     

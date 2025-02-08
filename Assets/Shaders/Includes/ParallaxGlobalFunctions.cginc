@@ -54,7 +54,7 @@ float FresnelEffect(float3 worldNormal, float3 viewDir, float power)
 
 // We get the reflection color in the directional pass anyway
 #if !defined (DONT_SAMPLE_REFLECTIONS)
-    #if defined (DIRECTIONAL)
+    #if defined (DIRECTIONAL) && !defined (SCALED)
         #define GET_REFLECTION_COLOR                                                    \
             float3 reflDir = reflect(-viewDir, worldNormal);                            \
             float4 reflSkyData = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, reflDir);        \
@@ -63,7 +63,16 @@ float FresnelEffect(float3 worldNormal, float3 viewDir, float power)
         #define GET_REFRACTION_COLOR                                                    \
             float3 refrDir = refract(-viewDir, worldNormal, eta);                       \
             float4 refrSkyData = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, refrDir);        \
-            float3 refrColor = DecodeHDR(refrSkyData, unity_SpecCube0_HDR);             
+            float3 refrColor = DecodeHDR(refrSkyData, unity_SpecCube0_HDR);
+
+    #elif defined (SCALED)
+        #define GET_REFLECTION_COLOR                                                    \
+            float3 reflDir = reflect(-viewDir, worldNormal);                            \
+            reflDir = mul(_SkyboxRotation, reflDir);                                    \
+            float4 reflSkyData = _Skybox.SampleLevel(sampler_Skybox, reflDir, 0);       \
+            float3 reflColor = DecodeHDR(reflSkyData, _Skybox_HDR);
+
+        #define GET_REFRACTION_COLOR float3 refrColor = 0;
     #else
         #define GET_REFLECTION_COLOR                                                    \
             float3 reflColor = 0;
@@ -155,7 +164,7 @@ float3 CalculateLighting(LIGHTING_INPUT)
     float3 specular = spec * _LightColor0.rgb;
     float3 reflection = fresnel * reflColor * col.a * _EnvironmentMapFactor; // For refraction
     float3 refraction = (1 - fresnel) * refrColor * _RefractionIntensity;
-    reflection *= shadow + UNITY_LIGHTMODEL_AMBIENT;
+    //reflection *= shadow + UNITY_LIGHTMODEL_AMBIENT;
     float3 scattering = 0;
     
     #if defined (SUBSURFACE_SCATTERING) || defined (SUBSURFACE_USE_THICKNESS_TEXTURE)
@@ -249,10 +258,6 @@ float4 ParallaxClipSpaceShadowCasterPos(float3 wPos, float3 wNormal)
 // Deferred Functions
 //
 
-#if defined (PARALLAX_DEFERRED_PASS)
-
-#define PARALLAX_DEFERRED_OUTPUT_BUFFERS out half4 outGBuffer0 : SV_Target0, out half4 outGBuffer1 : SV_Target1, out half4 outGBuffer2 : SV_Target2, out half4 outEmission : SV_Target3
-
 #define blinnPhongShininessPower 0.215
 #define ONE_OVER_PI 0.31830989161
 
@@ -266,6 +271,10 @@ void GetStandardSpecularPropertiesFromLegacy(float legacyShininess, float specul
 
     specular = legacySpecularColor * ONE_OVER_PI;
 }
+
+#if defined (PARALLAX_DEFERRED_PASS)
+
+#define PARALLAX_DEFERRED_OUTPUT_BUFFERS out half4 outGBuffer0 : SV_Target0, out half4 outGBuffer1 : SV_Target1, out half4 outGBuffer2 : SV_Target2, out half4 outEmission : SV_Target3
 
 half4 LightingStandardSpecular_Deferred_Corrected(SurfaceOutputStandardSpecular s, float3 viewDir, UnityGI gi, out half4 outGBuffer0, out half4 outGBuffer1, out half4 outGBuffer2)
 {

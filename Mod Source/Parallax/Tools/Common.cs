@@ -1,4 +1,6 @@
-﻿using Parallax.Harmony_Patches;
+﻿using Kopernicus.Configuration;
+using LibNoise.Models;
+using Parallax.Harmony_Patches;
 using Parallax.Scaled_System;
 using Parallax.Tools;
 using System;
@@ -281,11 +283,11 @@ namespace Parallax
         }
         public IEnumerator LoadAsync()
         {
+            isLoading = true;
             if (loaded)
             {
                 yield break;
             }
-            System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
 
             foreach (KeyValuePair<string, string> textureValue in terrainShaderProperties.shaderTextures)
             {
@@ -302,6 +304,7 @@ namespace Parallax
                     // Add to active textures
                     loadedTextures.Add(textureValue.Key, tex);
                     yield return null;
+                    if (!isLoading) { yield break; }
                 }
                 // Bump maps need to be linear, while everything else sRGB
                 // This could be handled better, tbh, but at least we're accounting for linear textures this time around
@@ -316,6 +319,7 @@ namespace Parallax
                 parallaxMaterials.parallaxFull.SetTexture(textureValue.Key, tex);
             }
             loaded = true;
+            isLoading = false;
         }
         public static Texture2D LoadTexIfUnloaded(ParallaxTerrainBody body, string path, string key)
         {
@@ -341,6 +345,8 @@ namespace Parallax
         }
         public void Unload()
         {
+            isLoading = false;
+
             // Check to see if a scaled body that requires these textures exists
             if (ConfigLoader.parallaxScaledBodies.ContainsKey(planetName))
             {
@@ -480,7 +486,6 @@ namespace Parallax
 
             float _MeshRadius = GetMeshRadiusScaledSpace(kspBody);
             worldSpaceMeshRadius = _MeshRadius;
-
             float scalingFactor = _MeshRadius / _PlanetRadius;
 
             scaledMaterial.SetFloat("_MinRadialAltitude", (_MinAltitude) * scalingFactor);
@@ -614,6 +619,8 @@ namespace Parallax
             // Instantly load the height, color and normal maps to get a 'base' level of detail
             // Then wait for the rest "higher detail" to load - most of the load time will be spent loading terrain textures
 
+            isLoading = true;
+
             foreach (KeyValuePair<string, string> textureValue in scaledMaterialParams.shaderProperties.shaderTextures)
             {
                 // Base planet texture
@@ -645,17 +652,21 @@ namespace Parallax
             // Wait a frame - above was pretty expensive
             yield return null;
 
+            if (!isLoading) { yield break; }
+
             //
             //  Base maps loaded, now load the terrain in a coroutine
             //
 
-            isLoading = true;
+            
             // First check for terrain body's terrain textures and load them
             if (!terrainBody.Loaded && mode != ParallaxScaledBodyMode.Baked)
             {
                 ScaledManager.Instance.StartCoroutine(terrainBody.LoadAsync());
                 yield return new WaitUntil(() => terrainBody.Loaded == true);
             }
+
+            if (!isLoading) { yield break; }
 
             // Now load the textures needed here
             foreach (KeyValuePair<string, string> textureValue in scaledMaterialParams.shaderProperties.shaderTextures)
@@ -685,6 +696,7 @@ namespace Parallax
                         // Add to active textures
                         loadedTextures.Add(textureValue.Key, tex);
                         yield return null;
+                        if (!isLoading) { yield break; }
                     }
                 }
 
@@ -721,6 +733,9 @@ namespace Parallax
 
         public void Unload()
         {
+            // Prevent LoadAsync from continuing, if it was
+            isLoading = false;
+
             // First destroy our textures
             Texture2D[] textures = loadedTextures.Values.ToArray();
             string[] keys = loadedTextures.Keys.ToArray();
@@ -738,6 +753,7 @@ namespace Parallax
             }
             loadedTextures.Clear();
             loaded = false;
+            
 
             // Scaled body is always loaded when terrain is loaded
             // So, if terrain is loaded, it could be hanging around for the scaled body
