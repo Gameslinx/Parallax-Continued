@@ -8,12 +8,12 @@ Available in Early Access at [Linx's Patreon](https://www.patreon.com/linx_)
     - KSP Burst: https://github.com/KSPModdingLibs/KSPBurst/releases
     
 2. Ensure you have downloaded the following files:
-    - ParallaxContinuedEarlyAccess-Release.zip
+    - ParallaxContinuedEarlyAccess-Release3.zip
     - Optional lifeless Eve patch - Lifeless Eve-1.0.zip
     - Optional configs for users using rescaled systems - Parallax Rescale Configs.zip
 
-3. Browse to **ParallaxContinuedEarlyAccess-Release.zip/GameData**
-4. Move **all folders** (Parallax, Parallax_StockPlanetTextures, Parallax_StockScatterTextures and Parallax_StockTerrainTextures) to **your GameData** folder
+3. Browse to **ParallaxContinuedEarlyAccess-Release3.zip/GameData**
+4. Move **all folders** (ParallaxContinued, Parallax_StockPlanetTextures, Parallax_StockScatterTextures and Parallax_StockTerrainTextures) to **your GameData** folder
 5. If you downloaded the lifeless eve patch, move '**Parallax_LifelessEvePatch**' from '**Parallax_LifelessEvePatch.zip/GameData**' to your **GameData** folder
 6. If you downloaded the rescale configs, move the appropriate Parallax_Rescale_x.x folder to your GameData folder. Choose the one that matches the scale you play at
 
