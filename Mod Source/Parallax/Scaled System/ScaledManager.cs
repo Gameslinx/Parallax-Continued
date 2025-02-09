@@ -21,8 +21,10 @@ namespace Parallax.Scaled_System
         public static List<Mesh> scaledPlanetMeshes = new List<Mesh>();
         public void Awake()
         {
+            ParallaxDebug.Log("Scaled manager awake");
             if (!HighLogic.LoadedSceneIsFlight && !(HighLogic.LoadedScene == GameScenes.TRACKSTATION) && !(HighLogic.LoadedScene == GameScenes.MAINMENU))
             {
+                ParallaxDebug.Log("Scaled manager destroyed - not in the right scene");
                 Destroy(this);
             }
             Instance = this;
@@ -42,6 +44,7 @@ namespace Parallax.Scaled_System
                 body.SetScaledMaterialParams(kspBody);
 
                 meshRenderer.material = body.scaledMaterial;
+                meshRenderer.sharedMaterial = body.scaledMaterial;
             }
         }
 

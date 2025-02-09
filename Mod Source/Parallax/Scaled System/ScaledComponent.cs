@@ -37,7 +37,7 @@ namespace Parallax.Scaled_System
             // Locate the parent star for shadows
             ParallaxDebug.Log("Searching for parent star");
             CelestialBody parentBody = celestialBody.referenceBody;
-            while (parentBody != null && !parentBody.isStar)
+            while (parentBody != null && !parentBody.isStar && parentBody != parentBody.referenceBody)
             {
                 // Step up
                 parentBody = parentBody.referenceBody;
