@@ -42,7 +42,7 @@ Mods that are fully compatible with and enhance the visual experience when insta
 |OPM and MPE - Jthero Configs|[Download](https://github.com/jthero3/OuterParallax/tree/ParallaxContinued)|Not maintained by me
 |OPM - Recommended Configs|[Download](https://drive.google.com/file/d/127yJZ46sTaIcGmdCondYquETtWzfGXZy/view?usp=drive_link)|11/11/2024
 |Beyond Home|Maintainer Contacted
-|Kcalbeloh|[Download](https://drive.google.com/file/d/1Ou24R74Ys2InsBXi5Mq8R37ckLfjywVh/view?usp=drive_link)|11/11/2024
+|Kcalbeloh|[Download](https://drive.google.com/file/d/1co_qgylXOP4WqXgu5gvF4qpDZzZp1qVt/view?usp=drive_link)|09/02/2025
 |Celestial Harmony|[Download](https://github.com/ProximaCentauri-star/Celestial-Harmony/releases)|Not maintained by me
 |Techo's Stock Planet Revamp|Author Contacted
 |KSRSS Reborn|[Download](https://github.com/Sheepdog2142/ParalaxContinued-KSRSS-SDI)|Not maintained by me
