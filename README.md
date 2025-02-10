@@ -47,7 +47,6 @@ Mods that are fully compatible with and enhance the visual experience when insta
 |Techo's Stock Planet Revamp|Author Contacted
 |KSRSS Reborn|[Download](https://github.com/Sheepdog2142/ParalaxContinued-KSRSS-SDI)|Not maintained by me
 |JNSQ|[Download](https://github.com/yukkine0704/JNSQ_ParallaxScattersContinued)|Not maintained by me
-|Galileo's Planet Pack|No
 
 ## License
 All Rights Reserved
