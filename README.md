@@ -38,7 +38,7 @@ Mods that are fully compatible with and enhance the visual experience when insta
 |----|----|----
 |Stock Planetary System|Fully supported|/
 |Stock Planetary System (Rescaled)|[Download](https://drive.google.com/file/d/1qFMQlvmI6M2HdJLgLyz1jRCGos-_YOTP/view?usp=drive_link)|Not been updated yet
-|RSS Reborn|Almost Complete|/
+|RSS Reborn|In Progress|/
 |OPM and MPE - Jthero Configs|[Download](https://github.com/jthero3/OuterParallax/tree/ParallaxContinued)|Not maintained by me
 |OPM - Recommended Configs|[Download](https://drive.google.com/file/d/127yJZ46sTaIcGmdCondYquETtWzfGXZy/view?usp=drive_link)|11/11/2024
 |Beyond Home|Maintainer Contacted
