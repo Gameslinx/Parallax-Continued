@@ -45,7 +45,7 @@ Mods that are fully compatible with and enhance the visual experience when insta
 |Kcalbeloh|[Download](https://drive.google.com/file/d/1co_qgylXOP4WqXgu5gvF4qpDZzZp1qVt/view?usp=drive_link)|09/02/2025
 |Celestial Harmony|[Download](https://github.com/ProximaCentauri-star/Celestial-Harmony/releases)|Not maintained by me
 |Techo's Stock Planet Revamp|Author Contacted
-|KSRSS Reborn|[Download](https://github.com/Sheepdog2142/ParalaxContinued-KSRSS-SDI)|Not maintained by me
+|KSRSS Reborn|Removed, as they are broken|/
 |JNSQ|[Download](https://github.com/yukkine0704/JNSQ_ParallaxScattersContinued)|Not maintained by me
 
 ## License
