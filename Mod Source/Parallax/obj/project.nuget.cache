@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "E+HbCfabJJiBlVDLBzBbkreCf3r7iPbnPGWDxyfv1oGcR7IebQjgxQa5jGIfD9YKFfPCnjw6ZC6uyyeaklUMLw==",
+  "dgSpecHash": "Vw5yK+hz+H8=",
   "success": true,
-  "projectFilePath": "E:\\Productivity\\Unity\\Parallax Continued\\Mod Source\\Parallax\\Parallax.csproj",
+  "projectFilePath": "D:\\Productivity\\Unity\\Parallax Continued\\Mod Source\\Parallax\\Parallax.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\tuvee\\.nuget\\packages\\krafs.publicizer\\2.2.1\\krafs.publicizer.2.2.1.nupkg.sha512"
   ],

@@ -44,19 +44,24 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\tuvee\\.nuget\\packages\\": {}
+    "C:\\Users\\tuvee\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "E:\\Productivity\\Unity\\Parallax Continued\\Mod Source\\Parallax\\Parallax.csproj",
+      "projectUniqueName": "D:\\Productivity\\Unity\\Parallax Continued\\Mod Source\\Parallax\\Parallax.csproj",
       "projectName": "Parallax",
-      "projectPath": "E:\\Productivity\\Unity\\Parallax Continued\\Mod Source\\Parallax\\Parallax.csproj",
+      "projectPath": "D:\\Productivity\\Unity\\Parallax Continued\\Mod Source\\Parallax\\Parallax.csproj",
       "packagesPath": "C:\\Users\\tuvee\\.nuget\\packages\\",
-      "outputPath": "E:\\Productivity\\Unity\\Parallax Continued\\Mod Source\\Parallax\\obj\\",
+      "outputPath": "D:\\Productivity\\Unity\\Parallax Continued\\Mod Source\\Parallax\\obj\\",
       "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
       "configFilePaths": [
         "C:\\Users\\tuvee\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
@@ -76,7 +81,13 @@
         "warnAsError": [
           "NU1605"
         ]
-      }
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      },
+      "SdkAnalysisLevel": "9.0.200"
     },
     "frameworks": {
       "net48": {
@@ -89,7 +100,7 @@
             "version": "[2.2.1, )"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.304\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.200\\RuntimeIdentifierGraph.json"
       }
     }
   }

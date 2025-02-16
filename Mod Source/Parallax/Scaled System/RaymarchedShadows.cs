@@ -34,6 +34,8 @@ namespace Parallax.Scaled_System
         CommandBuffer shadowCommandBuffer;
         CommandBuffer lightCommandBuffer;
 
+        Texture2D blueNoiseTexture;
+
         public List<ParallaxScaledBody> scaledBodies = new List<ParallaxScaledBody>();
         public List<MeshRenderer> meshRenderers = new List<MeshRenderer>();
         void Awake()
@@ -48,9 +50,13 @@ namespace Parallax.Scaled_System
         }
         void Start()
         {
+            // Load the texture - uncompressed DDS Luminance 8, linear
+            blueNoiseTexture = TextureLoader.LoadTexture("ParallaxContinued/Textures/PluginData/blueNoise.dds", true, true);
+
             // Setup
             foreach (KeyValuePair<string, ParallaxScaledBody> pair in ConfigLoader.parallaxScaledBodies)
             {
+                pair.Value.shadowCasterMaterial.SetTexture("_BlueNoise", blueNoiseTexture);
                 scaledBodies.Add(pair.Value);
                 meshRenderers.Add(FlightGlobals.GetBodyByName(pair.Value.planetName).scaledBody.GetComponent<MeshRenderer>());
             }
@@ -150,9 +156,6 @@ namespace Parallax.Scaled_System
                 }
                 else
                 {
-                    shadowCommandBuffer.SetGlobalMatrix("_WorldRotation", Matrix4x4.Inverse(Matrix4x4.Rotate(meshRenderer.localToWorldMatrix.rotation)));
-                    shadowCommandBuffer.DrawRenderer(meshRenderer, scaledBody.shadowCasterMaterial, 0);
-                    
                     // Set planet opacity for current and other scaled planets
                     if (FlightGlobals.currentMainBody != null && FlightGlobals.currentMainBody.name == scaledBody.planetName)
                     {
@@ -162,6 +165,10 @@ namespace Parallax.Scaled_System
                     {
                         shadowCommandBuffer.SetGlobalFloat("_ScaledPlanetOpacity", 1.0f);
                     }
+
+                    shadowCommandBuffer.SetGlobalInt("_FrameCount", Time.frameCount);
+                    shadowCommandBuffer.SetGlobalMatrix("_WorldRotation", Matrix4x4.Inverse(Matrix4x4.Rotate(meshRenderer.localToWorldMatrix.rotation)));
+                    shadowCommandBuffer.DrawRenderer(meshRenderer, scaledBody.shadowCasterMaterial, 0);
                 }
             }
         }
@@ -173,7 +180,7 @@ namespace Parallax.Scaled_System
         }
 
         bool debug = false;
-        void LateUpdate()
+        void Update()
         {
             RenderShadows();
 

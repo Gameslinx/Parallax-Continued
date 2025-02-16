@@ -25,6 +25,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _BlueNoise:
+        m_Texture: {fileID: 2800000, guid: aeeaa43a837991b43b7d161f9c30f343, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _BumpMap:
         m_Texture: {fileID: 2800000, guid: fa9801d11b7dccc45accaa69dc97e08f, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -128,14 +132,16 @@ Material:
     - _Displacement: 0.1
     - _DstBlend: 0
     - _EnvironmentMapFactor: 1
+    - _FrameCount: 0
     - _FresnelPower: 1
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
     - _Hapke: 1
-    - _LightWidth: 0.3
+    - _LightWidth: 0.06
     - _LowMidBlendEnd: 0.5003
     - _LowMidBlendStart: 0.50002503
+    - _MaxRayDistance: 0.5
     - _MaxTessellation: 6
     - _MaxTessellationRange: 100
     - _Metallic: 0

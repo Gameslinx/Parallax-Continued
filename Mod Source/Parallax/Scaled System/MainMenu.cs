@@ -313,6 +313,13 @@ namespace Parallax.Scaled_System
                 body.shadowCasterMaterial.SetFloat("_OceanAltitude", body.scaledMaterialParams.shaderProperties.shaderFloats["_OceanAltitude"]);
             }
 
+            // Computed the max shadow ray distance
+            float worldDistance = body.maxTerrainAltitude * scalingFactor + _MeshRadius;
+            float theta = Mathf.Asin(_MeshRadius / worldDistance);
+            float tangentDist = _MeshRadius / Mathf.Tan(theta);
+
+            body.shadowCasterMaterial.SetFloat("_MaxRayDistance", tangentDist);
+
             // Computed at runtime, but the default is computed from Kerbin's SMA around the Sun
             body.shadowCasterMaterial.SetFloat("_LightWidth", 0.0384f);
 

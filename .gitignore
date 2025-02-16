@@ -216,3 +216,17 @@ crashlytics-build.properties
 /Mod Source/Parallax/Temp
 /Mod Source/Parallax/obj/Debug
 /Mod Source/Parallax/obj/Release
+/Mod Source/Parallax/obj
+/Mod Source/Parallax/obj/x64/Release/net48/Parallax.AssemblyInfo.cs
+/Mod Source/Parallax/obj/x64/Release/net48/Parallax.AssemblyInfoInputs.cache
+/Mod Source/Parallax/obj/x64/Release/net48/Parallax.assets.cache
+/Mod Source/Parallax/obj/x64/Release/net48/Parallax.csproj.AssemblyReference.cache
+/Mod Source/Parallax/obj/x64/Release/net48/Parallax.csproj.CoreCompileInputs.cache
+/Mod Source/Parallax/obj/x64/Release/net48/Parallax.csproj.FileListAbsolute.txt
+/Mod Source/Parallax/obj/x64/Release/net48/Parallax.dll
+/Mod Source/Parallax/obj/x64/Release/net48/Parallax.GeneratedMSBuildEditorConfig.editorconfig
+/Mod Source/Parallax/obj/Release/net48/Parallax.AssemblyInfo.cs
+/Mod Source/Parallax/obj/Release/net48/Parallax.AssemblyInfoInputs.cache
+/Mod Source/Parallax/obj/Release/net48/Parallax.assets.cache
+/Mod Source/Parallax/obj/Release/net48/Parallax.csproj.AssemblyReference.cache
+/Mod Source/Parallax/obj/Release/net48/Parallax.GeneratedMSBuildEditorConfig.editorconfig

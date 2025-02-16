@@ -12,8 +12,9 @@
         [Header(Planet Textures)]
         [Space(10)]
         _HeightMap("Planet Height Map", 2D) = "black" {}
-        _DepthTex("Depth Tex", 2D) = "white" {}
+        _BlueNoise("Blue Noise", 2D) = "grey" {}
 
+        //_FrameCount("Frame Count", int) = 0
         _PlanetRadius("Planet Radius", Range(0, 100000)) = 0
         _WorldPlanetRadius("World Planet Radius", Range(0, 2000)) = 0
         _PlanetOrigin("Planet Origin", VECTOR) = (0,0,0)
@@ -21,6 +22,9 @@
         // Saves a multicompile
         _DisableDisplacement("Disable Displacement", int) = 0
         _LightWidth("Light Width", Range(0.0001, 0.3)) = 0.05
+        _MaxRayDistance("Max Ray Distace", Range(0.0001, 100000)) = 1
+
+        // Comment out when compiling
         //_ScaledPlanetOpacity("Scaled planet opacity", Range(0, 1)) = 1
     }
     SubShader
@@ -56,6 +60,7 @@
             float _LightWidth;
             float _ScaledPlanetOpacity;
             float _OceanAltitude;
+            float _MaxRayDistance;
 
             // Parallax includes
             #include "../../Includes/ParallaxGlobalFunctions.cginc" 
@@ -84,6 +89,12 @@
         
             sampler2D _HeightMap;
             bool _DisableDisplacement;
+
+            // Blue noise tex and sampler
+            Texture2D _BlueNoise;
+            SamplerState sampler_BlueNoise_point_repeat;
+            float4 _BlueNoise_TexelSize;
+            int _FrameCount;
         
             v2f vert (appdata v)
             {
@@ -141,6 +152,14 @@
                 return realAltitude;
             }
 
+            float hash11(float p)
+            {
+                p = frac(p * 0.1031);
+                p *= p + 33.33;
+                p *= p + p;
+                return frac(p);
+            }
+
             // Shadow umbra and penumbra calculation reference: https://iquilezles.org/articles/rmshadows/
             PS_Output frag (v2f i)
             {
@@ -168,16 +187,22 @@
 
                 float3 rayPos = initialRayPos + dhdz;
                 float3 rayDir = normalize(_WorldSpaceLightPos0);
-
-                // TODO: Precompute the ray distance
-                float rayDistance = _WorldPlanetRadius * 0.2f;
+                
+                float rayDistance = _MaxRayDistance;
                 float stepSize = rayDistance / float(STEP_COUNT);
 
                 float attenuation = 1.0f;
-                float t = 0;
+                float t = 0.0001;
+
+                // Random noise offset, could use blue noise but this looks good enough, it's only visible at shadow edges and helps remove stepping
+                float2 screenUV = (i.screenPos.xy / i.screenPos.w) * _ScreenParams.xy + 0.5f;
+                float noise = _BlueNoise.Sample(sampler_BlueNoise_point_repeat, (screenUV % 64) / 64);
+                noise = (noise + 1.618f * _FrameCount) % 1;
+
+                rayPos -= rayDir * noise * stepSize;
 
                 // Raymarch towards the light
-                for (int b = 0; b < 48; b++)
+                for (int b = 0; b < STEP_COUNT; b++)
                 {
                     rayPos += rayDir * stepSize;
 

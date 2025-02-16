@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Minmus
+  m_Name: a
   m_Shader: {fileID: 4800000, guid: 3c05f23d39e47ad438585d779ea28a16, type: 3}
   m_ShaderKeywords: ADVANCED_BLENDING PARALLAX_FULL SCALED_EMISSIVE_MAP
   m_LightmapFlags: 4

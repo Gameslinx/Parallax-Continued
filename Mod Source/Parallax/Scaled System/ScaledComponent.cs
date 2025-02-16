@@ -132,7 +132,8 @@ namespace Parallax.Scaled_System
             float angle = Mathf.Atan2(targetRadius, (origin - target).magnitude) * 2.0f;
 
             // 90 degree FOV baseline
-            float fovScalingFactor = fov / 90.0f;
+            // Scale inversely
+            float fovScalingFactor = 90.0f / fov;
 
             // Naively scale the angle depending on fov
             // Not an accurate or perfect calculation but gets the job done

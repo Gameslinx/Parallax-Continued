@@ -32,13 +32,6 @@ public class RaymarchedShadows : MonoBehaviour
     {
         shadowCommandBuffer = new CommandBuffer { name = "Render Custom Shadows" };
 
-        shadowCommandBuffer.SetRenderTarget(
-            new RenderTargetIdentifier[] { shadowAttenuationRT, shadowDistanceRT },
-            shadowObjectDepth
-        );
-        shadowCommandBuffer.ClearRenderTarget(true, true, Color.clear);
-        shadowCommandBuffer.DrawMesh(customShadowObject.GetComponent<MeshFilter>().sharedMesh, customShadowObject.transform.localToWorldMatrix, shadowMaterial);
-
         if (Camera.main.renderingPath == RenderingPath.DeferredShading)
         {
             Camera.main.AddCommandBuffer(CameraEvent.BeforeLighting, shadowCommandBuffer);
@@ -48,7 +41,21 @@ public class RaymarchedShadows : MonoBehaviour
             Camera.main.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, shadowCommandBuffer);
         }
     }
-
+    void RenderShadows()
+    {
+        shadowCommandBuffer.Clear();
+        shadowCommandBuffer.SetRenderTarget(
+            new RenderTargetIdentifier[] { shadowAttenuationRT, shadowDistanceRT },
+            shadowObjectDepth
+        );
+        shadowCommandBuffer.ClearRenderTarget(true, true, Color.clear);
+        shadowCommandBuffer.SetGlobalInt("_FrameCount", Time.frameCount);
+        shadowCommandBuffer.DrawMesh(customShadowObject.GetComponent<MeshFilter>().sharedMesh, customShadowObject.transform.localToWorldMatrix, shadowMaterial);
+    }
+    void Update()
+    {
+        RenderShadows();
+    }
     void SetupLightCommandBuffer(Material blitMaterial)
     {
         lightCommandBuffer = new CommandBuffer { name = "Composite Shadows" };

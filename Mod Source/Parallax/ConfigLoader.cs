@@ -510,6 +510,11 @@ namespace Parallax
             ParseScaledMaterialProperties(scaledBody, bodyMode, bodyNode.GetNode("Material"));
             ParseScaledMaterialOverride(scaledBody, bodyMode, bodyNode.GetNode("TerrainMaterialOverride"));
 
+            //
+            // Optional properties
+            //
+
+            // Stock mesh
             bool usingStockMesh = false;
             if (bodyNode.TryGetValue("usingStockMesh", ref usingStockMesh))
             {

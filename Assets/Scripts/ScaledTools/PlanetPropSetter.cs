@@ -78,7 +78,44 @@ public class PlanetPropSetter : MonoBehaviour
 
         mat.SetMatrix("_SkyboxRotation", rotMat);
     }
+    public float EstimateMaxRayLength()
+    {
+        // At each pixel in the height map, calculate distance to sphere tangent
+        Texture2D heightMap = (Texture2D)gameObject.GetComponent<MeshRenderer>().sharedMaterial.GetTexture("_HeightMap");
+        if (heightMap == null)
+        {
+            return 0;
+        }
+        float maxAltitude = 0;
 
+        float scalingFactor = _MeshRadius / _PlanetRadius;
+
+        int width = heightMap.width;
+        int height = heightMap.height;
+        float altitude = 0;
+        Vector3 worldPos = Vector3.zero;
+        for (int i = 0; i < width; i++)
+        {
+            for (int j = 0; j < height; j++)
+            {
+                altitude = Mathf.Lerp(_MinAltitude, _MaxAltitude, heightMap.GetPixel(i, j).r);
+                if (altitude > maxAltitude)
+                {
+                    maxAltitude = altitude;
+                }
+            }
+        }
+
+        // Now compute distance to sphere tangent
+        float worldDistance = maxAltitude * scalingFactor + _MeshRadius;
+        float theta = Mathf.Asin(_MeshRadius / worldDistance);
+        float tangentDist = _MeshRadius / Mathf.Tan(theta);
+
+        Debug.Log("Tangent distance: " + tangentDist);
+        Debug.Log("Tangent distance as function of planet radius: " + tangentDist / _MeshRadius);
+
+        return tangentDist;
+    }
     public Mesh GenerateMesh()
     {
         Mesh mesh = exportableMeshTemplate;
@@ -103,6 +140,11 @@ class PlanetPropSetterButton : Editor
             go.GetComponent<MeshFilter>().sharedMesh = mesh;
 
             go.transform.position = Vector3.zero;
+        }
+        if (GUILayout.Button("Calculate ray step size"))
+        {
+            PlanetPropSetter script = (PlanetPropSetter)target;
+            script.EstimateMaxRayLength();
         }
     }
 }

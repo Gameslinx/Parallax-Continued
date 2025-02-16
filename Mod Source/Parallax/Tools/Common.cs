@@ -287,6 +287,7 @@ namespace Parallax
             isLoading = true;
             if (loaded)
             {
+                isLoading = false;
                 yield break;
             }
 
@@ -347,7 +348,6 @@ namespace Parallax
         public void Unload()
         {
             isLoading = false;
-
             // Check to see if a scaled body that requires these textures exists
             if (ConfigLoader.parallaxScaledBodies.ContainsKey(planetName))
             {
@@ -486,8 +486,10 @@ namespace Parallax
             float _MaxAltitude = maxTerrainAltitude;
 
             float _MeshRadius = GetMeshRadiusScaledSpace(kspBody);
+            Debug.Log("Mesh radius (world) for " + kspBody.name + " = " + _MeshRadius);
             worldSpaceMeshRadius = _MeshRadius;
             float scalingFactor = _MeshRadius / _PlanetRadius;
+            Debug.Log(" - Scaling factor: " + scalingFactor);
 
             scaledMaterial.SetFloat("_MinRadialAltitude", (_MinAltitude) * scalingFactor);
             scaledMaterial.SetFloat("_MaxRadialAltitude", (_MaxAltitude) * scalingFactor);
@@ -529,6 +531,17 @@ namespace Parallax
                 shadowCasterMaterial.SetFloat("_OceanAltitude", scaledMaterialParams.shaderProperties.shaderFloats["_OceanAltitude"]);
             }
 
+            // Computed the max shadow ray distance
+            float worldDistance = maxTerrainAltitude * scalingFactor + _MeshRadius;
+            float theta = Mathf.Asin(_MeshRadius / worldDistance);
+            float tangentDist = _MeshRadius / Mathf.Tan(theta);
+
+            Debug.Log("World mesh radius: " + _MeshRadius);
+
+            //shadowCasterMaterial.SetFloat("_MaxRayDistance", tangentDist);
+            shadowCasterMaterial.SetFloat("_MaxRayDistance", worldSpaceMeshRadius * 0.2f);
+            Debug.Log("Tangent distance computed as " + (worldSpaceMeshRadius * 0.2f));
+
             // Computed at runtime, but the default is computed from Kerbin's SMA around the Sun
             shadowCasterMaterial.SetFloat("_LightWidth", 0.0384f);
 
@@ -540,12 +553,7 @@ namespace Parallax
         // Potential optimization here - just calculate the scaled space mesh radius manually
         public float GetMeshRadiusScaledSpace(CelestialBody celestialBody)
         {
-            float localMeshRadius = 1000.0f;
-            Vector3 meshCenter = Vector3.zero;
-            Vector3 arbitraryMeshBound = Vector3.up * localMeshRadius;
-
-            float radius = Vector3.Distance(celestialBody.scaledBody.transform.TransformPoint(meshCenter), celestialBody.scaledBody.transform.TransformPoint(arbitraryMeshBound));
-            return radius;
+            return (float)(celestialBody.Radius * ScaledSpace.InverseScaleFactor);
         }
         public void Load()
         {
