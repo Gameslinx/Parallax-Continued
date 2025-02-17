@@ -40,9 +40,9 @@
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_fwdbase nolightmap nodirlightmap nodynlightmap novertexlight
-            #pragma multi_compile_local _          OCEAN OCEAN_FROM_COLORMAP
+            #pragma multi_compile_local _           OCEAN OCEAN_FROM_COLORMAP
+            #pragma multi_compile_local _           BLUE_NOISE
 
-            #define STEP_COUNT 48
             #define SHADOW_BIAS 0.001
             #define SHADOW_NORMAL_BIAS 0.01
 
@@ -61,6 +61,9 @@
             float _ScaledPlanetOpacity;
             float _OceanAltitude;
             float _MaxRayDistance;
+
+            // Global integer - Set at runtime from settings
+            int _ParallaxScaledShadowStepSize;
 
             // Parallax includes
             #include "../../Includes/ParallaxGlobalFunctions.cginc" 
@@ -189,20 +192,23 @@
                 float3 rayDir = normalize(_WorldSpaceLightPos0);
                 
                 float rayDistance = _MaxRayDistance;
-                float stepSize = rayDistance / float(STEP_COUNT);
+                float stepSize = rayDistance / float(_ParallaxScaledShadowStepSize);
 
                 float attenuation = 1.0f;
                 float t = 0.0001;
 
                 // Random noise offset, could use blue noise but this looks good enough, it's only visible at shadow edges and helps remove stepping
-                float2 screenUV = (i.screenPos.xy / i.screenPos.w) * _ScreenParams.xy + 0.5f;
-                float noise = _BlueNoise.Sample(sampler_BlueNoise_point_repeat, (screenUV % 64) / 64);
-                noise = (noise + 1.618f * _FrameCount) % 1;
+                #if defined (BLUE_NOISE)
 
-                rayPos -= rayDir * noise * stepSize;
+                    float2 screenUV = (i.screenPos.xy / i.screenPos.w) * _ScreenParams.xy + 0.5f;
+                    float noise = _BlueNoise.Sample(sampler_BlueNoise_point_repeat, (screenUV % 64) / 64);
+                    noise = (noise + 1.618f * _FrameCount) % 1;
+                    rayPos -= rayDir * noise * stepSize;
+
+                #endif
 
                 // Raymarch towards the light
-                for (int b = 0; b < STEP_COUNT; b++)
+                for (int b = 0; b < _ParallaxScaledShadowStepSize; b++)
                 {
                     rayPos += rayDir * stepSize;
 

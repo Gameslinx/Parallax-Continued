@@ -67,6 +67,7 @@
      <Compile Include="Assets\Scripts\Advanced Subdivision\ParallelSubdivision.cs" />
      <Compile Include="Assets\Scripts\Debug\CubeHeightGenerator.cs" />
      <Compile Include="Assets\Scripts\Debug\LimitFPS.cs" />
+     <Compile Include="Assets\Scripts\Debug\ObjectScreenSize.cs" />
      <Compile Include="Assets\Scripts\Debug\ShadowDebug.cs" />
      <Compile Include="Assets\Scripts\Extensions\Dictionary_TryAdd.cs" />
      <Compile Include="Assets\Scripts\ScaledTools\PlanetPropSetter.cs" />

@@ -42,7 +42,7 @@ public class PlanetPropSetter : MonoBehaviour
             }
             avgRad /= verts.Length;
             _MeshRadius = avgRad;
-            Debug.Log("Mesh rad: " + _MeshRadius + " go name: " + gameObject.name);
+            //Debug.Log("Mesh rad: " + _MeshRadius + " go name: " + gameObject.name);
         }
         else
         {

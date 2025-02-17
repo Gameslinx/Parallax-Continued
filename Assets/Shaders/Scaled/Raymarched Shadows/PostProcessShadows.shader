@@ -39,30 +39,6 @@
             float4 _MainTex_ST;
             float4 _MainTex_TexelSize;
 
-            // Gaussian kernel weights for a 5x5 blur
-
-            static const int samples = 35, LOD = 3, sLOD = 1 << LOD;
-            static const float sigma = float(samples) * 0.25;
-
-            float gaussian(float2 i) 
-            {
-                return exp( -0.5* dot(i/=sigma,i) ) / ( 6.28 * sigma*sigma );
-            }
-
-            float4 blur(sampler2D sp, float2 U, float2 scale, float blurStrength) 
-            {
-                float4 O = 0;  
-                int s = samples/sLOD;
-                
-                for ( int i = 0; i < s*s; i++ ) 
-                {
-                    float2 d = float2(i%s, i/s)*float(sLOD) - float(samples)/2.0;
-                    O += gaussian(d) * tex2Dlod( sp, float4(U + scale * d * blurStrength, 0, float(LOD)) );
-                }
-                
-                return O / O.a;
-            }
-
             v2f vert (appdata v)
             {
                 v2f o;

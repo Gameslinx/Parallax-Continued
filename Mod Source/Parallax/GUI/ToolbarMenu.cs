@@ -115,11 +115,21 @@ namespace Parallax
             GUILayout.Space(15);
             // Scaled settings
             GUILayout.Label("Scaled System Settings", HighLogic.Skin.label);
+            GUILayout.Label("Tip: You can press Alt + 7 in the tracking station to display the shadow map");
             ParamCreator.ChangeMethod scaledShadowCallback = UpdateScaledShadowSettings;
             ParamCreator.ChangeMethod scaledTextureCallback = UpdateScaledTextureSettings;
+            ParamCreator.ChangeMethod scaledShadowMaterialCallback = UpdateScaledShadowMaterialSettings;
 
-            ParamCreator.CreateParam("Scaled Planet Self Shadows", ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledSpaceShadows, GUIHelperFunctions.BoolField, scaledShadowCallback);
-            ParamCreator.CreateParam("Load Scaled Textures Immediately", ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.loadTexturesImmediately, GUIHelperFunctions.BoolField, scaledTextureCallback);
+            ParamCreator.CreateParam("Scaled Planet Self Shadows",              ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledSpaceShadows, GUIHelperFunctions.BoolField, scaledShadowCallback);
+            ParamCreator.CreateParam("Smooth Scaled Planet Shadows",            ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.smoothScaledSpaceShadows, GUIHelperFunctions.BoolField, scaledShadowMaterialCallback);
+            ParamCreator.CreateParam("Raymarched Scaled Shadows Step Count",    ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowStepCount, GUIHelperFunctions.IntField, scaledShadowMaterialCallback);
+            ParamCreator.CreateParam("Load Scaled Textures Immediately",        ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.loadTexturesImmediately, GUIHelperFunctions.BoolField, scaledTextureCallback);
+
+            // Prevent some stupid settings
+            if (ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowStepCount > 256)
+            {
+                ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowStepCount = 256;
+            }
 
             GUILayout.Space(15);
             // Save button
@@ -214,6 +224,26 @@ namespace Parallax
             // Nothing needed here for now
         }
 
+        static void UpdateScaledShadowMaterialSettings()
+        {
+            // Toggle smooth shadows
+            foreach (ParallaxScaledBody scaledBody in ConfigLoader.parallaxScaledBodies.Values)
+            {
+                if (scaledBody.shadowCasterMaterial != null)
+                {
+                    if (!scaledBody.shadowCasterMaterial.IsKeywordEnabled("BLUE_NOISE") && ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.smoothScaledSpaceShadows)
+                    {
+                        scaledBody.shadowCasterMaterial.EnableKeyword("BLUE_NOISE");
+                    }
+                    else if (scaledBody.shadowCasterMaterial.IsKeywordEnabled("BLUE_NOISE") && !ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.smoothScaledSpaceShadows)
+                    {
+                        scaledBody.shadowCasterMaterial.DisableKeyword("BLUE_NOISE");
+                    }
+                }
+            }
+
+            Shader.SetGlobalInt("_ParallaxScaledShadowStepSize", ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowStepCount);
+        }
 
         static void UpdateScaledShadowSettings()
         {

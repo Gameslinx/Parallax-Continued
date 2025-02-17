@@ -17,7 +17,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Parallax")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+73fe9a25e94dd8b7869473c37910adefa4c617e3")]
 [assembly: System.Reflection.AssemblyProductAttribute("Parallax")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Parallax")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -42,7 +42,6 @@ public class ShadowDebug : MonoBehaviour
     //}
     void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
-        Debug.Log("hi there");
         //dummyBlitMaterial.SetTexture("_MainTex", )
         Graphics.Blit(attenuationTexture, destination);
     }

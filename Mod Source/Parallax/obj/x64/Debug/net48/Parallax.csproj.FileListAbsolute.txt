@@ -7,3 +7,11 @@ E:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48
 E:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.csproj.CoreCompileInputs.cache
 E:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.dll
 E:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.pdb
+D:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.csproj.AssemblyReference.cache
+D:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.GeneratedMSBuildEditorConfig.editorconfig
+D:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.AssemblyInfoInputs.cache
+D:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.AssemblyInfo.cs
+D:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.csproj.CoreCompileInputs.cache
+D:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.sourcelink.json
+D:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.dll
+D:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.pdb

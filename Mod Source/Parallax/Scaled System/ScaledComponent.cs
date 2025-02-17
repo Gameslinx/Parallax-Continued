@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
+using static DishController;
 
 namespace Parallax.Scaled_System
 {
@@ -21,9 +22,10 @@ namespace Parallax.Scaled_System
         public CelestialBody celestialBody;
         public CelestialBody parentStar;
 
-        public static float loadAngle = 0.008f;
-        public static float unloadAngle = 0.003f;
-        public static float forceUnloadAngle = 0.00005f;
+        // Size in screen pixels to load or unload based on the current camera FOV
+        public static float loadScreenSizePixels = 3.0f;
+        public static float unloadScreenSizePixels = 1.5f;
+        public static float forceUnloadScreenSizePixels = 0.5f;
 
         public bool pendingUnload = false;
         public static float unloadDelaySeconds = 10.0f;
@@ -65,8 +67,8 @@ namespace Parallax.Scaled_System
         void UpdateVisibility()
         {
             // Calculate "size on screen" (really the angle subtended by the sphere radius)
-            float angle = CalculateSubtendedAngle(ScaledSpace.LocalToScaledSpace(celestialBody.gameObject.transform.position), ScaledCamera.Instance.cam.transform.position, scaledBody.worldSpaceMeshRadius, ScaledCamera.Instance.cam.fieldOfView);
-            if (angle > loadAngle)
+            float sizePixels = CalculateScreenSizePixels(celestialBody.scaledBody.gameObject.transform.position, ScaledCamera.Instance.cam.gameObject.transform.position, (float)celestialBody.Radius, ScaledCamera.Instance.cam.fieldOfView);
+            if (sizePixels > loadScreenSizePixels)
             {
                 // Prevent an unload if we just dipped into it and back out
                 pendingUnload = false;
@@ -83,7 +85,7 @@ namespace Parallax.Scaled_System
                     }
                 }
             }
-            if ((angle < unloadAngle || angle < forceUnloadAngle) && FlightGlobals.currentMainBody != celestialBody)
+            if ((sizePixels < unloadScreenSizePixels || sizePixels < forceUnloadScreenSizePixels) && FlightGlobals.currentMainBody != celestialBody)
             {
                 if (scaledBody.Loaded)
                 {
@@ -93,9 +95,9 @@ namespace Parallax.Scaled_System
                         pendingUnload = true;
                         timeUnloadRequestedSeconds = Time.time;
                     }
-                    if (Time.time - timeUnloadRequestedSeconds > unloadDelaySeconds || angle < forceUnloadAngle)
+                    if (Time.time - timeUnloadRequestedSeconds > unloadDelaySeconds || sizePixels < forceUnloadScreenSizePixels)
                     {
-                        if (angle < forceUnloadAngle)
+                        if (sizePixels < forceUnloadScreenSizePixels)
                         {
                             ParallaxDebug.Log("Force unloading " + scaledBody.planetName);
                         }
@@ -127,17 +129,16 @@ namespace Parallax.Scaled_System
         {
             return Mathf.Atan2(targetRadius, (origin - target).magnitude) * 2.0f;
         }
-        float CalculateSubtendedAngle(Vector3 origin, Vector3 target, float targetRadius, float fov)
+        float CalculateScreenSizePixels(Vector3 origin, Vector3 target, float radius, float fovDegrees)
         {
-            float angle = Mathf.Atan2(targetRadius, (origin - target).magnitude) * 2.0f;
+            float fov = fovDegrees * Mathf.Deg2Rad;
+            float d = Vector3.Distance(origin, target);
+            float r = radius * ScaledSpace.InverseScaleFactor;
 
-            // 90 degree FOV baseline
-            // Scale inversely
-            float fovScalingFactor = 90.0f / fov;
+            float projRadius = (1.0f / Mathf.Tan(fov * 0.5f)) * r / Mathf.Sqrt(d * d - r * r);
+            float screenPixels = projRadius * Screen.height;
 
-            // Naively scale the angle depending on fov
-            // Not an accurate or perfect calculation but gets the job done
-            return angle * fovScalingFactor;
+            return screenPixels;
         }
         void OnDisable()
         {

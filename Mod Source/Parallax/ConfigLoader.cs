@@ -72,6 +72,7 @@ namespace Parallax
 
             AssetBundleLoader.Initialize();
             InitializeGlobalSettings(GetConfigByName("ParallaxGlobal"));
+            Shader.SetGlobalInt("_ParallaxScaledShadowStepSize", ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowStepCount);
 
             ParallaxDebug.Log("Starting Harmony patching...");
             var harmony = new Harmony("Parallax");
@@ -270,6 +271,8 @@ namespace Parallax
 
             ConfigNode scaledSettingsNode = config.config.GetNode("ScaledSystemSettings");
             parallaxGlobalSettings.scaledGlobalSettings.scaledSpaceShadows = bool.Parse(scaledSettingsNode.GetValue("scaledSpaceShadows"));
+            parallaxGlobalSettings.scaledGlobalSettings.smoothScaledSpaceShadows = bool.Parse(scaledSettingsNode.GetValue("smoothScaledSpaceShadows"));
+            parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowStepCount = int.Parse(scaledSettingsNode.GetValue("scaledRaymarchedShadowStepCount"));
             parallaxGlobalSettings.scaledGlobalSettings.loadTexturesImmediately = bool.Parse(scaledSettingsNode.GetValue("loadTexturesImmediately"));
 
             ConfigNode debugSettingsNode = config.config.GetNode("DebugSettings");

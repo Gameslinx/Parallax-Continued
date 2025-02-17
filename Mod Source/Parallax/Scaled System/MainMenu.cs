@@ -35,7 +35,7 @@ namespace Parallax.Scaled_System
         GameObject mainMenuPlanet;
         ParallaxScaledBody mainMenuBody;
         Material scaledMaterial;
-
+        Texture2D blueNoiseTexture;
         Camera mainCamera;
 
         // For skybox
@@ -84,7 +84,7 @@ namespace Parallax.Scaled_System
         void Start()
         {
             mainMenuGalaxy = GameObject.Find("MainMenuGalaxy");
-            mainLight = RenderSettings.sun;
+            //mainLight = RenderSettings.sun;
             originalShadowDistance = QualitySettings.shadowDistance;
 
             MainMenu mainMenu = FindObjectOfType<MainMenu>();
@@ -145,7 +145,16 @@ namespace Parallax.Scaled_System
             // Initial rotation
             mainMenuPlanet.transform.rotation = new Quaternion(0, 0.4f, 0, 0.9f);
 
-            mainMenuPlanet.GetComponent<MeshFilter>().sharedMesh = UnityEngine.Object.Instantiate(GameDatabase.Instance.GetModel("ParallaxContinued/Models/ScaledMesh").GetComponent<MeshFilter>().mesh);
+            // Should really check against 'using stock mesh' but disable deformity will achieve the same thing
+            if (!mainMenuBody.disableDeformity)
+            {
+                mainMenuPlanet.GetComponent<MeshFilter>().sharedMesh = UnityEngine.Object.Instantiate(GameDatabase.Instance.GetModel("ParallaxContinued/Models/ScaledMesh").GetComponent<MeshFilter>().mesh);
+            }
+            else
+            {
+                ParallaxDebug.Log("Main menu planet has deformity disabled");
+            }
+
             StartupMainMenuScaledBody(mainMenuPlanet, mainMenuPlanet.name);
 
             // Sun
@@ -169,22 +178,10 @@ namespace Parallax.Scaled_System
             meshRenderer = mainMenuPlanet.GetComponent<MeshRenderer>();
 
             // Ensure the screenspace mask is generated
-            RenderSettings.sun.shadows = LightShadows.Soft;
-            RenderSettings.sun.shadowStrength = 1;
-            RenderSettings.sun.lightShadowCasterMode = LightShadowCasterMode.Everything;
-            RenderSettings.sun.shadowResolution = LightShadowResolution.VeryHigh;
-            
-            planetLight.shadows = LightShadows.Soft;
-            planetLight.shadowStrength = 1;
-            planetLight.lightShadowCasterMode = LightShadowCasterMode.Everything;
-            planetLight.shadowResolution = LightShadowResolution.VeryHigh;
-
             fillLight.shadows = LightShadows.Soft;
             fillLight.shadowStrength = 1;
             fillLight.lightShadowCasterMode = LightShadowCasterMode.Everything;
             fillLight.shadowResolution = LightShadowResolution.VeryHigh;
-
-
 
             // Set up command buffers
             shadowCommandBuffer = new CommandBuffer { name = "Render Custom Shadows" };
@@ -230,8 +227,6 @@ namespace Parallax.Scaled_System
 
             lightCommandBuffer.Blit(shadowAttenuationRT, BuiltinRenderTextureType.CurrentActive, compositorMaterial);
 
-            RenderSettings.sun.AddCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
-            planetLight.AddCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
             fillLight.AddCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
 
             QualitySettings.shadowDistance = 10000.0f;
@@ -313,6 +308,19 @@ namespace Parallax.Scaled_System
                 body.shadowCasterMaterial.SetFloat("_OceanAltitude", body.scaledMaterialParams.shaderProperties.shaderFloats["_OceanAltitude"]);
             }
 
+            if (ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.smoothScaledSpaceShadows)
+            {
+                body.shadowCasterMaterial.EnableKeyword("BLUE_NOISE");
+            }
+            else
+            {
+                body.shadowCasterMaterial.DisableKeyword("BLUE_NOISE");
+            }
+
+            // Load the blue noise texture - uncompressed DDS Luminance 8, linear
+            blueNoiseTexture = TextureLoader.LoadTexture("ParallaxContinued/Textures/PluginData/blueNoise.dds", true, true);
+            body.shadowCasterMaterial.SetTexture("_BlueNoise", blueNoiseTexture);
+
             // Computed the max shadow ray distance
             float worldDistance = body.maxTerrainAltitude * scalingFactor + _MeshRadius;
             float theta = Mathf.Asin(_MeshRadius / worldDistance);
@@ -337,6 +345,11 @@ namespace Parallax.Scaled_System
         }
         public void RenderShadows()
         {
+            if (!ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledSpaceShadows)
+            {
+                return;
+            }
+
             shadowCommandBuffer.Clear();
 
             // Setup RTs
@@ -426,6 +439,7 @@ namespace Parallax.Scaled_System
             planetLight.transform.forward = Vector3.Slerp(initialSunDirection, targetSunDirection, sunRotationProgress);
             fillLight.transform.forward = Vector3.Slerp(initialSunDirection, targetSunDirection, sunRotationProgress);
             RenderSettings.sun.transform.forward = Vector3.Slerp(initialSunDirection, targetSunDirection, sunRotationProgress);
+
             RenderShadows();
             DebugShadows();
         }
@@ -457,9 +471,19 @@ namespace Parallax.Scaled_System
         }
         void OnDisable()
         {
+            QualitySettings.shadowDistance = originalShadowDistance;
             if (mainMenuBody != null)
             {
                 mainMenuBody.Unload();
+            }
+
+            UnityEngine.Object.Destroy(compositorMaterial);
+            UnityEngine.Object.Destroy(scaledMaterial);
+            UnityEngine.Object.Destroy(blueNoiseTexture);
+
+            if (!ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledSpaceShadows)
+            {
+                return;
             }
 
             if (mainCamera != null && mainCamera.renderingPath == RenderingPath.DeferredShading)
@@ -471,8 +495,6 @@ namespace Parallax.Scaled_System
                 mainCamera.RemoveCommandBuffer(CameraEvent.BeforeForwardOpaque, shadowCommandBuffer);
             }
 
-            RenderSettings.sun?.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
-            planetLight?.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
             fillLight?.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
 
             lightCommandBuffer.Dispose();
@@ -480,9 +502,6 @@ namespace Parallax.Scaled_System
             shadowAttenuationRT.Release();
             shadowDistanceRT.Release();
             shadowObjectDepthRT.Release();
-            QualitySettings.shadowDistance = originalShadowDistance;
-            UnityEngine.Object.Destroy(compositorMaterial);
-            UnityEngine.Object.Destroy(scaledMaterial);
         }
     }
 }

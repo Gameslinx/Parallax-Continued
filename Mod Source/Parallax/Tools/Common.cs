@@ -59,6 +59,8 @@ namespace Parallax
             lightingSettingsNode.AddValue("lightShadowQuality", lightingGlobalSettings.lightShadowsQuality.ToString());
 
             scaledSettingsNode.AddValue("scaledSpaceShadows", scaledGlobalSettings.scaledSpaceShadows);
+            scaledSettingsNode.AddValue("smoothScaledSpaceShadows", scaledGlobalSettings.smoothScaledSpaceShadows);
+            scaledSettingsNode.AddValue("scaledRaymarchedShadowStepCount", scaledGlobalSettings.scaledRaymarchedShadowStepCount);
             scaledSettingsNode.AddValue("loadTexturesImmediately", scaledGlobalSettings.loadTexturesImmediately);
 
             debugSettingsNode.AddValue("wireframeTerrain", debugGlobalSettings.wireframeTerrain);
@@ -101,6 +103,8 @@ namespace Parallax
     public struct ScaledGlobalSetings
     {
         public bool scaledSpaceShadows;
+        public bool smoothScaledSpaceShadows;
+        public int scaledRaymarchedShadowStepCount;
         public bool loadTexturesImmediately;
     }
     public struct DebugGlobalSettings
@@ -486,10 +490,8 @@ namespace Parallax
             float _MaxAltitude = maxTerrainAltitude;
 
             float _MeshRadius = GetMeshRadiusScaledSpace(kspBody);
-            Debug.Log("Mesh radius (world) for " + kspBody.name + " = " + _MeshRadius);
             worldSpaceMeshRadius = _MeshRadius;
             float scalingFactor = _MeshRadius / _PlanetRadius;
-            Debug.Log(" - Scaling factor: " + scalingFactor);
 
             scaledMaterial.SetFloat("_MinRadialAltitude", (_MinAltitude) * scalingFactor);
             scaledMaterial.SetFloat("_MaxRadialAltitude", (_MaxAltitude) * scalingFactor);
@@ -531,16 +533,22 @@ namespace Parallax
                 shadowCasterMaterial.SetFloat("_OceanAltitude", scaledMaterialParams.shaderProperties.shaderFloats["_OceanAltitude"]);
             }
 
+            if (ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.smoothScaledSpaceShadows)
+            {
+                shadowCasterMaterial.EnableKeyword("BLUE_NOISE");
+            }
+            else
+            {
+                shadowCasterMaterial.DisableKeyword("BLUE_NOISE");
+            }
+
             // Computed the max shadow ray distance
             float worldDistance = maxTerrainAltitude * scalingFactor + _MeshRadius;
             float theta = Mathf.Asin(_MeshRadius / worldDistance);
             float tangentDist = _MeshRadius / Mathf.Tan(theta);
 
-            Debug.Log("World mesh radius: " + _MeshRadius);
-
             //shadowCasterMaterial.SetFloat("_MaxRayDistance", tangentDist);
             shadowCasterMaterial.SetFloat("_MaxRayDistance", worldSpaceMeshRadius * 0.2f);
-            Debug.Log("Tangent distance computed as " + (worldSpaceMeshRadius * 0.2f));
 
             // Computed at runtime, but the default is computed from Kerbin's SMA around the Sun
             shadowCasterMaterial.SetFloat("_LightWidth", 0.0384f);
