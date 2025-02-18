@@ -547,8 +547,7 @@ namespace Parallax
             float theta = Mathf.Asin(_MeshRadius / worldDistance);
             float tangentDist = _MeshRadius / Mathf.Tan(theta);
 
-            //shadowCasterMaterial.SetFloat("_MaxRayDistance", tangentDist);
-            shadowCasterMaterial.SetFloat("_MaxRayDistance", worldSpaceMeshRadius * 0.2f);
+            shadowCasterMaterial.SetFloat("_MaxRayDistance", tangentDist);
 
             // Computed at runtime, but the default is computed from Kerbin's SMA around the Sun
             shadowCasterMaterial.SetFloat("_LightWidth", 0.0384f);
