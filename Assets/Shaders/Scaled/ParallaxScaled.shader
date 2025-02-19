@@ -857,7 +857,7 @@ Shader "Custom/ParallaxScaled"
 
             float _Debug;
 
-            void Frag_Shader (Interpolators i, PARALLAX_DEFERRED_OUTPUT_BUFFERS, float depth : SV_Depth)
+            void Frag_Shader (Interpolators i, PARALLAX_DEFERRED_OUTPUT_BUFFERS)
             {   
                 //
                 //  Block - Prerequisites

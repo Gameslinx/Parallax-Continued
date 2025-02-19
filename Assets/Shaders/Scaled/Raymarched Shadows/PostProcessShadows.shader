@@ -62,9 +62,9 @@
                 float shadowCasterDepth = LinearEyeDepth(tex2D(_ShadowDepth, screenUV).r);
                 
                 // Define a depth threshold to avoid z-fighting issues
-                float depthThreshold = 0.01; // Tweak this value for better results
+                float depthThreshold = 0.001; // Tweak this value for better results
                 
-                if (sceneDepth - shadowCasterDepth < 0)
+                if (sceneDepth - shadowCasterDepth < depthThreshold)
                 {
                     // Discard shadow: return white (no shadow attenuation)
                     return fixed4(1.0, 1.0, 1.0, 1.0);

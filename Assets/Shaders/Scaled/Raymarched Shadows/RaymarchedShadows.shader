@@ -237,7 +237,12 @@
                 output.shadowAttenuation = attenuation;
                 float shadowBlurMaxDistance = 0.05f;
                 output.shadowDistance = saturate(distance(rayPos, initialRayPos) / shadowBlurMaxDistance);
+
+                #if defined (SHADER_API_GLCORE) || defined (SHADER_API_OPENGL)
+                output.depth = i.pos.z - 0.001f;
+                #else
                 output.depth = i.pos.z + 0.001f;
+                #endif
 
                 output.shadowAttenuation = saturate(output.shadowAttenuation + (1 - _ScaledPlanetOpacity));
 
