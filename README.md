@@ -40,10 +40,10 @@ Mods that are fully compatible with and enhance the visual experience when insta
 |Stock Planetary System|Fully supported|Release 3|
 |Stock Planetary System (Rescaled)|[Download](https://drive.google.com/file/d/1qFMQlvmI6M2HdJLgLyz1jRCGos-_YOTP/view?usp=drive_link)|Release 3|Not been updated yet
 |RSS Reborn|In Progress|
-|OPM - Jthero Configs for Release 3|[Download]([https://github.com/jthero3/OuterParallax/tree/ParallaxContinued](https://forum.kerbalspaceprogram.com/topic/226905-1125-aetherium-021-16-feb-2025-random-assortment-of-parallax-continued-configs/)|Release 3|Not maintained by me
-|MPE - Jthero Configs for Release 3|[Download]([https://github.com/jthero3/OuterParallax/tree/ParallaxContinued](https://forum.kerbalspaceprogram.com/topic/226905-1125-aetherium-021-16-feb-2025-random-assortment-of-parallax-continued-configs/)|Release 3|Not maintained by me
-|Quack Pack - Jthero Configs for Release 3|[Download]([https://github.com/jthero3/OuterParallax/tree/ParallaxContinued](https://forum.kerbalspaceprogram.com/topic/226905-1125-aetherium-021-16-feb-2025-random-assortment-of-parallax-continued-configs/)|Release 3|Not maintained by me
-|Nem - Jthero Configs for Release 3|[Download]([https://github.com/jthero3/OuterParallax/tree/ParallaxContinued](https://forum.kerbalspaceprogram.com/topic/226905-1125-aetherium-021-16-feb-2025-random-assortment-of-parallax-continued-configs/)|Release 3|Not maintained by me
+|OPM - Jthero Configs for Release 3|[Download](https://forum.kerbalspaceprogram.com/topic/226905-1125-aetherium-021-16-feb-2025-random-assortment-of-parallax-continued-configs/)|Release 3|Not maintained by me
+|MPE - Jthero Configs for Release 3|[Download](https://forum.kerbalspaceprogram.com/topic/226905-1125-aetherium-021-16-feb-2025-random-assortment-of-parallax-continued-configs/)|Release 3|Not maintained by me
+|Quack Pack - Jthero Configs for Release 3|[Download](https://forum.kerbalspaceprogram.com/topic/226905-1125-aetherium-021-16-feb-2025-random-assortment-of-parallax-continued-configs/)|Release 3|Not maintained by me
+|Nem - Jthero Configs for Release 3|[Download](https://forum.kerbalspaceprogram.com/topic/226905-1125-aetherium-021-16-feb-2025-random-assortment-of-parallax-continued-configs/)|Release 3|Not maintained by me
 |OPM - Old Configs|[Download](https://drive.google.com/file/d/127yJZ46sTaIcGmdCondYquETtWzfGXZy/view?usp=drive_link)|Release 2|11/11/2024
 |Beyond Home|Maintainer Contacted
 |Kcalbeloh|[Download](https://drive.google.com/file/d/1co_qgylXOP4WqXgu5gvF4qpDZzZp1qVt/view?usp=drive_link)|Release 2|09/02/2025
