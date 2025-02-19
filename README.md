@@ -34,19 +34,23 @@ Mods that are fully compatible with and enhance the visual experience when insta
 
 ## List of Supported Planet Packs
 "Author Contacted" means not currently supported, but I've reached out to the author to help get upgrading existing configs started
-|Planet Pack Name|Compatibility Status|Last Updated
-|----|----|----
-|Stock Planetary System|Fully supported|/
-|Stock Planetary System (Rescaled)|[Download](https://drive.google.com/file/d/1qFMQlvmI6M2HdJLgLyz1jRCGos-_YOTP/view?usp=drive_link)|Not been updated yet
-|RSS Reborn|In Progress|/
-|OPM and MPE - Jthero Configs|[Download](https://github.com/jthero3/OuterParallax/tree/ParallaxContinued)|Not maintained by me
-|OPM - Recommended Configs|[Download](https://drive.google.com/file/d/127yJZ46sTaIcGmdCondYquETtWzfGXZy/view?usp=drive_link)|11/11/2024
+**"Release 2" configs will work with Release 3**, but the orbit textures won't be improved.
+|Planet Pack Name|Compatibility Status|Supports Release|Last Updated
+|----|----|----|----
+|Stock Planetary System|Fully supported|Release 3|
+|Stock Planetary System (Rescaled)|[Download](https://drive.google.com/file/d/1qFMQlvmI6M2HdJLgLyz1jRCGos-_YOTP/view?usp=drive_link)|Release 3|Not been updated yet
+|RSS Reborn|In Progress|
+|OPM - Jthero Configs for Release 3|[Download](https://forum.kerbalspaceprogram.com/topic/226905-1125-aetherium-021-16-feb-2025-random-assortment-of-parallax-continued-configs/)|Release 3|Not maintained by me
+|MPE - Jthero Configs for Release 3|[Download](https://forum.kerbalspaceprogram.com/topic/226905-1125-aetherium-021-16-feb-2025-random-assortment-of-parallax-continued-configs/)|Release 3|Not maintained by me
+|Quack Pack - Jthero Configs for Release 3|[Download](https://forum.kerbalspaceprogram.com/topic/226905-1125-aetherium-021-16-feb-2025-random-assortment-of-parallax-continued-configs/)|Release 3|Not maintained by me
+|Nem - Jthero Configs for Release 3|[Download](https://forum.kerbalspaceprogram.com/topic/226905-1125-aetherium-021-16-feb-2025-random-assortment-of-parallax-continued-configs/)|Release 3|Not maintained by me
+|OPM - Old Configs|[Download](https://drive.google.com/file/d/127yJZ46sTaIcGmdCondYquETtWzfGXZy/view?usp=drive_link)|Release 2|11/11/2024
 |Beyond Home|Maintainer Contacted
-|Kcalbeloh|[Download](https://drive.google.com/file/d/1co_qgylXOP4WqXgu5gvF4qpDZzZp1qVt/view?usp=drive_link)|09/02/2025
-|Celestial Harmony|[Download](https://github.com/ProximaCentauri-star/Celestial-Harmony/releases)|Not maintained by me
+|Kcalbeloh|[Download](https://drive.google.com/file/d/1co_qgylXOP4WqXgu5gvF4qpDZzZp1qVt/view?usp=drive_link)|Release 2|09/02/2025
+|Celestial Harmony|[Download](https://github.com/ProximaCentauri-star/Celestial-Harmony/releases)|Release 2|Not maintained by me
 |Techo's Stock Planet Revamp|Author Contacted
-|KSRSS Reborn|Removed, as they are broken|/
-|JNSQ|[Download](https://github.com/yukkine0704/JNSQ_ParallaxScattersContinued)|Not maintained by me
+|KSRSS Reborn|Removed, as they are broken| | 
+|JNSQ|[Download](https://github.com/yukkine0704/JNSQ_ParallaxScattersContinued)|Release 2|Not maintained by me
 
 ## License
 All Rights Reserved
