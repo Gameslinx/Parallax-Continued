@@ -46,11 +46,10 @@ namespace Parallax.Debugging
                 {
                     ParallaxDebug.LogError(" - Reason: This system does not support async GPU readback");
                 }
-                // This could be better, but it's already made clear that Apple devices aren't supported due to their lack of OpenGL support.
-                if (SystemInfo.operatingSystem.ToLower().Contains("mac") || SystemInfo.operatingSystem.ToLower().Contains("osx"))
-                {
-                    ParallaxDebug.LogError(" - Reason: This is likely due to Apple devices having too low of an OpenGL version");
-                }
+            }
+            if (SystemInfo.graphicsDeviceVersion.StartsWith("OpenGL") && Application.platform == RuntimePlatform.OSXPlayer)
+            {
+                ParallaxDebug.LogCritical("Parallax is not supported on MacOSX systems running OpenGL. Please install CrossOver and under 'Advanced Settings', set 'Graphics' to 'D3DMetal' with synchronization 'MSync'");
             }
         }
     }

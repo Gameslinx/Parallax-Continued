@@ -93,36 +93,51 @@ namespace Parallax.Scaled_System
                 ParallaxDebug.LogError("Unable to process skybox for scaled space reflections");
             }
 
-            int faceDim = skyboxTextures[0].width;
+            Resources.UnloadUnusedAssets();
 
-            // We're using this for environment reflections, does not need to be as high-res
-            int resultDim = faceDim / 4;
-            TextureFormat format = skyboxTextures[0].format;
-            
-            // Elaborate way of supporting compressed textures and cramming them into a cubemap
+            // Store current quality setting
+            // Game settings texture quality changes master texture limit, which resizes all textures before we can extract the skybox
+            int previousMasterTextureLimit = 0;
+            if (GameSettings.TEXTURE_QUALITY != 0)
+            {
+                previousMasterTextureLimit = QualitySettings.masterTextureLimit;
+
+                // Force full-resolution textures temporarily
+                QualitySettings.masterTextureLimit = 0;
+            }
+
+            int resultDim = skyboxTextures[0].width;
             RenderTexture rt = new RenderTexture(resultDim, resultDim, 0, GraphicsFormat.R8G8B8A8_UNorm);
             rt.Create();
 
             Texture2D[] destTextures = new Texture2D[6];
+
             for (int i = 0; i < skyboxTextures.Length; i++)
             {
                 Texture2D tex = skyboxTextures[i];
+
                 Graphics.Blit(tex, rt);
                 RenderTexture.active = rt;
+
                 destTextures[i] = new Texture2D(resultDim, resultDim, TextureFormat.RGBA32, true);
-                destTextures[i].ReadPixels(new Rect(0, 0, resultDim, resultDim), 0, 0, false);
+                destTextures[i].ReadPixels(new Rect(0, 0, resultDim, resultDim), 0, 0, true);
                 destTextures[i].Compress(false);
                 destTextures[i].Apply(true, true);
             }
 
+            // Restore the original texture limit
+            if (GameSettings.TEXTURE_QUALITY != 0)
+            {
+                // Force full-resolution textures temporarily
+                QualitySettings.masterTextureLimit = previousMasterTextureLimit;
+            }
+
             Cubemap cube = new Cubemap(resultDim, destTextures[0].format, destTextures[0].mipmapCount);
 
-            Graphics.CopyTexture(destTextures[0], 0, cube, 0);
-            Graphics.CopyTexture(destTextures[1], 0, cube, 1);
-            Graphics.CopyTexture(destTextures[2], 0, cube, 2);
-            Graphics.CopyTexture(destTextures[3], 0, cube, 3);
-            Graphics.CopyTexture(destTextures[4], 0, cube, 4);
-            Graphics.CopyTexture(destTextures[5], 0, cube, 5);
+            for (int i = 0; i < 6; i++)
+            {
+                Graphics.CopyTexture(destTextures[i], 0, cube, i);
+            }
 
             cubeMap = cube;
 

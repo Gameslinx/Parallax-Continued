@@ -9,12 +9,6 @@ using System.Linq;
 using System.Reflection.Emit;
 using UnityEngine;
 using UnityEngine.Rendering;
-using static Parallax.Legacy.LegacyScatterConfigLoader;
-
-//
-// Config upgrade notes:
-// 1. "Textures" node in ParallaxTerrain.cfg needs to be renamed to ShaderProperties
-// 2. Vars now need to be named according to the ShaderPropertiesTemplate.cfg
 
 [assembly: KSPAssembly("Parallax", 1, 0)]
 [assembly: KSPAssemblyDependency("Kopernicus", 1, 0)]
@@ -251,6 +245,15 @@ namespace Parallax
         }
         public static void InitializeGlobalSettings(UrlDir.UrlConfig config)
         {
+            if (config == null)
+            {
+                ParallaxDebug.Log("Generating default settings config");
+
+                // Save the defaults
+                parallaxGlobalSettings.SaveSettings();
+
+                return;
+            }
             ConfigNode terrainSettingsNode = config.config.GetNode("TerrainShaderSettings");
             parallaxGlobalSettings.terrainGlobalSettings.maxTessellation = float.Parse(terrainSettingsNode.GetValue("maxTessellation"));
             parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength = float.Parse(terrainSettingsNode.GetValue("tessellationEdgeLength"));
@@ -567,16 +570,49 @@ namespace Parallax
                 // Populate the values from this material
                 PopulateMaterialValues(ref body.scaledMaterialParams, materialNode, body.planetName);
             }
+            if (mode == ParallaxScaledBodyMode.CustomRequiresTerrain)
+            {
+                string shaderName = materialNode.GetValue("customShaderName");
+                if (shaderName == null)
+                {
+                    ParallaxDebug.LogCritical("Scaled body mode is CustomRequiresTerrain, but customShaderName value in the Material node is missing - Parallax has no idea what shader name to look for!");
+                    return;
+                }
+
+                body.scaledMaterialParams.shader = shaderName;
+
+                // Read the properties
+                body.scaledMaterialParams.shaderProperties = LookupTemplateConfig(GetConfigByName("ParallaxScaledShaderProperties"), body.scaledMaterialParams.shader, keywords);
+
+                // Populate the values from this material
+                PopulateMaterialValues(ref body.scaledMaterialParams, materialNode, body.planetName);
+
+                // Append terrain properties and enable appropriate keywords
+                body.ReadTerrainShaderProperties();
+                DetermineScaledKeywordsFromTerrain(body, body.scaledMaterialParams.shaderKeywords);
+            }
             if (mode == ParallaxScaledBodyMode.Custom)
             {
-                // Call initialize template config with the shaderbank config node here
+                string shaderName = materialNode.GetValue("customShaderName");
+                if (shaderName == null)
+                {
+                    ParallaxDebug.LogCritical("Scaled body mode is CustomRequiresTerrain, but customShaderName value in the Material node is missing - Parallax has no idea what shader name to look for!");
+                    return;
+                }
+
+                body.scaledMaterialParams.shader = shaderName;
+
+                // Read the properties
+                body.scaledMaterialParams.shaderProperties = LookupTemplateConfig(GetConfigByName("ParallaxScaledShaderProperties"), body.scaledMaterialParams.shader, keywords);
+
+                // Populate the values from this material
+                PopulateMaterialValues(ref body.scaledMaterialParams, materialNode, body.planetName);
             }
-            
         }
         public static void ParseScaledMaterialOverride(ParallaxScaledBody body, ParallaxScaledBodyMode mode, ConfigNode overrideNode)
         {
             // We're not inheriting from terrain, so there's nothing to override
-            if (mode != ParallaxScaledBodyMode.FromTerrain)
+            if (mode != ParallaxScaledBodyMode.FromTerrain && mode != ParallaxScaledBodyMode.CustomRequiresTerrain)
             {
                 return;
             }
@@ -1204,7 +1240,7 @@ namespace Parallax
                 // Just approximate the normal strength changes, it won't be perfect, but we can't derive it without regenerating the normals
                 scaledBody.scaledMaterial.SetFloat("_PlanetBumpScale", Mathf.Pow(landscapeValue, 0.333f));
 
-                if (scaledBody.mode == ParallaxScaledBodyMode.FromTerrain)
+                if (scaledBody.mode == ParallaxScaledBodyMode.FromTerrain || scaledBody.mode == ParallaxScaledBodyMode.CustomRequiresTerrain)
                 {
                     scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendStart"] *= resizeValue * landscapeValue;
                     scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendEnd"] *= resizeValue * landscapeValue;

@@ -272,7 +272,7 @@ namespace Parallax.Scaled_System
             scaledMaterial.SetFloat("_MaxRadialAltitude", (_MaxAltitude) * scalingFactor);
 
             // Terrain shader specific
-            if (body.mode == ParallaxScaledBodyMode.FromTerrain)
+            if (body.mode == ParallaxScaledBodyMode.FromTerrain || body.mode == ParallaxScaledBodyMode.CustomRequiresTerrain)
             {
                 scaledMaterial.SetFloat("_LowMidBlendStart", (body.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendStart"] + _PlanetRadius) * scalingFactor);
                 scaledMaterial.SetFloat("_LowMidBlendEnd", (body.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendEnd"] + _PlanetRadius) * scalingFactor);

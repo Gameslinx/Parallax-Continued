@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using UnityEngine;
 
 namespace Parallax
@@ -18,23 +19,29 @@ namespace Parallax
         public static Dictionary<string, Shader> parallaxDebugShaders = new Dictionary<string, Shader>();
         public static void Initialize()
         {
-            string terrainShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "ParallaxContinued/Shaders/ParallaxTerrain");
-            string scatterShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "ParallaxContinued/Shaders/ParallaxScatters");
-            string computeShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "ParallaxContinued/Shaders/ParallaxCompute");
-            string scaledShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "ParallaxContinued/Shaders/ParallaxScaled");
-            string debugShaderFilePath = Path.Combine(KSPUtil.ApplicationRootPath + "GameData/" + "ParallaxContinued/Shaders/ParallaxDebug");
+            ConfigNode assetBundleNode = GameDatabase.Instance.GetConfigs("ParallaxAssetBundleList")[0].config;
 
-            terrainShaderFilePath = DeterminePlatform(terrainShaderFilePath);
-            scatterShaderFilePath = DeterminePlatform(scatterShaderFilePath);
-            computeShaderFilePath = DeterminePlatform(computeShaderFilePath);
-            scaledShaderFilePath = DeterminePlatform(scaledShaderFilePath);
-            debugShaderFilePath = DeterminePlatform(debugShaderFilePath);
+            string[] terrainShaderFilePaths = GetShaderPaths(assetBundleNode, "Terrain");
+            string[] scatterShaderFilePaths = GetShaderPaths(assetBundleNode, "Scatter");
+            string[] computeShaderFilePaths = GetShaderPaths(assetBundleNode, "Compute");
+            string[] scaledShaderFilePaths = GetShaderPaths(assetBundleNode, "Scaled");
+            string[] debugShaderFilePaths = GetShaderPaths(assetBundleNode, "Debug");
 
-            LoadAssetBundles<Shader>(terrainShaderFilePath, parallaxTerrainShaders);
-            LoadAssetBundles<Shader>(scatterShaderFilePath, parallaxScatterShaders);
-            LoadAssetBundles<ComputeShader>(computeShaderFilePath, parallaxComputeShaders);
-            LoadAssetBundles<Shader>(scaledShaderFilePath, parallaxScaledShaders);
-            LoadAssetBundles<Shader>(debugShaderFilePath, parallaxDebugShaders);
+            LoadAssetBundles<Shader>(terrainShaderFilePaths, parallaxTerrainShaders);
+            LoadAssetBundles<Shader>(scatterShaderFilePaths, parallaxScatterShaders);
+            LoadAssetBundles<ComputeShader>(computeShaderFilePaths, parallaxComputeShaders);
+            LoadAssetBundles<Shader>(scaledShaderFilePaths, parallaxScaledShaders);
+            LoadAssetBundles<Shader>(debugShaderFilePaths, parallaxDebugShaders);
+        }
+        static string[] GetShaderPaths(ConfigNode assetBundleNode, string nodePrefix)
+        {
+            ConfigNode shaderTypeNode = assetBundleNode.GetNode(nodePrefix + "Shaders");
+            string[] bundleNames = shaderTypeNode.GetValues("path");
+            for (int i = 0; i < bundleNames.Length; i++)
+            {
+                bundleNames[i] = ConfigLoader.GameDataPath + DeterminePlatform(bundleNames[i]);
+            }
+            return bundleNames;
         }
         static string DeterminePlatform(string filePath)
         {
@@ -59,25 +66,32 @@ namespace Parallax
             return filePath;
         }
         // Get all shaders from asset bundle
-        static void LoadAssetBundles<T>(string filePath, Dictionary<string, T> dest) where T : UnityEngine.Object
+        static void LoadAssetBundles<T>(string[] filePaths, Dictionary<string, T> dest) where T : UnityEngine.Object
         {
-            if (!File.Exists(filePath))
+            if (filePaths.Length == 0)
             {
-                ParallaxDebug.LogCritical("Asset bundle load requested, but the file doesn't exist on disk! " + filePath);
-                return;
+                ParallaxDebug.LogCritical("Asset bundle load requested, but no file paths were supplied. Installation error?");
             }
-            var assetBundle = AssetBundle.LoadFromFile(filePath);
-            if (assetBundle == null)
+            foreach (string filePath in filePaths)
             {
-                ParallaxDebug.LogCritical("Failed to load bundle at path: " + filePath);
-            }
-            else
-            {
-                T[] shaders = assetBundle.LoadAllAssets<T>();
-                foreach (T shader in shaders)
+                if (!File.Exists(filePath))
                 {
-                    dest.Add(shader.name, shader);
-                    ParallaxDebug.Log("Loaded shader: " + shader.name);
+                    ParallaxDebug.LogCritical("Asset bundle load requested, but the file doesn't exist on disk! " + filePath);
+                    return;
+                }
+                var assetBundle = AssetBundle.LoadFromFile(filePath);
+                if (assetBundle == null)
+                {
+                    ParallaxDebug.LogCritical("Failed to load bundle at path: " + filePath);
+                }
+                else
+                {
+                    T[] shaders = assetBundle.LoadAllAssets<T>();
+                    foreach (T shader in shaders)
+                    {
+                        dest.Add(shader.name, shader);
+                        ParallaxDebug.Log("Loaded shader: " + shader.name);
+                    }
                 }
             }
         }

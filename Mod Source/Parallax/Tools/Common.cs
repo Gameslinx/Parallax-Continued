@@ -23,13 +23,12 @@ namespace Parallax
     // Holds ParallaxGlobalSettings.cfg values for terrain shader and scatters
     public class ParallaxSettings
     {
-        public TerrainGlobalSettings terrainGlobalSettings = new TerrainGlobalSettings();
-        public ScatterGlobalSettings scatterGlobalSettings = new ScatterGlobalSettings();
-        public LightingGlobalSettings lightingGlobalSettings = new LightingGlobalSettings();
-        public ScaledGlobalSetings scaledGlobalSettings = new ScaledGlobalSetings();
-        public DebugGlobalSettings debugGlobalSettings = new DebugGlobalSettings();
-        public ObjectPoolSettings objectPoolSettings = new ObjectPoolSettings();
-
+        public TerrainGlobalSettings terrainGlobalSettings = TerrainGlobalSettings.Default;
+        public ScatterGlobalSettings scatterGlobalSettings = ScatterGlobalSettings.Default;
+        public LightingGlobalSettings lightingGlobalSettings = LightingGlobalSettings.Default;
+        public ScaledGlobalSettings scaledGlobalSettings = ScaledGlobalSettings.Default;
+        public DebugGlobalSettings debugGlobalSettings = DebugGlobalSettings.Default;
+        public ObjectPoolSettings objectPoolSettings = ObjectPoolSettings.Default;
         public void SaveSettings()
         {
             ConfigNode rootNode = new ConfigNode("ParallaxGlobal");
@@ -74,9 +73,8 @@ namespace Parallax
             globalNode.AddNode(scaledSettingsNode);
             globalNode.AddNode(debugSettingsNode);
             globalNode.AddNode(objectPoolSettingsNode);
-
+            
             rootNode.Save(KSPUtil.ApplicationRootPath + "GameData/ParallaxContinued/Config/ParallaxGlobalSettings.cfg");
-
         }
     }
     public struct TerrainGlobalSettings
@@ -86,6 +84,16 @@ namespace Parallax
         public float maxTessellationRange;
         public bool advancedTextureBlending;
         public bool ambientOcclusion;
+
+        private static readonly TerrainGlobalSettings defaultSetting = new TerrainGlobalSettings()
+        {
+            maxTessellation = 64,
+            tessellationEdgeLength = 4,
+            maxTessellationRange = 30,
+            advancedTextureBlending = true,
+            ambientOcclusion = true
+        };
+        public static TerrainGlobalSettings Default => defaultSetting;
     }
     public struct ScatterGlobalSettings
     {
@@ -94,27 +102,71 @@ namespace Parallax
         public float fadeOutStartRange;
         public int collisionLevel;
         public float colliderLookaheadTime;
+
+        private static readonly ScatterGlobalSettings defaultSetting = new ScatterGlobalSettings()
+        {
+            densityMultiplier = 1,
+            rangeMultiplier = 1,
+            fadeOutStartRange = 0.8f,
+            collisionLevel = 2,
+            colliderLookaheadTime = 0
+        };
+
+        public static ScatterGlobalSettings Default => defaultSetting;
     }
     public struct LightingGlobalSettings
     {
         public bool lightShadows;
         public LightShadowResolution lightShadowsQuality;
+
+        private static readonly LightingGlobalSettings defaultSetting = new LightingGlobalSettings()
+        {
+            lightShadows = true,
+            lightShadowsQuality = LightShadowResolution.Medium
+        };
+
+        public static LightingGlobalSettings Default => defaultSetting;
     }
-    public struct ScaledGlobalSetings
+    public struct ScaledGlobalSettings
     {
         public bool scaledSpaceShadows;
         public bool smoothScaledSpaceShadows;
         public int scaledRaymarchedShadowStepCount;
         public bool loadTexturesImmediately;
+
+        private static readonly ScaledGlobalSettings defaultSetting = new ScaledGlobalSettings()
+        {
+            scaledSpaceShadows = true,
+            smoothScaledSpaceShadows = true,
+            scaledRaymarchedShadowStepCount = 48,
+            loadTexturesImmediately = false
+        };
+
+        public static ScaledGlobalSettings Default => defaultSetting;
     }
     public struct DebugGlobalSettings
     {
         public bool wireframeTerrain;
         public bool suppressCriticalMessages;
+
+        private static readonly DebugGlobalSettings defaultSetting = new DebugGlobalSettings()
+        {
+            wireframeTerrain = false,
+            suppressCriticalMessages = false
+        };
+
+        public static DebugGlobalSettings Default => defaultSetting;
     }
     public struct ObjectPoolSettings
     {
         public int cachedColliderCount;
+
+        private static readonly ObjectPoolSettings defaultSetting = new ObjectPoolSettings()
+        {
+            cachedColliderCount = 1000
+        };
+
+        public static ObjectPoolSettings Default => defaultSetting;
     }
     // Stores the loaded values from the configs for each planet, except for the textures which are stored via file path
     // Textures are loaded On-Demand and stored in loadedTextures, where they are unloaded on scene change
@@ -356,7 +408,7 @@ namespace Parallax
             if (ConfigLoader.parallaxScaledBodies.ContainsKey(planetName))
             {
                 ParallaxScaledBody scaledBody = ConfigLoader.parallaxScaledBodies[planetName];
-                if (scaledBody.mode == ParallaxScaledBodyMode.FromTerrain && (scaledBody.Loaded || scaledBody.IsLoading))
+                if ((scaledBody.mode == ParallaxScaledBodyMode.FromTerrain || scaledBody.mode == ParallaxScaledBodyMode.CustomRequiresTerrain) && (scaledBody.Loaded || scaledBody.IsLoading))
                 {
                     // Remain loaded - the scaled planet uses these textures and is still visible
                     return;
@@ -378,6 +430,7 @@ namespace Parallax
     {
         FromTerrain,
         Baked,
+        CustomRequiresTerrain,
         Custom
     }
     // Parallax Scaled Body
@@ -497,7 +550,7 @@ namespace Parallax
             scaledMaterial.SetFloat("_MaxRadialAltitude", (_MaxAltitude) * scalingFactor);
 
             // Terrain shader specific
-            if (mode == ParallaxScaledBodyMode.FromTerrain)
+            if (mode == ParallaxScaledBodyMode.FromTerrain || mode == ParallaxScaledBodyMode.CustomRequiresTerrain)
             {
                 scaledMaterial.SetFloat("_LowMidBlendStart", (scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendStart"] + _PlanetRadius) * scalingFactor);
                 scaledMaterial.SetFloat("_LowMidBlendEnd", (scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendEnd"] + _PlanetRadius) * scalingFactor);
@@ -585,7 +638,7 @@ namespace Parallax
                 else
                 {
                     // Check to see if the texture we're trying to load is a terrain texture
-                    if (mode == ParallaxScaledBodyMode.FromTerrain && terrainBody.loadedTextures.ContainsKey(textureValue.Key))
+                    if ((mode == ParallaxScaledBodyMode.FromTerrain || mode == ParallaxScaledBodyMode.CustomRequiresTerrain) && terrainBody.loadedTextures.ContainsKey(textureValue.Key))
                     {
                         // Point to the terrain texture
                         tex = terrainBody.loadedTextures[textureValue.Key];
@@ -697,7 +750,10 @@ namespace Parallax
                 else
                 {
                     // Check to see if the texture we're trying to load is a terrain texture
-                    if (mode == ParallaxScaledBodyMode.FromTerrain && terrainBody.loadedTextures.ContainsKey(textureValue.Key))
+                    if ((mode == ParallaxScaledBodyMode.FromTerrain 
+                        || mode == ParallaxScaledBodyMode.CustomRequiresTerrain) 
+                        && terrainBody.loadedTextures.ContainsKey(textureValue.Key)
+                        && terrainBody.terrainShaderProperties.shaderTextures[textureValue.Key] == scaledMaterialParams.shaderProperties.shaderTextures[textureValue.Key])
                     {
                         // Point to the terrain texture
                         tex = terrainBody.loadedTextures[textureValue.Key];
