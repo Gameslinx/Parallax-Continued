@@ -173,64 +173,27 @@ namespace Parallax
             {
                 // Already has global range multiplier applied
                 float range = scatter.distributionParams.range;
+                float originalRange = scatter.distributionParams.originalRange;
+                
                 float densityMultiplier = Mathf.Max(ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier, 0.33f);
 
-                float lod0Range = scatter.distributionParams.lod1.range * range;
-                float lod1Range = scatter.distributionParams.lod2.range * range;
-                float lod2Range = scatter.distributionParams.range;
+                float lod0Range = scatter.distributionParams.lod1.range * originalRange;
+                float lod1Range = scatter.distributionParams.lod2.range * originalRange;
+                float lod2Range = originalRange;
 
-                // Fixup ranges to prevent OOB
-                lod0Range = Mathf.Min(lod0Range, scatter.distributionParams.range);
-                lod1Range = Mathf.Min(lod1Range, scatter.distributionParams.range);
+                int lod0Count = scatter.optimizationParams.maxRenderableObjectsLOD0;
+                int lod1Count = scatter.optimizationParams.maxRenderableObjectsLOD1;
+                int lod2Count = scatter.optimizationParams.maxRenderableObjectsLOD2;
 
-                // Weight by area
-                float lod0Area = Mathf.PI * lod0Range * lod0Range;
-                float lod1Area = Mathf.PI * lod1Range * lod1Range;
-                float lod2Area = Mathf.PI * lod2Range * lod2Range;
+                // Area covered by these LODs
+                float areaLOD0 = lod0Range * lod0Range * Mathf.PI;
+                float areaLOD1 = lod1Range * lod1Range * Mathf.PI;
+                float areaLOD2 = lod2Range * lod2Range * Mathf.PI;
 
-                // Multiplier to max renderable objects - Pre setting multipliers
-                float lod0CountFraction = lod0Area / lod2Area;
-                float lod1CountFraction = lod1Area / lod2Area;
-                float lod2CountFraction = 1;
-
-                // Constrain fraction for LOD0, which often approaches extremely small values
-                // Unless LODs set by some dingus this should compensate aptly for tiny ranges
-                lod0CountFraction = Mathf.Max(lod0CountFraction, 0.04f);
-                lod1CountFraction = Mathf.Max(lod1CountFraction, 0.05f);
-                lod2CountFraction = Mathf.Max(lod2CountFraction, 0.07f);
-                
-                float baseLOD0Count = Mathf.CeilToInt(scatter.optimizationParams.maxRenderableObjects * lod0CountFraction);
-                float baseLOD1Count = Mathf.CeilToInt(scatter.optimizationParams.maxRenderableObjects * lod1CountFraction);
-                float baseLOD2Count = Mathf.CeilToInt(scatter.optimizationParams.maxRenderableObjects * lod2CountFraction);
-
-                // Now calculate multipliers to area from range/density mults - note range mult only affects lod2 range, does not adjust LOD distances
-                float lod0OriginalRange = lod0Range / ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier;
-                float lod1OriginalRange = lod1Range / ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier;
-                float lod2OriginalRange = lod2Range / ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier;
-
-                // Fixup ranges to prevent OOB
-                lod0OriginalRange = Mathf.Min(lod0OriginalRange, scatter.distributionParams.range / ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier);
-                lod1OriginalRange = Mathf.Min(lod1OriginalRange, scatter.distributionParams.range / ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier);
-
-                float lod0OriginalArea = Mathf.PI * lod0OriginalRange * lod0OriginalRange;
-                float lod1OriginalArea = Mathf.PI * lod1OriginalRange * lod1OriginalRange;
-                float lod2OriginalArea = Mathf.PI * lod2OriginalRange * lod2OriginalRange;
-
-                float lod0AreaFactor = lod0Area / lod0OriginalArea;
-                float lod1AreaFactor = lod1Area / lod1OriginalArea;
-                float lod2AreaFactor = lod2Area / lod2OriginalArea;
-
-                if (ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier < 0.6)
-                {
-                    // Too unstable, and the VRAM savings are tiny at this point. Just force a higher buffer size to be on the safe side
-                    lod0AreaFactor = 1;
-                    lod1AreaFactor = 1;
-                    lod2AreaFactor = 1;
-                }
-
-                int lod0Count = Mathf.CeilToInt(baseLOD0Count * densityMultiplier * lod0AreaFactor);
-                int lod1Count = Mathf.CeilToInt(baseLOD1Count * densityMultiplier * lod1AreaFactor);
-                int lod2Count = Mathf.CeilToInt(baseLOD2Count * densityMultiplier * lod2AreaFactor);
+                // New area due to range multipliers
+                float newAreaLOD0 = scatter.distributionParams.lod1.range * range;
+                float newAreaLOD1 = scatter.distributionParams.lod2.range * range;
+                float newAreaLOD2 = range;
 
                 outputLOD0 = new ComputeBuffer(lod0Count, TransformData.Size(), ComputeBufferType.Append);
                 outputLOD1 = new ComputeBuffer(lod1Count, TransformData.Size(), ComputeBufferType.Append);

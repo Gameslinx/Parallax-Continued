@@ -90,7 +90,11 @@
                 SHADOW_COORDS(3)
             };
         
-            sampler2D _HeightMap;
+            Texture2D _HeightMap;
+
+            // Use a custom sampler state to disable anisotropic filtering for the raymarched shadows - 16x less samples
+            SamplerState linear_repeat_sampler;
+
             bool _DisableDisplacement;
 
             // Blue noise tex and sampler
@@ -111,7 +115,7 @@
                 o.worldPos = worldPos;
                 o.worldNormal = worldNormal;
         
-                float displacement = tex2Dlod(_HeightMap, float4(v.uv, 0, 0)).r;
+                float displacement = _HeightMap.SampleLevel(linear_repeat_sampler, v.uv, 0, 0).r;
                 CALCULATE_HEIGHTMAP_DISPLACEMENT_SCALED(o, displacement);
         
                 o.pos = UnityWorldToClipPos(o.worldPos);
@@ -134,7 +138,7 @@
                 // Also transform by the planet rotation
                 float3 dirFromCenter = normalize(pos - origin);
                 float2 uv = DirectionToEquirectangularUV(dirFromCenter);
-                float heightValue = tex2Dlod(_HeightMap, float4(uv, 0, 0)).r;
+                float heightValue = _HeightMap.SampleLevel(linear_repeat_sampler, uv, 0, 0).r;
         
                 float altitude = lerp(_MinRadialAltitude, _MaxRadialAltitude, heightValue);
 
@@ -172,7 +176,7 @@
                 float3 origin = mul(unity_ObjectToWorld, float4(0, 0, 0, 1)).xyz;
 
                 // Initial height position, add a small amount to prevent immediate self shadow
-                float initialHeight = lerp(_MinRadialAltitude, _MaxRadialAltitude, tex2Dlod(_HeightMap, float4(i.uv, 0, 0)));
+                float initialHeight = lerp(_MinRadialAltitude, _MaxRadialAltitude, _HeightMap.SampleLevel(linear_repeat_sampler, i.uv, 0, 0));
                 #if defined (OCEAN) || defined (OCEAN_FROM_COLORMAP)
                 initialHeight = max(initialHeight, _OceanAltitude);
                 #endif

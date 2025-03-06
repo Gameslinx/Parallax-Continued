@@ -896,7 +896,9 @@ namespace Parallax
     {
         public float frustumCullingIgnoreRadius;
         public float frustumCullingSafetyMargin;
-        public int maxRenderableObjects;
+        public int maxRenderableObjectsLOD0;
+        public int maxRenderableObjectsLOD1;
+        public int maxRenderableObjectsLOD2;
     }
     public enum SubdivisionMode
     {
@@ -1161,7 +1163,9 @@ namespace Parallax
         {
             node.AddValue("frustumCullingStartRange", optimizationParams.frustumCullingIgnoreRadius * distributionParams.range);
             node.AddValue("frustumCullingScreenMargin", optimizationParams.frustumCullingSafetyMargin);
-            node.AddValue("maxObjects", optimizationParams.maxRenderableObjects);
+            node.AddValue("maxRenderableObjectsLOD0", optimizationParams.maxRenderableObjectsLOD0);
+            node.AddValue("maxRenderableObjectsLOD1", optimizationParams.maxRenderableObjectsLOD1);
+            node.AddValue("maxRenderableObjectsLOD2", optimizationParams.maxRenderableObjectsLOD2);
         }
         protected virtual void PopulateSubdivisionSettingsNode(ConfigNode node)
         {
@@ -1332,7 +1336,9 @@ namespace Parallax
 
             this.optimizationParams.frustumCullingSafetyMargin = parent.optimizationParams.frustumCullingSafetyMargin;
             this.optimizationParams.frustumCullingIgnoreRadius = parent.optimizationParams.frustumCullingIgnoreRadius;
-            this.optimizationParams.maxRenderableObjects = parent.optimizationParams.maxRenderableObjects;
+            this.optimizationParams.maxRenderableObjectsLOD0 = parent.optimizationParams.maxRenderableObjectsLOD0;
+            this.optimizationParams.maxRenderableObjectsLOD1 = parent.optimizationParams.maxRenderableObjectsLOD1;
+            this.optimizationParams.maxRenderableObjectsLOD2 = parent.optimizationParams.maxRenderableObjectsLOD2;
         }
         protected override void PopulateDistributionNode(ConfigNode node)
         {

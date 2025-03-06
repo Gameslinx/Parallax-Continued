@@ -853,11 +853,31 @@ namespace Parallax
 
             string frustumCullingIgnoreRadius = ConfigUtils.TryGetConfigValue(node, "frustumCullingStartRange");
             string frustumCullingSafetyMargin = ConfigUtils.TryGetConfigValue(node, "frustumCullingScreenMargin");
-            string maxRenderableObjects = ConfigUtils.TryGetConfigValue(node, "maxObjects");
+
+            bool isUsingLegacyObjectCount = node.HasValue("maxObjects");
+            if (isUsingLegacyObjectCount)
+            {
+                string maxRenderableObjects = ConfigUtils.TryGetConfigValue(node, "maxObjects");
+                int maxRenderableObjectsValue = (int)ConfigUtils.TryParse(planetName, "maxObjects", maxRenderableObjects, typeof(int));
+
+                optimizationParams.maxRenderableObjectsLOD0 = maxRenderableObjectsValue / 2;
+                optimizationParams.maxRenderableObjectsLOD1 = maxRenderableObjectsValue / 4;
+                optimizationParams.maxRenderableObjectsLOD2 = maxRenderableObjectsValue;
+            }
+            else
+            {
+                string maxRenderableObjectsLOD0 = ConfigUtils.TryGetConfigValue(node, "maxRenderableObjectsLOD0");
+                string maxRenderableObjectsLOD1 = ConfigUtils.TryGetConfigValue(node, "maxRenderableObjectsLOD1");
+                string maxRenderableObjectsLOD2 = ConfigUtils.TryGetConfigValue(node, "maxRenderableObjectsLOD2");
+
+                optimizationParams.maxRenderableObjectsLOD0 = (int)ConfigUtils.TryParse(planetName, "maxRenderableObjectsLOD0", maxRenderableObjectsLOD0, typeof(int));
+                optimizationParams.maxRenderableObjectsLOD1 = (int)ConfigUtils.TryParse(planetName, "maxRenderableObjectsLOD1", maxRenderableObjectsLOD1, typeof(int));
+                optimizationParams.maxRenderableObjectsLOD2 = (int)ConfigUtils.TryParse(planetName, "maxRenderableObjectsLOD2", maxRenderableObjectsLOD2, typeof(int));
+            }
 
             optimizationParams.frustumCullingIgnoreRadius = (float)ConfigUtils.TryParse(planetName, "cullingRange", frustumCullingIgnoreRadius, typeof(float));
             optimizationParams.frustumCullingSafetyMargin = (float)ConfigUtils.TryParse(planetName, "cullingLimit", frustumCullingSafetyMargin, typeof(float));
-            optimizationParams.maxRenderableObjects = (int)ConfigUtils.TryParse(planetName, "maxObjects", maxRenderableObjects, typeof(int));
+            
 
             return optimizationParams;
         }
@@ -1188,15 +1208,18 @@ namespace Parallax
         static void PerformAdditionalOperations(Scatter scatter)
         {
             // Check if the models actually exist
-            if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + scatter.modelPath + ".mu"))
+            string lod0ModelPath = GameDataPath + scatter.modelPath + ".mu";
+            string lod1ModelPath = GameDataPath + scatter.distributionParams.lod1.modelPathOverride + ".mu";
+            string lod2ModelPath = GameDataPath + scatter.distributionParams.lod2.modelPathOverride + ".mu";
+            if (!File.Exists(lod0ModelPath) || GameDatabase.Instance.GetModel(scatter.modelPath) == null)
             {
                 ParallaxDebug.LogCritical("This model file doesn't exist: " + scatter.modelPath + " on scatter: " + scatter.scatterName);
             }
-            if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + scatter.distributionParams.lod1.modelPathOverride + ".mu"))
+            if (!File.Exists(lod1ModelPath) || GameDatabase.Instance.GetModel(scatter.distributionParams.lod1.modelPathOverride) == null)
             {
                 ParallaxDebug.LogCritical("This model file doesn't exist: " + scatter.distributionParams.lod1.modelPathOverride + " on scatter: " + scatter.scatterName);
             }
-            if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + scatter.distributionParams.lod2.modelPathOverride + ".mu"))
+            if (!File.Exists(lod2ModelPath) || GameDatabase.Instance.GetModel(scatter.distributionParams.lod2.modelPathOverride) == null)
             {
                 ParallaxDebug.LogCritical("This model file doesn't exist: " + scatter.distributionParams.lod2.modelPathOverride + " on scatter: " + scatter.scatterName);
             }

@@ -239,7 +239,9 @@ namespace Parallax.Legacy
             {
                 node.AddValue("frustumCullingStartRange", cullingRange);
                 node.AddValue("frustumCullingScreenMargin", cullingLimit);
-                node.AddValue("maxObjects", maxObjects);
+                node.AddValue("maxRenderableObjectsLOD0", maxObjects / 4);
+                node.AddValue("maxRenderableObjectsLOD1", maxObjects / 2);
+                node.AddValue("maxRenderableObjectsLOD2", maxObjects);
             }
             void PopulateSubdivisionSettingsNode(ConfigNode node)
             {

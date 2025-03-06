@@ -10,27 +10,6 @@ using UnityEngine;
 
 namespace Parallax.Harmony_Patches
 {
-    [KSPAddon(KSPAddon.Startup.TrackingStation, false)]
-    public class debugger : MonoBehaviour
-    {
-        //void Update()
-        //{
-        //    CelestialBody kerbin = FlightGlobals.GetBodyByName("Kerbin");
-        //
-        //    if (kerbin != null)
-        //    {
-        //        Debug.Log("Kerbin scaled material: " + kerbin.scaledBody.GetComponent<MeshRenderer>().sharedMaterial.name);
-        //        Debug.Log("Kerbin scaled material shader: " + kerbin.scaledBody.GetComponent<MeshRenderer>().sharedMaterial.shader);
-        //    }
-        //
-        //    CelestialBody mun = FlightGlobals.GetBodyByName("Mun");
-        //    if (mun != null)
-        //    {
-        //        Debug.Log("mun scaled material: " + mun.scaledBody.GetComponent<MeshRenderer>().sharedMaterial.name);
-        //        Debug.Log("mun scaled material shader: " + mun.scaledBody.GetComponent<MeshRenderer>().sharedMaterial.shader);
-        //    }
-        //}
-    }
     [HarmonyPatch]
     internal class PatchScanSat
     {
