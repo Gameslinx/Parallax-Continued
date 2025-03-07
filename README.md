@@ -34,6 +34,7 @@ Mods that are fully compatible with and enhance the visual experience when insta
 
 ## List of Supported Planet Packs
 "Author Contacted" means not currently supported, but I've reached out to the author to help get upgrading existing configs started
+
 **"Release 2" configs will work with Release 3**, but the orbit textures won't be improved.
 |Planet Pack Name|Compatibility Status|Supports Release|Last Updated
 |----|----|----|----
