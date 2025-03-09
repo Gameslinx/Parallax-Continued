@@ -24,6 +24,7 @@ namespace Parallax
         public float subdivisionRadius;
         public float sqrQuadWidth;
         public float cameraDistance;
+        public bool ignoreRendererVisibility;
 
         // Direction from planet to quad in world and local space
         public Vector3 planetNormal;
@@ -157,6 +158,23 @@ namespace Parallax
                     data.Cleanup();
                     data.Start();
                 }
+                else
+                {
+                    // Scatter not found on this quad, needs to be checked if eligible
+                    bool eligible = ScatterEligible(scatter);
+                    if (eligible)
+                    {
+                        if (scatter.distributionParams.fixedAltitude)
+                        {
+                            // We're not placing objects on the quad itself, such as icebergs that float much higher than the quad, so we always evaluate it
+                            ignoreRendererVisibility = true;
+                        }
+
+                        ScatterData newData = new ScatterData(this, scatter);
+                        quadScatters.Add(newData);
+                        StartScatter(newData);
+                    }
+                }
             }
         }
         /// <summary>
@@ -184,8 +202,9 @@ namespace Parallax
         {
             foreach (ScatterData scatter in quadScatters)
             {
+                float referenceDistance = scatter.scatter.useCraftPosition ? (float)(quad.gcDist) : cameraDistance;
                 // Scatter out of range and active? Pause
-                if (cameraDistance > scatter.scatter.distributionParams.range * scatter.scatter.distributionParams.range + sqrQuadWidth)
+                if (referenceDistance > scatter.scatter.distributionParams.range * scatter.scatter.distributionParams.range + sqrQuadWidth)
                 { 
                     if (!scatter.cleaned)
                     {
@@ -219,6 +238,11 @@ namespace Parallax
                 Scatter scatter = body.fastScatters[i];
                 if (ScatterEligible(scatter))
                 {
+                    if (scatter.distributionParams.fixedAltitude)
+                    {
+                        // We're not placing objects on the quad itself, such as icebergs that float much higher than the quad, so we always evaluate it
+                        ignoreRendererVisibility = true;
+                    }
                     ScatterData data = new ScatterData(this, body.fastScatters[i]);
                     quadScatters.Add(data);
                     StartScatter(data);
@@ -234,7 +258,8 @@ namespace Parallax
             // Update camera distance to this quad
             UpdateQuadCameraDistance(ref RuntimeOperations.vectorCameraPos);
 
-            if (data.CollidersEligible() && cameraDistance > data.scatter.distributionParams.range * data.scatter.distributionParams.range + sqrQuadWidth)
+            float referenceDistance = data.scatter.useCraftPosition ? (float)(quad.gcDist) : cameraDistance;
+            if (data.CollidersEligible() && referenceDistance > data.scatter.distributionParams.range * data.scatter.distributionParams.range + sqrQuadWidth)
             {
                 // We're out of range, and colliders won't be generated
                 data.Pause();

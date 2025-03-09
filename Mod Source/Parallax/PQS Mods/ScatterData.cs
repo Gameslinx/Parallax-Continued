@@ -149,9 +149,17 @@ namespace Parallax
         public int GetEvaluateKernel()
         {
             int kernel = 3;
-            if (scatter.distributionParams.coloredByTerrain)
+            if (scatter.distributionParams.coloredByTerrain && !scatter.useCraftPosition)
             {
                 kernel = 4;
+            }
+            else if (!scatter.distributionParams.coloredByTerrain && scatter.useCraftPosition)
+            {
+                kernel = 5;
+            }
+            else if (scatter.distributionParams.coloredByTerrain && scatter.useCraftPosition)
+            {
+                kernel = 6;
             }
             return kernel;
         }
@@ -162,7 +170,10 @@ namespace Parallax
             scatterShader.SetFloat(ParallaxScatterShaderProperties.spawnChanceID, scatter.distributionParams.spawnChance * parent.sphereRelativeDensityMult);
             scatterShader.SetInt(ParallaxScatterShaderProperties.alignToTerrainNormalID, scatter.distributionParams.alignToTerrainNormal);
             scatterShader.SetFloat(ParallaxScatterShaderProperties.maxNormalDevianceID, scatter.distributionParams.maxNormalDeviance);
-            scatterShader.SetFloat(ParallaxScatterShaderProperties.seedID, scatter.distributionParams.seed);
+
+            // Use the quad index to vary the seed per-quad
+            float quadUniqueSeed = scatter.distributionParams.seed + (float)parent.quad.quadIndex;
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.seedID, quadUniqueSeed);
 
             scatterShader.SetVector(ParallaxScatterShaderProperties.minScaleID, scatter.distributionParams.minScale);
             scatterShader.SetVector(ParallaxScatterShaderProperties.maxScaleID, scatter.distributionParams.maxScale);
@@ -387,22 +398,14 @@ namespace Parallax
             collidersAdded = true;
         }
         // Evaluate which objects are in range, what LODs to show, and frustum cull them
-        // This is called very often, every frame. All calls combined take around 0.4 to 0.5ms CPU
+        // This is called very often, every frame. All calls combined take around 0.4 to 0.5ms CPU on kerbin/laythe
         public bool paused = false;
         public void Evaluate()
         {
             // There aren't any of this scatter on this quad
             if (count[0] == 0) { return; }
 
-            // Quad is not in the view frustum or used for shadow rendering
-            if (!parent.quad.meshRenderer.isVisible) { return; }
-
-            // Quad is out of range
-            if (parent.cameraDistance > scatter.distributionParams.range * scatter.distributionParams.range + parent.sqrQuadWidth)
-            {
-                return;
-            }
-
+            // Quad is suspended
             if (paused) { return; }
 
             // Not finished distributing yet
@@ -429,7 +432,16 @@ namespace Parallax
             scatterShader.SetVector(ParallaxScatterShaderProperties.planetNormalID, Vector3.Normalize(parent.quad.PrecisePosition - parent.quad.sphereRoot.PrecisePosition));
             scatterShader.SetFloats(ParallaxScatterShaderProperties.cameraFrustumPlanesID, RuntimeOperations.floatCameraFrustumPlanes);
             scatterShader.SetVector(ParallaxScatterShaderProperties.worldSpaceCameraPositionID, RuntimeOperations.vectorCameraPos);
-            scatterShader.SetInt(   ParallaxScatterShaderProperties.maxCountID, realCount);
+            if (scatter.useCraftPosition)
+            {
+                scatterShader.SetVector(ParallaxScatterShaderProperties.worldSpaceReferencePositionID, RuntimeOperations.vectorCraftPos);
+            }
+            else
+            {
+                scatterShader.SetVector(ParallaxScatterShaderProperties.worldSpaceReferencePositionID, RuntimeOperations.vectorCameraPos);
+            }
+
+            scatterShader.SetInt(ParallaxScatterShaderProperties.maxCountID, realCount);
 
             // Update the culling and lod params
             scatterShader.SetFloat(ParallaxScatterShaderProperties.cullRadiusID, scatter.optimizationParams.frustumCullingIgnoreRadius);
@@ -438,8 +450,6 @@ namespace Parallax
             scatterShader.SetFloat(ParallaxScatterShaderProperties.maxRangeID, scatter.distributionParams.range);
             scatterShader.SetFloat(ParallaxScatterShaderProperties.lod01SplitID, scatter.distributionParams.lod1.range);
             scatterShader.SetFloat(ParallaxScatterShaderProperties.lod12SplitID, scatter.distributionParams.lod2.range);
-
-            //Debug.Log("E" + scatter.scatterName);
 
             scatterShader.DispatchIndirect(evaluateKernel, dispatchArgs, 0);
         }

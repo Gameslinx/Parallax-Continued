@@ -749,8 +749,13 @@ namespace Parallax
                         string collisionLevelString = ConfigUtils.TryGetConfigValue(node, "collisionLevel");
                         int collisionLevel = (int)ConfigUtils.TryParse(body, "collisionLevel", collisionLevelString, typeof(int));
 
+                        // Use craft position for distance culling?
+                        bool useCraftPosition = false;
+                        node.TryGetValue("useCraftPositionForDistanceCulling", ref useCraftPosition);
+
                         Scatter scatter = new Scatter(scatterName);
                         scatter.modelPath = model;
+                        scatter.useCraftPosition = useCraftPosition;
 
                         OptimizationParams optimizationParams = GetOptimizationParams(body, node.GetNode("Optimizations"));
                         SubdivisionParams subdivisionParams = GetSubdivisionParams(body, node.GetNode("SubdivisionSettings"));

@@ -42,4 +42,12 @@ namespace Parallax.Tools
             return changedValues;
         }
     }
+
+    public static class FloatExtensions
+    {
+        public static float RoundToDecimalPlaces(this float value, int decimalPlaces)
+        {
+            return (float)Math.Round(value, decimalPlaces);
+        }
+    }
 }

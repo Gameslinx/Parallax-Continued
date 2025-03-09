@@ -70,6 +70,8 @@ float _CullLimit;
 // Range before cutting off entirely
 float _MaxRange;
 
+float _WorldSpaceReferencePosition;
+
 // Range before scatters begin to cut off
 float _RangeFadeStart;
 

@@ -122,7 +122,7 @@ namespace Parallax
             foreach (var data in ScatterComponent.scatterQuadData)
             {
                 ScatterSystemQuadData quadData = data.Value;
-                if (quadData.quad.isVisible && quadData.quad.meshRenderer.isVisible)
+                if ((quadData.quad.isVisible && quadData.quad.meshRenderer.isVisible) || quadData.ignoreRendererVisibility)
                 {
                     quadData.UpdateQuadCameraDistance(ref RuntimeOperations.vectorCameraPos);
                     quadData.EvaluateQuad();

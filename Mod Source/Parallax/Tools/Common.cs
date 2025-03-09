@@ -1060,6 +1060,7 @@ namespace Parallax
     {
         public string scatterName;
         public string modelPath;
+        public bool useCraftPosition = false;
 
         public OptimizationParams optimizationParams;
         public SubdivisionParams subdivisionParams;

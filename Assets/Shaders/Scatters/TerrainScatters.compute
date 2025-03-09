@@ -5,9 +5,11 @@
 #pragma kernel Distribute NOISEMODE_CELLULAR
 #pragma kernel Distribute NOISEMODE_POLKADOT
 
-// Render             - Kernels 3, 4
+// Render             - Kernels 3, 4, 5, 6
 #pragma kernel Evaluate
 #pragma kernel Evaluate OUTPUT_TERRAIN_COLOR
+#pragma kernel Evaluate SEPARATE_LOD_RANGE_CULLING
+#pragma kernel Evaluate SEPARATE_LOD_RANGE_CULLING OUTPUT_TERRAIN_COLOR
 
 #include "ScatterStructs.cginc"
 #include "ScatterParams.cginc"
@@ -215,18 +217,23 @@ void Evaluate(uint3 id : SV_DispatchThreadID)
     
 	// Get distance from camera to object
     float lodDist = distance(_WorldSpaceCameraPosition, worldPos) / _MaxRange; //Percentage to max range
+
+    #if defined (SEPARATE_LOD_RANGE_CULLING)
+    float cullingDistance = distance(_WorldSpaceReferencePosition, worldPos) / _MaxRange;
+    #else
+    float cullingDistance = lodDist;
+    #endif
     
-    
-    if (lodDist > 1)
+    if (cullingDistance > 1)
     {
         return;
     }
-    if (!(all(cd0 >= _CullLimit) && all(cd1 >= _CullLimit)) && lodDist > _CullRadius)
+    if (!(all(cd0 >= _CullLimit) && all(cd1 >= _CullLimit)) && cullingDistance > _CullRadius)
     {
         return;
     }
     
-    bool fadeRangeCull = IsOutOfRangeEarly(lodDist, pos.localPos);
+    bool fadeRangeCull = IsOutOfRangeEarly(cullingDistance, pos.localPos);
     if (fadeRangeCull)
     {
         return;

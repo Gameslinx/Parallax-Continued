@@ -29,6 +29,7 @@ namespace Parallax
         public static float[] floatCameraFrustumPlanes = new float[24];
         public static float3 cameraPos = float3.zero;
         public static Vector3 vectorCameraPos = Vector3.zero;
+        public static Vector3 vectorCraftPos = Vector3.zero;
 
         int planetOpacityID = Shader.PropertyToID("_PlanetOpacity");
         int planetOriginID =  Shader.PropertyToID("_PlanetOrigin");
@@ -133,6 +134,17 @@ namespace Parallax
             {
                 vectorCameraPos = Vector3.zero;
                 cameraPos = float3.zero;
+            }
+
+            Vessel vessel = FlightGlobals.ActiveVessel;
+            if (vessel != null)
+            {
+                vectorCraftPos = vessel.transform.position;
+            }
+            else
+            {
+                // Default to camera position, or 0 otherwise
+                vectorCraftPos = vectorCameraPos;
             }
         }
 

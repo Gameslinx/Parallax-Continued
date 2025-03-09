@@ -47,6 +47,7 @@ namespace Parallax
         public static int planetNormalID =                  Shader.PropertyToID("_PlanetNormal");
         public static int cameraFrustumPlanesID =           Shader.PropertyToID("_CameraFrustumPlanes");
         public static int worldSpaceCameraPositionID =      Shader.PropertyToID("_WorldSpaceCameraPosition");
+        public static int worldSpaceReferencePositionID =   Shader.PropertyToID("_WorldSpaceReferencePosition");
         public static int maxCountID =                      Shader.PropertyToID("_MaxCount");
         public static int cullRadiusID =                    Shader.PropertyToID("_CullRadius");
         public static int cullLimitID =                     Shader.PropertyToID("_CullLimit");
