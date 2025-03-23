@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -29,6 +30,28 @@ namespace Parallax
         public ScaledGlobalSettings scaledGlobalSettings = ScaledGlobalSettings.Default;
         public DebugGlobalSettings debugGlobalSettings = DebugGlobalSettings.Default;
         public ObjectPoolSettings objectPoolSettings = ObjectPoolSettings.Default;
+
+        // Logs all global settings using reflection
+        public void LogAll()
+        {
+            Type type = typeof(ParallaxSettings);
+            FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance);
+
+            ParallaxDebug.Log("Parallax Global Settings:");
+            foreach (FieldInfo field in fields)
+            {
+                object fieldValue = field.GetValue(this);
+                Type fieldType = field.FieldType;
+                FieldInfo[] structFields = fieldType.GetFields(BindingFlags.Public | BindingFlags.Instance);
+
+                foreach (FieldInfo structField in structFields)
+                {
+                    object value = structField.GetValue(fieldValue);
+                    ParallaxDebug.Log($"  {structField.Name} = {value}");
+                }
+                ParallaxDebug.Log("");
+            }
+        }
         public void SaveSettings()
         {
             ConfigNode rootNode = new ConfigNode("ParallaxGlobal");
@@ -607,6 +630,9 @@ namespace Parallax
 
             // Setup environment
             scaledMaterial.SetTexture("_Skybox", SkyboxControl.cubeMap);
+
+            // Pretend we have a main tex parameter
+            scaledMaterial.SetTexture("_MainTex", Texture2D.whiteTexture);
         }
 
         // Averages all vert distances from the planet to get the radius in scaled space

@@ -44,6 +44,7 @@ SamplerState PARALLAX_SAMPLER_STATE;
 sampler2D _ColorMap;
 sampler2D _BumpMap;
 sampler2D _HeightMap;
+sampler2D _ResourceMap;
 
 #if defined (SCALED_EMISSIVE_MAP)
 sampler2D _EmissiveMap;

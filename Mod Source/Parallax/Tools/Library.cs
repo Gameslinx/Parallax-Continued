@@ -30,6 +30,14 @@ namespace Parallax
             }
             Debug.LogError("[Parallax] " + message);
         }
+        public static void LogPopupWarning(string message)
+        {
+            if (!ConfigLoader.parallaxGlobalSettings.debugGlobalSettings.suppressCriticalMessages)
+            {
+                PopupDialog dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), "Warning", "Warning", message, "Okay", true, HighLogic.UISkin);
+            }
+            Debug.LogWarning("[Parallax] " + message);
+        }
         public static void LogParseError(string name, string planetName, string type, string value)
         {
             string adjustedValue = value;

@@ -15,6 +15,7 @@ Shader "Custom/ParallaxScaled"
         _BumpMap("Planet Bump Map", 2D) = "bump" {}
         _HeightMap("Planet Height Map", 2D) = "black" {}
         _EmissiveMap("Planet Emissive Map", 2D) = "black" {}
+        _ResourceMap("Resource Map", 2D) = "black" {}
         _OceanColor("Planet Ocean Color", COLOR) = (0,0,0,1)
         _AtmosphereRimMap("Atmosphere Rim", 2D) = "black" {}
         _AtmosphereThickness("Transition Width", Range(0.0001, 5)) = 2
@@ -95,10 +96,13 @@ Shader "Custom/ParallaxScaled"
         // Saves a multicompile
         _DisableDisplacement("Disable Displacement", int) = 0
         _Debug("Debug", Range(-1, 1)) = 0
+
+        // Unused, just because unity loves using main tex, but I've already set it up to use _ColorMap - gets set to generic white in game
+        _MainTex("_MainTex", 2D) = "white" {}
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "RenderType"="Opaque"}
         LOD 100
         ZWrite On
         //Cull Back
@@ -108,7 +112,7 @@ Shader "Custom/ParallaxScaled"
         Pass
         {
             Blend SrcAlpha OneMinusSrcAlpha
-            Tags { "LightMode" = "ForwardBase" }
+            Tags { "LightMode" = "ForwardBase" "Queue"="Geometry" }
             CGPROGRAM
 
             #define SCALED
@@ -349,6 +353,11 @@ Shader "Custom/ParallaxScaled"
                 UNITY_APPLY_FOG(i.fogCoord, result);
                 APPLY_EMISSION
                 APPLY_SCALED_EMISSION
+
+                // Defaults to black and 0 alpha if no resource map is provided
+                float4 resourceMap = tex2D(_ResourceMap, i.uv);
+                result *= (1 - min(resourceMap.a, 0.75f));
+                result += resourceMap.rgb;
 
                 return float4(result + atmosphereColor, 1);
             }
@@ -965,6 +974,12 @@ Shader "Custom/ParallaxScaled"
 
                 BLEND_OCCLUSION(landMask, occlusion)
 
+                // Defaults to black and 0 alpha if no resource map is provided
+                float4 resourceMap = tex2D(_ResourceMap, i.uv);
+                finalDiffuse.rgb *= (1 - min(resourceMap.a, 0.75f));
+                finalDiffuse.a *= (1 - resourceMap.a);
+                finalDiffuse.rgb += resourceMap.rgb;
+
                 // Deferred functions
                 // Output diffuse, normals, specular
                 SurfaceOutputStandardSpecular surfaceInput = GetPBRStruct(finalDiffuse, 0, finalNormal.xyz, i.worldPos ADDITIONAL_PBR_PARAMS);
@@ -993,6 +1008,9 @@ Shader "Custom/ParallaxScaled"
                 rgb += atmosphereColor;
                 rgb += GET_EMISSION;
                 rgb += GET_SCALED_EMISSION;
+
+                rgb *= (1 - resourceMap.a);
+                rgb += resourceMap.rgb * 0.3f;
 
                 SET_OUT_EMISSION(float4(rgb, 1));
             }

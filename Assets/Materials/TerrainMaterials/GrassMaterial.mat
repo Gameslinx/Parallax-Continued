@@ -24,19 +24,19 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMapHigh:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 9c0a7298a4736554ba8a64bafae725ae, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMapLow:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 9c0a7298a4736554ba8a64bafae725ae, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMapMid:
-        m_Texture: {fileID: 2800000, guid: 33c6a0fcd0222e24ea25ee8c53650e4d, type: 3}
+        m_Texture: {fileID: 2800000, guid: 9c0a7298a4736554ba8a64bafae725ae, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMapSteep:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 9c0a7298a4736554ba8a64bafae725ae, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DetailAlbedoMap:
@@ -68,19 +68,19 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTexHigh:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: e05d9ddc3b6d9ab4c9513036d6fd2feb, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTexLow:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: e05d9ddc3b6d9ab4c9513036d6fd2feb, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTexMid:
-        m_Texture: {fileID: 2800000, guid: 5ab818c6d7b3e11459865d71dc5aa990, type: 3}
+        m_Texture: {fileID: 2800000, guid: e05d9ddc3b6d9ab4c9513036d6fd2feb, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTexSteep:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: e05d9ddc3b6d9ab4c9513036d6fd2feb, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -108,13 +108,14 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
+    - _Hapke: 1
     - _LowMidBlendEnd: 7.31
-    - _LowMidBlendStart: 0.91
+    - _LowMidBlendStart: 5.8
     - _MaxTessellation: 1
     - _MaxTessellationRange: 5
     - _Metallic: 0
-    - _MidHighBlendEnd: 5
-    - _MidHighBlendStart: 4
+    - _MidHighBlendEnd: 10
+    - _MidHighBlendStart: 9.7
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02

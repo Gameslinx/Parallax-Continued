@@ -5,8 +5,7 @@
 // This macro separates the matrix into the colour and a clean local to world matrix
 #define DECODE_INSTANCE_DATA(transformAndColorMatrix, outColor)                                                                          \
     float3 outColor = float3(transformAndColorMatrix[3][0], transformAndColorMatrix[3][1], transformAndColorMatrix[3][2]);               \
-    float outFade = transformAndColorMatrix[3][3];                                                                                       \
-    transformAndColorMatrix[3] = float4(0, 0, 0, 1);
+    transformAndColorMatrix[3] = float4(0, 0, 0, transformAndColorMatrix[3][3]);
 
 #define DECODE_INSTANCE_DATA_SHADOW(transformAndColorMatrix)                                                                             \
     transformAndColorMatrix[3] = float4(0, 0, 0, transformAndColorMatrix[3][3]);
@@ -195,11 +194,7 @@ void Billboard(BILLBOARD_INPUT)
     float3 local = vertex.xyz;
                 
     float3 upVector = float3(0, 1, 0);
-#if !defined (PARALLAX_SHADOW_CASTER_PASS )
     float3 forwardVector = mul(UNITY_MATRIX_IT_MV[2].xyz, mat);
-#else
-    float3 forwardVector = mul(_WorldSpaceLightPos0, mat);
-#endif
     float3 rightVector = normalize(cross(forwardVector, upVector));
              
     float3 position = local.x * rightVector + local.y * upVector + local.z * forwardVector;

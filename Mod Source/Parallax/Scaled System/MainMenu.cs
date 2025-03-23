@@ -88,17 +88,17 @@ namespace Parallax.Scaled_System
             originalShadowDistance = QualitySettings.shadowDistance;
 
             MainMenu mainMenu = FindObjectOfType<MainMenu>();
-            mainMenu.startBtn.onTap += new Callback(MenuAdvancedForwards);
-            mainMenu.backBtn.onTap += new Callback(MenuAdvancedBackwards);
+            mainMenu.startBtn.onTap += new Callback(MenuAdvanceForwards);
+            mainMenu.backBtn.onTap += new Callback(MenuAdvanceBackwards);
 
             StartCoroutine(Init());
         }
-        void MenuAdvancedForwards()
+        void MenuAdvanceForwards()
         {
             //targetSunDirection = secondMenuSunDirection;
             sunRotationProgressTarget = 1;
         }
-        void MenuAdvancedBackwards()
+        void MenuAdvanceBackwards()
         {
             //targetSunDirection = firstMenuSunDirection;
             //initialSunDirection = planetLight.transform.forward;

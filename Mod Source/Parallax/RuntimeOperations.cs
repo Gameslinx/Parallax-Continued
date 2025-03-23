@@ -59,22 +59,35 @@ namespace Parallax
             //  Still in progress, not included in the build for now
             //
 
-            // Find and replace ksc shader
+            //ParallaxDebug.Log("Starting stopwatch for KSC Shader replacement");
+            //System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+            //
+            //// Find and replace ksc shader
             //if (FlightGlobals.currentMainBody == FlightGlobals.GetHomeBody() && ConfigLoader.parallaxTerrainBodies.ContainsKey(FlightGlobals.GetHomeBody().name))
             //{
+            //    ParallaxDebug.Log("Beginning KSC material shader replacement");
             //    ParallaxTerrainBody body = ConfigLoader.parallaxTerrainBodies[FlightGlobals.GetHomeBody().name];
-            //    Material[] materials = Resources.FindObjectsOfTypeAll<Material>().Where(m => (m.shader.name.Contains("Ground KSC"))).ToArray();
+            //    Material[] allMaterials = Resources.FindObjectsOfTypeAll<Material>();
+            //
+            //    // Check if we've already replaced the shaders and load the textures if we have
+            //    ParallaxDebug.Log("Checking for Parallax materials on the KSC...");
+            //    Material[] parallaxMaterials = allMaterials.Where(m => (m.shader.name.Contains("ParallaxKSC"))).ToArray();
+            //
+            //    foreach (Material material in parallaxMaterials)
+            //    {
+            //        material.SetTexture("_MainTexLow", ParallaxTerrainBody.LoadTexIfUnloaded(body, body.terrainShaderProperties.shaderTextures["_MainTexMid"], "_MainTexMid"));
+            //        material.SetTexture("_BumpMapLow", ParallaxTerrainBody.LoadTexIfUnloaded(body, body.terrainShaderProperties.shaderTextures["_BumpMapMid"], "_BumpMapMid"));
+            //        material.SetTexture("_InfluenceMap", ParallaxTerrainBody.LoadTexIfUnloaded(body, body.terrainShaderProperties.shaderTextures["_InfluenceMap"], "_InfluenceMap"));
+            //        material.SetTexture("_OcclusionMap", ParallaxTerrainBody.LoadTexIfUnloaded(body, body.terrainShaderProperties.shaderTextures["_OcclusionMap"], "_OcclusionMap"));
+            //    }
+            //
+            //    Material[] materials = allMaterials.Where(m => (m.shader.name.Contains("Ground KSC"))).ToArray();
             //    for (int i = 0; i < materials.Length; i++)
             //    {
             //        Material material = materials[i];
-            //        ParallaxDebug.Log("material name: " + material.name);
-            //        ParallaxDebug.Log("material shader: " + material.shader.name);
-            //        if (material.name.Contains("exterior_terrain_grass"))
+            //
+            //        //if (hasGrass)
             //        {
-            //            if (ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.ambientOcclusion)
-            //            {
-            //                material.EnableKeyword("AMBIENT_OCCLUSION");
-            //            }
             //            material.shader = AssetBundleLoader.parallaxTerrainShaders["Custom/ParallaxKSCTerrain"];
             //
             //            // calc ksc altitude and determine texture to use
@@ -92,9 +105,17 @@ namespace Parallax
             //            material.SetFloat("_EnvironmentMapFactor", body.terrainShaderProperties.shaderFloats["_EnvironmentMapFactor"]);
             //            material.SetFloat("_Hapke", body.terrainShaderProperties.shaderFloats["_Hapke"]);
             //            material.SetFloat("_BumpScale", body.terrainShaderProperties.shaderFloats["_BumpScale"]);
+            //
+            //            if (ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.ambientOcclusion)
+            //            {
+            //                material.EnableKeyword("AMBIENT_OCCLUSION");
+            //            }
             //        }
             //    }
             //}
+            //
+            //sw.Stop();
+            //ParallaxDebug.Log("KSC Shader replacement took: " + sw.Elapsed.Milliseconds.ToString("F3") + "ms");
         }
         public void Update()
         {
@@ -158,7 +179,6 @@ namespace Parallax
                 cameraFrustumPlanes[i] = planes[i];
             }
 
-            
             if (SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Direct3D11)
             {
                 Camera farCam = FlightCamera.fetch.cameras[1];

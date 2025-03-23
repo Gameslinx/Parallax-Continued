@@ -5,7 +5,12 @@
 #pragma kernel Distribute NOISEMODE_CELLULAR
 #pragma kernel Distribute NOISEMODE_POLKADOT
 
-// Render             - Kernels 3, 4, 5, 6
+// Block map and noise modes - Kernels 3, 4, 5
+#pragma kernel Distribute LOCAL_BLOCKMAP
+#pragma kernel Distribute LOCAL_BLOCKMAP NOISEMODE_CELLULAR
+#pragma kernel Distribute LOCAL_BLOCKMAP NOISEMODE_POLKADOT
+
+// Render             - Kernels 6, 7, 8, 9
 #pragma kernel Evaluate
 #pragma kernel Evaluate OUTPUT_TERRAIN_COLOR
 #pragma kernel Evaluate SEPARATE_LOD_RANGE_CULLING
@@ -33,6 +38,13 @@ StructuredBuffer<float3> directionsFromCenter;
 // Biome map - RGBA (although alpha is unused, I can't convert to RGB)
 Texture2D<float4> biomeMap;
 Texture2D<float4> scatterBiomes;
+
+// Local blockmap - Removes scatters locally, only if defined
+// Valid quads calculated on CPU, blockmap sampled per tri and interpolated
+// 0 blocked, 1 allowed
+#if defined (LOCAL_BLOCKMAP)
+Texture2D<float4> blockMap;
+#endif
 
 // The naming is important here
 SamplerState linearClampSampler;
@@ -83,7 +95,7 @@ void Distribute (uint3 id : SV_DispatchThreadID)
     
     // Get the biome colour
     float3 biome = biomeMap.SampleLevel(pointClampSampler, centerUV.xy, 0).rgb;
-    
+
     // Does this biome colour match any of the biomes this scatter can appear in?
     int biomesEligible = 0;
     for (int b = 0; b < _NumberOfBiomes; b++)
@@ -142,7 +154,34 @@ void Distribute (uint3 id : SV_DispatchThreadID)
         float3 localPos = RandomPoint(v1, v2, v3, randomX, randomY);
         float3 localCenterDir = RandomPoint(dfc1, dfc2, dfc3, randomX, randomY);
         float3 localNormal = RandomPoint(dfc1, dfc2, dfc3, randomX, randomY);
-        
+        float localAllowScatter = RandomFloat(uv1.z, uv2.z, uv3.z, randomX, randomY);
+
+        // Blockmap
+    #if defined (LOCAL_BLOCKMAP)
+
+        // Originally thought this should be transformed into world space because I adapted this from the MapDecal PQSMod, which uses direction from center
+        // But I suppose that must also be in local space, so this works out
+        float3 avgDirection = localCenterDir;
+
+        float quadAngle = acos(dot(avgDirection, _BlockMapDirectionFromCenter));
+        float inclusionAngle = atan(_BlockMapRadius / _PlanetRadius) * 1;   // MapDecal PQSMod multiplies this by 4 but it's used per-quad, here is per-triangle
+
+        if (quadAngle < inclusionAngle)
+        {
+            float3 vertexRotation = QuaternionMul(_BlockMapRotation, avgDirection);
+
+            float u = ((vertexRotation.x * _PlanetRadius / _BlockMapRadius + 1.0f) * 0.5f);
+            float v = ((vertexRotation.z * _PlanetRadius / _BlockMapRadius + 1.0f) * 0.5f);
+
+            float blockMapValue = blockMap.SampleLevel(linearClampSampler, float2(u, v), 0).r;
+            if (blockMapValue < 0.5f)
+            {
+                localAllowScatter = 0;
+            }
+        }
+    #endif
+
+
         float noise = Noise(localCenterDir);
         
         // Do we blend between min and max scale based on the noise value, randomly, or a mix of both?
@@ -173,6 +212,7 @@ void Distribute (uint3 id : SV_DispatchThreadID)
         // 2. Is out of altitude range (close to altitude range, lower the spawn chance)
         // 3. Is on a slope (higher gradient, lower spawn chance)
         // 4. Noise is past cutoff threshold
+        float vertexAllowScatter = localAllowScatter > 0.5f ? 1 : 0;
         bool canSpawn = (random4 < _SpawnChance * altitudeScalar * slope * vertexAllowScatter) && (noise > _NoiseCutoffThreshold);
         
         newObject.localPos = localPos;

@@ -41,6 +41,9 @@ namespace Parallax
         public static int localPlanetNormalID =             Shader.PropertyToID("_LocalPlanetNormal");
         public static int planetOriginID =                  Shader.PropertyToID("_PlanetOrigin");
         public static int worldToObjectMatrixID =           Shader.PropertyToID("_WorldToObjectMatrix");
+        public static int blockMapDirectionFromCenterID =   Shader.PropertyToID("_BlockMapDirectionFromCenter");
+        public static int blockMapRotationID =              Shader.PropertyToID("_BlockMapRotation");
+        public static int blockMapRadiusID =                Shader.PropertyToID("_BlockMapRadius");
 
         // Init property IDs - Evaluate
         public static int objectToWorldMatrixID =           Shader.PropertyToID("_ObjectToWorldMatrix");
@@ -72,5 +75,6 @@ namespace Parallax
         // Init texture IDs
         public static int biomeMapTextureID =               Shader.PropertyToID("biomeMap");
         public static int scatterBiomesTextureID =          Shader.PropertyToID("scatterBiomes");
+        public static int blockMapID =                      Shader.PropertyToID("blockMap");
     }
 }

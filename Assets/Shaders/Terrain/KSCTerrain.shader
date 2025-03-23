@@ -81,9 +81,10 @@
                 float3 worldPos : TEXCOORD3;
                 float3 worldNormal : NORMAL;
                 float3 viewDir : TEXCOORD4;
+                float3 localPos : TEXCOORD5;
 
-                LIGHTING_COORDS(5, 6)
-                UNITY_FOG_COORDS(7)
+                LIGHTING_COORDS(6, 7)
+                UNITY_FOG_COORDS(8)
             };
 
             sampler2D _NearGrassTexture;
@@ -105,6 +106,7 @@
                 o.worldPos = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1)).xyz;
                 o.worldNormal = mul(unity_ObjectToWorld, float4(v.normal, 0)).xyz;
                 o.viewDir = _WorldSpaceCameraPos - o.worldPos;
+                o.localPos = v.vertex.xyz;
 
                 TRANSFER_VERTEX_TO_FRAGMENT(o);
                 UNITY_TRANSFER_FOG(o, o.pos);
@@ -137,7 +139,7 @@
                 DECLARE_INFLUENCE_VALUES
 
                 DECLARE_LOW_TEXTURE_SET(lowDiffuse, lowNormal, _MainTexLow, _BumpMapLow)
-                float4 tarmacColor = tex2D(_TarmacTexture, i.uv0);
+                float4 tarmacColor = tex2D(_TarmacTexture, i.localPos.xz / 3.0f);
                 float3 tarmacNormal = i.worldNormal;
 
                 fixed4 finalDiffuse = lerp(lowDiffuse, tarmacColor, blendMask);
@@ -274,8 +276,9 @@
                 float3 worldNormal : NORMAL;
                 float3 viewDir : TEXCOORD4;
                 float3 lightDir : TEXCOORD5;
+                float3 localPos : TEXCOORD6;
 
-                LIGHTING_COORDS(6, 7)
+                LIGHTING_COORDS(7, 8)
             };
 
             sampler2D _NearGrassTexture;
@@ -298,6 +301,7 @@
                 o.worldNormal = mul(unity_ObjectToWorld, float4(v.normal, 0)).xyz;
                 o.viewDir = _WorldSpaceCameraPos - o.worldPos;
                 o.lightDir = _WorldSpaceLightPos0 - o.worldPos;
+                o.localPos = v.vertex.xyz;
 
                 TRANSFER_VERTEX_TO_FRAGMENT(o);
                 UNITY_TRANSFER_FOG(o, o.pos);
@@ -331,7 +335,7 @@
                 DECLARE_INFLUENCE_VALUES
 
                 DECLARE_LOW_TEXTURE_SET(lowDiffuse, lowNormal, _MainTexLow, _BumpMapLow)
-                float4 tarmacColor = tex2D(_TarmacTexture, i.uv0);
+                float4 tarmacColor = tex2D(_TarmacTexture, i.localPos.xz / 3.0f);
                 float3 tarmacNormal = i.worldNormal;
 
                 fixed4 finalDiffuse = lerp(lowDiffuse, tarmacColor, blendMask);
@@ -406,9 +410,10 @@
                 float3 worldPos : TEXCOORD3;
                 float3 worldNormal : NORMAL;
                 float3 viewDir : TEXCOORD4;
+                float3 localPos : TEXCOORD5;
 
-                LIGHTING_COORDS(5, 6)
-                UNITY_FOG_COORDS(7)
+                LIGHTING_COORDS(6, 7)
+                UNITY_FOG_COORDS(8)
             };
 
             sampler2D _NearGrassTexture;
@@ -430,6 +435,7 @@
                 o.worldPos = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1)).xyz;
                 o.worldNormal = mul(unity_ObjectToWorld, float4(v.normal, 0)).xyz;
                 o.viewDir = _WorldSpaceCameraPos - o.worldPos;
+                o.localPos = v.vertex.xyz;
 
                 TRANSFER_VERTEX_TO_FRAGMENT(o);
                 UNITY_TRANSFER_FOG(o, o.pos);
@@ -464,7 +470,7 @@
                 DECLARE_LOW_TEXTURE_SET(lowDiffuse, lowNormal, _MainTexLow, _BumpMapLow)
                 DECLARE_AMBIENT_OCCLUSION_TEXTURE(occlusion, _OcclusionMap)
 
-                float4 tarmacColor = tex2D(_TarmacTexture, i.uv0);
+                float4 tarmacColor = tex2D(_TarmacTexture, i.localPos.xz / 3.0f);
                 float3 tarmacNormal = i.worldNormal;
 
                 fixed4 finalDiffuse = lerp(lowDiffuse, tarmacColor, blendMask);

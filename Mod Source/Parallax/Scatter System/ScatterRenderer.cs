@@ -171,33 +171,26 @@ namespace Parallax
         {
             if (!scatter.isShared)
             {
-                // Already has global range multiplier applied
-                float range = scatter.distributionParams.range;
+                // LOD change distances remain the same regardless of range multiplier
+                // Only LOD2 is affected
                 float originalRange = scatter.distributionParams.originalRange;
-                
-                float densityMultiplier = Mathf.Max(ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier, 0.33f);
+                float newRange = scatter.distributionParams.range;
 
-                float lod0Range = scatter.distributionParams.lod1.range * originalRange;
-                float lod1Range = scatter.distributionParams.lod2.range * originalRange;
-                float lod2Range = originalRange;
+                float originalArea = Mathf.PI * originalRange * originalRange;
+                float newArea = Mathf.PI * newRange * newRange;
 
-                int lod0Count = scatter.optimizationParams.maxRenderableObjectsLOD0;
-                int lod1Count = scatter.optimizationParams.maxRenderableObjectsLOD1;
-                int lod2Count = scatter.optimizationParams.maxRenderableObjectsLOD2;
+                float areaFactor = newArea / originalArea;
 
-                // Area covered by these LODs
-                float areaLOD0 = lod0Range * lod0Range * Mathf.PI;
-                float areaLOD1 = lod1Range * lod1Range * Mathf.PI;
-                float areaLOD2 = lod2Range * lod2Range * Mathf.PI;
+                float densityFactor = ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier;
 
-                // New area due to range multipliers
-                float newAreaLOD0 = scatter.distributionParams.lod1.range * range;
-                float newAreaLOD1 = scatter.distributionParams.lod2.range * range;
-                float newAreaLOD2 = range;
+                // Apply area factor to LOD2 and apply density factor to all LODs
+                int newLOD0Count = Mathf.CeilToInt(scatter.optimizationParams.maxRenderableObjectsLOD0 * densityFactor);
+                int newLOD1Count = Mathf.CeilToInt(scatter.optimizationParams.maxRenderableObjectsLOD1 * densityFactor);
+                int newLOD2Count = Mathf.CeilToInt(scatter.optimizationParams.maxRenderableObjectsLOD2 * areaFactor * densityFactor);
 
-                outputLOD0 = new ComputeBuffer(lod0Count, TransformData.Size(), ComputeBufferType.Append);
-                outputLOD1 = new ComputeBuffer(lod1Count, TransformData.Size(), ComputeBufferType.Append);
-                outputLOD2 = new ComputeBuffer(lod2Count, TransformData.Size(), ComputeBufferType.Append);
+                outputLOD0 = new ComputeBuffer(newLOD0Count, TransformData.Size(), ComputeBufferType.Append);
+                outputLOD1 = new ComputeBuffer(newLOD1Count, TransformData.Size(), ComputeBufferType.Append);
+                outputLOD2 = new ComputeBuffer(newLOD2Count, TransformData.Size(), ComputeBufferType.Append);
             }
             else
             {
@@ -330,9 +323,9 @@ namespace Parallax
 
             ParallaxDebug.Log("Scatter: " + scatter.scatterName);
 
-            ParallaxDebug.Log(" - Count (LOD 0): " + countLOD0[0]);
-            ParallaxDebug.Log(" - Count (LOD 1): " + countLOD1[0]);
-            ParallaxDebug.Log(" - Count (LOD 2): " + countLOD2[0]);
+            ParallaxDebug.Log(" - Count (LOD 0): " + countLOD0[0] + " / " + outputLOD0.count);
+            ParallaxDebug.Log(" - Count (LOD 1): " + countLOD1[0] + " / " + outputLOD1.count);
+            ParallaxDebug.Log(" - Count (LOD 2): " + countLOD2[0] + " / " + outputLOD2.count);
             ParallaxDebug.Log("");
 
             int trisLOD0 = ((meshLOD0.triangles.Length / 3) * countLOD0[0]);

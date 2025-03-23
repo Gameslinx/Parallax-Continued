@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using Kopernicus;
 using Kopernicus.Configuration;
 using Parallax.Debugging;
 using Smooth.Collections;
@@ -96,7 +97,12 @@ namespace Parallax
             if (PQSCache.PresetList.presetIndex != PQSCache.PresetList.presets.Count - 1)
             {
                 PopupDialog dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f,0.5f), new Vector2(0.5f,0.5f), "Parallax Error", "Parallax Error",
-                                     "Parallax Installation Error: Your 'Terrain Detail' setting is not set to 'High'. You must set this correctly in the main menu graphics settings!", "I'll change this!", true, HighLogic.UISkin);
+                                     "Parallax Installation Error: Your 'Terrain Detail' setting is not set to 'High'. You must set this correctly in the main menu graphics settings!", "Okay", true, HighLogic.UISkin);
+            }
+            if (GameSettings.REFLECTION_PROBE_TEXTURE_RESOLUTION > 1)
+            {
+                int reflectionResolution = (int)(Mathf.Pow(2, GameSettings.REFLECTION_PROBE_TEXTURE_RESOLUTION) * 128.0f);
+                ParallaxDebug.LogPopupWarning("Your reflection resolution is set to " + reflectionResolution + " - this will have a huge performance impact! Set 'Reflection Resolution' in the main menu graphics settings to 128 for best performance");
             }
         }
 
@@ -284,6 +290,8 @@ namespace Parallax
 
             ConfigNode objectPoolsNode = config.config.GetNode("ObjectPoolSettings");
             parallaxGlobalSettings.objectPoolSettings.cachedColliderCount = int.Parse(objectPoolsNode.GetValue("cachedColliderCount"));
+
+            parallaxGlobalSettings.LogAll();
         }
         public static void InitializeObjectPools(ParallaxSettings settings)
         {
@@ -1244,53 +1252,58 @@ namespace Parallax
         static void ApplyCompatibilityPatches()
         {
             // Sigma Dimensions
-            UrlDir.UrlConfig sigDimConfig = GetConfigByName("SigmaDimensions");
-
-            if (sigDimConfig == null)
-            {
-                return;
-            }
-            else
-            {
-                ParallaxDebug.Log("Sigma Dimensions detected, applying rescale values");
-            }
-
-            ConfigNode sigmaDimensionsNode = sigDimConfig.config;
-
-            float resizeValue = float.Parse(sigmaDimensionsNode.GetValue("Resize"));
-            float landscapeValue = float.Parse(sigmaDimensionsNode.GetValue("landscape"));
-
-            foreach (ParallaxScaledBody scaledBody in parallaxScaledBodies.Values)
-            {
-                scaledBody.minTerrainAltitude *= resizeValue * landscapeValue;
-                scaledBody.maxTerrainAltitude *= resizeValue * landscapeValue;
-
-                // Just approximate the normal strength changes, it won't be perfect, but we can't derive it without regenerating the normals
-                scaledBody.scaledMaterial.SetFloat("_PlanetBumpScale", Mathf.Pow(landscapeValue, 0.333f));
-
-                if (scaledBody.mode == ParallaxScaledBodyMode.FromTerrain || scaledBody.mode == ParallaxScaledBodyMode.CustomRequiresTerrain)
-                {
-                    scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendStart"] *= resizeValue * landscapeValue;
-                    scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendEnd"] *= resizeValue * landscapeValue;
-                    scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_MidHighBlendStart"] *= resizeValue * landscapeValue;
-                    scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_MidHighBlendEnd"] *= resizeValue * landscapeValue;
-
-                    scaledBody.scaledMaterial.SetFloat("_LowMidBlendStart", scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendStart"]);
-                    scaledBody.scaledMaterial.SetFloat("_LowMidBlendEnd", scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendEnd"]);
-                    scaledBody.scaledMaterial.SetFloat("_MidHighBlendStart", scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_MidHighBlendStart"]);
-                    scaledBody.scaledMaterial.SetFloat("_MidHighBlendEnd", scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_MidHighBlendEnd"]);
-                }
-            }
-
-            foreach (ParallaxTerrainBody terrainBody in parallaxTerrainBodies.Values)
-            {
-                terrainBody.terrainShaderProperties.shaderFloats["_LowMidBlendStart"] *= resizeValue * landscapeValue;
-                terrainBody.terrainShaderProperties.shaderFloats["_LowMidBlendEnd"] *= resizeValue * landscapeValue;
-                terrainBody.terrainShaderProperties.shaderFloats["_MidHighBlendStart"] *= resizeValue * landscapeValue;
-                terrainBody.terrainShaderProperties.shaderFloats["_MidHighBlendEnd"] *= resizeValue * landscapeValue;
-
-                terrainBody.SetMaterialValues();
-            }
+            //UrlDir.UrlConfig sigDimConfig = GetConfigByName("SigmaDimensions");
+            //
+            //if (sigDimConfig == null)
+            //{
+            //    return;
+            //}
+            //else
+            //{
+            //    ParallaxDebug.Log("Sigma Dimensions detected, applying rescale values");
+            //}
+            //
+            //ConfigNode sigmaDimensionsNode = sigDimConfig.config;
+            //
+            //float resizeValue = float.Parse(sigmaDimensionsNode.GetValue("Resize"));
+            //float landscapeValue = float.Parse(sigmaDimensionsNode.GetValue("landscape"));
+            //
+            //foreach (ParallaxScaledBody scaledBody in parallaxScaledBodies.Values)
+            //{
+            //    CelestialBody cb = FlightGlobals.GetBodyByName(scaledBody.planetName);
+            //    double resize = cb.Get<double>("resize");
+            //
+            //    Debug.Log("Resize for planet: " + scaledBody + " is " + resize);
+            //
+            //    scaledBody.minTerrainAltitude *= resizeValue * landscapeValue;
+            //    scaledBody.maxTerrainAltitude *= resizeValue * landscapeValue;
+            //
+            //    // Just approximate the normal strength changes, it won't be perfect, but we can't derive it without regenerating the normals
+            //    scaledBody.scaledMaterial.SetFloat("_PlanetBumpScale", Mathf.Pow(landscapeValue, 0.333f));
+            //
+            //    if (scaledBody.mode == ParallaxScaledBodyMode.FromTerrain || scaledBody.mode == ParallaxScaledBodyMode.CustomRequiresTerrain)
+            //    {
+            //        scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendStart"] *= resizeValue * landscapeValue;
+            //        scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendEnd"] *= resizeValue * landscapeValue;
+            //        scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_MidHighBlendStart"] *= resizeValue * landscapeValue;
+            //        scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_MidHighBlendEnd"] *= resizeValue * landscapeValue;
+            //
+            //        scaledBody.scaledMaterial.SetFloat("_LowMidBlendStart", scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendStart"]);
+            //        scaledBody.scaledMaterial.SetFloat("_LowMidBlendEnd", scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_LowMidBlendEnd"]);
+            //        scaledBody.scaledMaterial.SetFloat("_MidHighBlendStart", scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_MidHighBlendStart"]);
+            //        scaledBody.scaledMaterial.SetFloat("_MidHighBlendEnd", scaledBody.scaledMaterialParams.shaderProperties.shaderFloats["_MidHighBlendEnd"]);
+            //    }
+            //}
+            //
+            //foreach (ParallaxTerrainBody terrainBody in parallaxTerrainBodies.Values)
+            //{
+            //    terrainBody.terrainShaderProperties.shaderFloats["_LowMidBlendStart"] *= resizeValue * landscapeValue;
+            //    terrainBody.terrainShaderProperties.shaderFloats["_LowMidBlendEnd"] *= resizeValue * landscapeValue;
+            //    terrainBody.terrainShaderProperties.shaderFloats["_MidHighBlendStart"] *= resizeValue * landscapeValue;
+            //    terrainBody.terrainShaderProperties.shaderFloats["_MidHighBlendEnd"] *= resizeValue * landscapeValue;
+            //
+            //    terrainBody.SetMaterialValues();
+            //}
         }
         void OnDestroy()
         {

@@ -94,6 +94,7 @@ namespace Parallax
             ParamCreator.ChangeMethod colliderCallback = UpdateColliderSettings;
 
             GUILayout.Label("Note: The game will pause for a few seconds when changing these settings");
+            GUILayout.Label("Important: You should restart the game after changing and saving these");
             GUILayout.Space(10);
             ParamCreator.CreateParam("Density Multiplier",                  ref ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier,        GUIHelperFunctions.FloatField, scatterCallback);
             ParamCreator.CreateParam("Range Multiplier",                    ref ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier,          GUIHelperFunctions.FloatField, scatterCallback);

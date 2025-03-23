@@ -1,4 +1,5 @@
-﻿using Parallax.Tools;
+﻿using Parallax.PQS_Mods;
+using Parallax.Tools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,6 +38,8 @@ namespace Parallax
         // Potentially store a scaled version of this to get closer to the desired frequency and reduce precision errors
         // Length parity with quad vertex count
         public Vector3[] directionsFromCenter;
+        public Texture2D blockMapData;
+        public PQSMod_MapDecalVertexRemoveScatter blockMapPQSMod;   // Only assigned if we have a block map on this quad
 
         // Physical mesh data
         Mesh mesh;
@@ -233,6 +236,17 @@ namespace Parallax
         /// </summary>
         public void DetermineScatters()
         {
+            // See if we have a block map applied to this quad
+            Dictionary<PQ, PQSMod_MapDecalVertexRemoveScatter> maskedScatters = PQSMod_MapDecalVertexRemoveScatter.maskedScattersPerQuad;
+            List<string> blockedScatterNames = null;
+            if (maskedScatters.ContainsKey(quad))
+            {
+                blockMapPQSMod = maskedScatters[quad];
+                blockedScatterNames = blockMapPQSMod.blockedScatters;
+                blockMapData = blockMapPQSMod.colorMap;
+            }
+
+            // Add the scatters for this quad
             for (int i = 0; i < body.fastScatters.Length; i++)
             {
                 Scatter scatter = body.fastScatters[i];
@@ -244,6 +258,13 @@ namespace Parallax
                         ignoreRendererVisibility = true;
                     }
                     ScatterData data = new ScatterData(this, body.fastScatters[i]);
+
+                    if (blockedScatterNames != null && blockedScatterNames.Contains(scatter.scatterName))
+                    {
+                        // Set up the block map data
+                        data.readBlockMap = true;
+                    }
+
                     quadScatters.Add(data);
                     StartScatter(data);
                 }

@@ -2,6 +2,11 @@
 int _PopulationMultiplier;
 float _Seed;
 
+// Only used if blockmap is enabled
+float3 _BlockMapDirectionFromCenter;
+float4 _BlockMapRotation;	// Quaternion in float4 format
+float _BlockMapRadius;
+
 // 1 = align scatter up vector to the terrain normal
 // 0 = align scatter up to the planet normal
 int _AlignToTerrainNormal;

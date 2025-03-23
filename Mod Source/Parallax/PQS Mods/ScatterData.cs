@@ -13,6 +13,7 @@ namespace Parallax
 
         // The scatter we're generating
         public Scatter scatter;
+        public bool readBlockMap = false;
 
         // Output evaluate results to the renderer
         public ScatterRenderer scatterRenderer;
@@ -122,23 +123,46 @@ namespace Parallax
         {
             int kernel = 0;
 
-            // Noise type
-            switch (scatter.noiseParams.noiseType)
+            if (!readBlockMap)
             {
-                case NoiseType.simplexPerlin:
+                switch (scatter.noiseParams.noiseType)
                 {
-                    kernel = 0;
-                    break;
+                    case NoiseType.simplexPerlin:
+                    {
+                        kernel = 0;
+                        break;
+                    }
+                    case NoiseType.simplexCellular:
+                    {
+                        kernel = 1;
+                        break;
+                    }
+                    case NoiseType.simplexPolkaDot:
+                    {
+                        kernel = 2;
+                        break;
+                    }
                 }
-                case NoiseType.simplexCellular:
+            }
+            else
+            {
+                switch (scatter.noiseParams.noiseType)
                 {
-                    kernel = 1;
-                    break;
-                }
-                case NoiseType.simplexPolkaDot:
-                {
-                    kernel = 2;
-                    break;
+                    case NoiseType.simplexPerlin:
+                    {
+                        kernel = 3;
+                        break;
+                    }
+                    case NoiseType.simplexCellular:
+                    {
+                        kernel = 4;
+                        break;
+                    }
+                    case NoiseType.simplexPolkaDot:
+                    {
+                        kernel = 5;
+                        break;
+                    }
                 }
             }
             return kernel;
@@ -148,18 +172,18 @@ namespace Parallax
         //
         public int GetEvaluateKernel()
         {
-            int kernel = 3;
+            int kernel = 6;
             if (scatter.distributionParams.coloredByTerrain && !scatter.useCraftPosition)
             {
-                kernel = 4;
+                kernel = 7;
             }
             else if (!scatter.distributionParams.coloredByTerrain && scatter.useCraftPosition)
             {
-                kernel = 5;
+                kernel = 8;
             }
             else if (scatter.distributionParams.coloredByTerrain && scatter.useCraftPosition)
             {
-                kernel = 6;
+                kernel = 9;
             }
             return kernel;
         }
@@ -205,6 +229,14 @@ namespace Parallax
             else
             {
                 scatterShader.SetInt(ParallaxScatterShaderProperties.distributeFixedAltitudeID, 0);
+            }
+
+            if (readBlockMap)
+            {
+                scatterShader.SetVector(ParallaxScatterShaderProperties.blockMapDirectionFromCenterID, (Vector3)parent.blockMapPQSMod.normalisedPosition);
+                scatterShader.SetVector(ParallaxScatterShaderProperties.blockMapRotationID, new Vector4(parent.blockMapPQSMod.rot.x, parent.blockMapPQSMod.rot.y, parent.blockMapPQSMod.rot.z, parent.blockMapPQSMod.rot.w));
+                scatterShader.SetFloat(ParallaxScatterShaderProperties.blockMapRadiusID, (float)parent.blockMapPQSMod.radius);
+                scatterShader.SetTexture(distributeKernel, ParallaxScatterShaderProperties.blockMapID, parent.blockMapPQSMod.colorMap);
             }
         }
         public void Distribute()

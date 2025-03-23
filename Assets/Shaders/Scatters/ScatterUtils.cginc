@@ -16,6 +16,35 @@ float DegToRad(float deg)
 {
     return DEG2RAD * deg;
 }
+
+// Quaternion multiplication
+float3 QuaternionMul(float4 rotation, float3 position)
+{
+    float num = rotation.x * 2.0f;
+    float num2 = rotation.y * 2.0f;
+    float num3 = rotation.z * 2.0f;
+    float num4 = rotation.x * num;
+    float num5 = rotation.y * num2;
+    float num6 = rotation.z * num3;
+    float num7 = rotation.x * num2;
+    float num8 = rotation.x * num3;
+    float num9 = rotation.y * num3;
+    float num10 = rotation.w * num;
+    float num11 = rotation.w * num2;
+    float num12 = rotation.w * num3;
+    float3 result = 0;
+    result.x = (1.0f - (num5 + num6)) * position.x + (num7 - num12) * position.y + (num8 + num11) * position.z;
+    result.y = (num7 + num12) * position.x + (1.0f - (num4 + num6)) * position.y + (num9 - num10) * position.z;
+    result.z = (num8 - num11) * position.x + (num9 + num10) * position.y + (1.0f - (num4 + num5)) * position.z;
+    return result;
+}
+
+//float3 QuaternionMul(float4 q, float3 v)
+//{
+//    float3 t = 2.0 * cross(q.xyz, v);
+//    return v + q.w * t + cross(q.xyz, t);
+//}
+
 // Get point/direction at center of triangle
 float3 TriCenter(float3 x, float3 y, float3 z)
 {
@@ -43,6 +72,13 @@ float2 RandomUV(float2 uv1, float2 uv2, float2 uv3, float r1, float r2)
 {
     // r1 must be a sqrt random number
     return ((1 - r1) * uv1) + ((r1 * (1 - r2)) * uv2) + ((r2 * r1) * uv3);
+}
+
+// Returns a uniformly distributed UV coordinate at a random position on a triangle - probably too expensive to be used if we're sampling biome maps all the time
+float RandomFloat(float f1, float f2, float f3, float r1, float r2)
+{
+    // r1 must be a sqrt random number
+    return ((1 - r1) * f1) + ((r1 * (1 - r2)) * f2) + ((r2 * r1) * f3);
 }
 
 bool BiomeEligible(float3 biomeColor, float3 scatterColor)

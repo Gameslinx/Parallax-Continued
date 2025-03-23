@@ -735,6 +735,12 @@ Shader "Custom/ParallaxScaledBaked"
                 eyeVec = mul(_SkyboxRotation, eyeVec);
                 finalNormal.xyz = mul(_SkyboxRotation, finalNormal);
 
+                // Defaults to black and 0 alpha if no resource map is provided
+                float4 resourceMap = tex2D(_ResourceMap, i.uv);
+                finalDiffuse.rgb *= (1 - min(resourceMap.a, 0.75f));
+                finalDiffuse.a *= (1 - resourceMap.a);
+                finalDiffuse.rgb += resourceMap.rgb;
+
                 Unity_GlossyEnvironmentData g = UnityGlossyEnvironmentSetup(outGBuffer2.w, -eyeVec, finalNormal.xyz, outGBuffer1.rgb);
 
                 half3 envColor = UnityGI_IndirectSpecularBasic(_Skybox_HDR, outGBuffer1.w, g);
@@ -743,6 +749,9 @@ Shader "Custom/ParallaxScaledBaked"
                 rgb *= _EnvironmentMapFactor;
                 rgb += atmosphereColor;
                 rgb += GET_SCALED_EMISSION;
+
+                rgb *= (1 - resourceMap.a);
+                rgb += resourceMap.rgb * 0.3f;
 
                 SET_OUT_EMISSION(float4(rgb, 1));
             }
