@@ -34,7 +34,6 @@ namespace Parallax.Scaled_System
         {
             foreach (ParallaxScaledBody body in ConfigLoader.parallaxScaledBodies.Values)
             {
-                Debug.Log("Replacing scaled material for " + body.planetName);
                 CelestialBody kspBody = FlightGlobals.GetBodyByName(body.planetName);
                 MeshRenderer meshRenderer = kspBody.scaledBody.GetComponent<MeshRenderer>();
 
@@ -48,29 +47,10 @@ namespace Parallax.Scaled_System
                 // This returns a copy of the materials on the mesh
                 Material[] mats = meshRenderer.sharedMaterials;
 
-                foreach (Material material in mats)
-                {
-                    Debug.Log("Before replacement - Material: " + material.name);
-                }
-
                 // Get the vanilla material (filter out scatterer and eve)
                 int materialIndex = GetScaledMaterialIndex(mats);
 
-                int scattererEclipseMaterialIndex = GetScattererEclipseMaterial(kspBody.name, mats, out Material scattererEclipseCasterMaterial);
-                Debug.Log("Scatterer eclipse material index: " + scattererEclipseMaterialIndex);
-
                 mats[materialIndex] = body.scaledMaterial;
-                
-                //body.scaledMaterial.SetTexture("_HeightMap", Texture2D.whiteTexture);
-                
-                if (scattererEclipseMaterialIndex > -1)
-                {
-                    Debug.Log("Attempting to restore scatterer's eclipse material");
-                    bool isSame = mats[scattererEclipseMaterialIndex].GetInstanceID() == scattererEclipseCasterMaterial.GetInstanceID();
-                    Debug.Log("Is same? " + isSame);
-                    // Restore scatterer's reference to the eclipse material
-                    mats[scattererEclipseMaterialIndex] = scattererEclipseCasterMaterial;
-                }
 
                 meshRenderer.sharedMaterials = mats;
             }

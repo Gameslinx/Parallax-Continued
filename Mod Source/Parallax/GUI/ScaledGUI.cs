@@ -53,13 +53,13 @@ namespace Parallax
                 // Options
                 GUILayout.Label("Planet Texture Exporter Options:", HighLogic.Skin.label);
 
-                ParamCreator.CreateParam("Resolution", ref exportOptions.horizontalResolution, GUIHelperFunctions.IntField, null);
+                ParamCreator.CreateParam("Resolution", ref exportOptions.horizontalResolution, GUIHelperFunctions.IntField, (ParamCreator.ChangeMethod)null);
                 GUILayout.Space(10);
-                ParamCreator.CreateParam("Export Height", ref exportOptions.exportHeight, GUIHelperFunctions.BoolField, null);
-                ParamCreator.CreateParam("Export Color", ref exportOptions.exportColor, GUIHelperFunctions.BoolField, null);
-                ParamCreator.CreateParam("Export Normal", ref exportOptions.exportNormal, GUIHelperFunctions.BoolField, null);
+                ParamCreator.CreateParam("Export Height", ref exportOptions.exportHeight, GUIHelperFunctions.BoolField, (ParamCreator.ChangeMethod)null);
+                ParamCreator.CreateParam("Export Color", ref exportOptions.exportColor, GUIHelperFunctions.BoolField, (ParamCreator.ChangeMethod)null);
+                ParamCreator.CreateParam("Export Normal", ref exportOptions.exportNormal, GUIHelperFunctions.BoolField, (ParamCreator.ChangeMethod)null);
                 GUILayout.Space(10);
-                ParamCreator.CreateParam("Multithreaded Export", ref exportOptions.multithread, GUIHelperFunctions.BoolField, null);
+                ParamCreator.CreateParam("Multithreaded Export", ref exportOptions.multithread, GUIHelperFunctions.BoolField, (ParamCreator.ChangeMethod)null);
                 GUILayout.Space(10);
                 if (currentMinMaxBody != planetName)
                 {

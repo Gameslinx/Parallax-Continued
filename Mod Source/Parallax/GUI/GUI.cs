@@ -489,12 +489,33 @@ namespace Parallax
             GUILayout.BeginHorizontal();
 
             GUILayout.Label(name);
+
             existingValue = fieldMethod(existingValue, out bool valueWasChanged);
 
             if (valueWasChanged && callback != null)
             {
                 callback();
             }
+
+            GUILayout.EndHorizontal();
+        }
+
+        public static void CreateParam<T>(string name, ref T existingValue, ParamTypeMethod<T> fieldMethod, ChangeMethod callback, string tooltip)
+        {
+            // Create a left aligned label and right aligned text box
+            GUILayout.BeginHorizontal();
+
+            GUILayout.Label(name);
+
+            existingValue = fieldMethod(existingValue, out bool valueWasChanged);
+
+            if (valueWasChanged && callback != null)
+            {
+                callback();
+            }
+
+            GUIContent content = new GUIContent("?", tooltip);
+            GUILayout.Button(content, HighLogic.Skin.button, GUILayout.Width(20));
 
             GUILayout.EndHorizontal();
         }
@@ -516,6 +537,45 @@ namespace Parallax
 
             GUILayout.EndHorizontal();
             return valueWasChanged;
+        }
+
+
+        public static bool CreateParam<T>(string name, ref T existingValue, ParamTypeMethod<T> fieldMethod, string tooltip)
+        {
+            // Create a left aligned label and right aligned text box
+            GUILayout.BeginHorizontal();
+
+            GUILayout.Label(name);
+            existingValue = fieldMethod(existingValue, out bool valueWasChanged);
+
+            GUIContent content = new GUIContent("?", tooltip);
+            GUILayout.Button(content, HighLogic.Skin.button, GUILayout.Width(20));
+
+            GUILayout.EndHorizontal();
+            return valueWasChanged;
+        }
+
+        private static GUIStyle tooltipStyle;
+        private static Rect lastParamRect;
+        private static string activeTooltip = "";
+
+        /// <summary>
+        /// Creates some flavour / info text
+        /// </summary>
+        /// <param name="description"></param>
+        public static void CreateParamDescription(string description)
+        {
+            if (tooltipStyle == null)
+            {
+                tooltipStyle = new GUIStyle();
+            }
+
+            GUILayout.BeginHorizontal();
+
+            GUILayout.Button(new GUIContent("?", "This is an example tooltip"));
+
+
+            GUILayout.EndHorizontal();
         }
     }
 }
