@@ -230,3 +230,4 @@ crashlytics-build.properties
 /Mod Source/Parallax/obj/Release/net48/Parallax.assets.cache
 /Mod Source/Parallax/obj/Release/net48/Parallax.csproj.AssemblyReference.cache
 /Mod Source/Parallax/obj/Release/net48/Parallax.GeneratedMSBuildEditorConfig.editorconfig
+/Mod Source/Parallax/obj/x64/Debug/net48/Parallax.dll
