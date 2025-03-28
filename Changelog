@@ -1,120 +1,11 @@
 # Parallax Continued Changelog
 
-## Release 3.0
+# Parallax Continued Changelog
+For new viewers, start at the bottom and work your way up!
 
-Features / Improvements
- - Added Parallax Scaled system - Scaled planets have overhauled shaders and textures
- - Added raymarched shadows implementation to the Scaled scene
- - Added environment reflections to the Scaled scene
- - Made the transitions between planets' surface and scaled views much smoother
- - Overhauled Eeloo completely to make it resemble KSP2 Eeloo. It still has the same number of biomes
- - Tweaked the main menu sun direction and animation
- - Added texture exporter (Ctrl+P in the tracking station)
+## Public Release 1.0.0
 
-GUI / Accessibility / QoL
- - Added new global setting 'Collider Lookahead Time' (see Scatters section)
- - Added new global setting 'Scaled Planet Self Shadows'
- - Added new global setting 'Load Scaled Textures Immediately'
-
-Scatters
- - Added collider lookahead in seconds, which will spawn colliders along the craft's velocity vector prematurely. Useful for radar/laser distance mods, or pathfinding
- - Slightly improve memory usage for scatters, which has a compounding effect when using rescale configs
-
-Bug Fixes
- - Fixed global settings config not saving properly
- - For non-patrons compiling from source - Fixed crashes caused by a missing return in code
- - Fixed scatter system never processing the final biome for a planet due to a texel coordinate sampling error in the scatters compute shader
-
-For Modders
- - Added new config node to the Body node in ParllaxTerrain configs 'ParallaxScaledProperties'
-
-## Release 2.0
-
-Features / Improvements
- - Added Ambient Occlusion maps for all planet terrain textures (Deferred only)
- - Replaced most planet surface textures to finalize the revamp that began in Release 1.0
-
-GUI / Accessibility / QoL
- - Added Ambient Occlusion setting toggle in the Parallax GUI. The performance impact is minimal, but allows the option to disable it to squeeze out more
-
-Terrain
- - Added Ambient Occlusion maps for all planets
- 
- - Moho
- - - Main surface texture is now huge hexagonal metal formations covered entirely by dust, tying it in with the surface scatters
- - - Slopes now better represent a rocky surface
-
- - Eve
- - - Eve was already revamped in 1.0
-
- - Gilly
- - - Surface texture no longer looks muddy, and aligns more with what we might expect to see for an asteroid of its size
-
- - Kerbin
- - - Kerbin was already revamped in 1.0
-
- - Mun
- - - The Mun was already revamped in 1.0
-
- - Minmus
- - - Lowlands are now completely icy/glassy and reflect the surrounding hills as well as the sunlight intensely
- - - Midlands are dusty and reminiscent of the vanilla Minmus texture
- - - Slopes are dusty mixed with jagged rock poking through
- - - Highlands are rocky now instead of some weird sand material
- - - Revamped Minmus' orbit texture
-
-- Duna
-- - Lowland areas no longer have very striking and unrealistic sand dunes - from afar they looked odd - and now has a more appropriate sand texture
-- - Cliffs are now sandy instead of rocky cliffs that appeared in places cliffs wouldn't normally appear
-- - Added a new jagged rocky texture for the highlands
-
-- Ike
-- - Surface texture is now much more representative of a rocky/dusty hybrid moon
-- - Slopes are now formed of smooth marble instead of dark stone
-
-- Dres
-- - Surface and slope textures revamped, but are mostly similar to before
-
-- Laythe
-- - No change besides ambient occlusion maps
-
-- Vall
-- - Massively improved the icy surface texture
-- - Slopes are now rough ice
-- - Highlands are now rough stone
-
-- Tylo
-- - Surface and slope textures revamped, but are mostly similar to before
-- - Brightened the slopes and reduced their contrast to make them fit in better with the surrounding terrain
-
-- Bop
-- - Bop was already revamped in 1.0
-- - Revamped Bop's orbit texture (in Release 1, but is relevant to the other orbit texture changes in Release 2)
-
-- Pol
-- - Lowland ice is now much more representative of an icy surface
-- - Remastered midlands, highlands and cliff textures
-- - Revamped Pol's orbit texture to better represent the surface
-
-- Eeloo
-- - Added a new lowland texture to approximate the appearance of tholins up close
-- - Remastered the ice surface texture
-
-Scatters - General
- - Adjuted some scatters to match their updated terrain
-
-For Mod Authors
- - No changes required for base functionality - Ambient Occlusion texture will default to white (no occlusion) for planets that don't have maps
- - There is a Parallax Texture Compositor tool that might be useful for authoring displacement and occlusion maps, available here: https://github.com/Gameslinx/ParallaxTextureCompositor/releases/tag/1.0.0
- - To support ambient occlusion maps, add "_OcclusionMap = [filepath].[extension]" to your Parallax Terrain config. They are set up similarly to displacement and influence maps (RGBA = low/mid/high/steep)
-
-Bug Fixes
- - Fixed interaction with TUFX HDR causing black quadrants of the screen (fixed in a Release 1 patch)
- - Fixed NRE spam when crafts are around the sun (fixed in a Release 1 patch)
- - For mod authors - Errors are now slightly more verbose in the log file when configs are set up improperly
- - Plus some extra minor fixes that I haven't been tracking
-
-## Release 1.0
+## Parallax -> Early Access Release 1.0
 
 Overview
  - The mod has been rewritten from the ground up, almost every line of code is new - expect massively improved quality, performance and reliability
@@ -250,3 +141,129 @@ Scatter System
   - Fixed scatter system breaking seemingly randomly when flying around
   - Fixed scatter system breaking when teleporting to another body
   - Fixed a calculation in the distribution code that caused too many objects to be generated, and would generate at a fixed position with random rotation, causing lag when in the view frustum
+
+
+## Early Access Release 1.0 -> Early Access Release 2.0
+
+Features / Improvements
+ - Added Ambient Occlusion maps for all planet terrain textures (Deferred only)
+ - Replaced most planet surface textures to finalize the revamp that began in Release 1.0
+
+GUI / Accessibility / QoL
+ - Added Ambient Occlusion setting toggle in the Parallax GUI. The performance impact is minimal, but allows the option to disable it to squeeze out more
+
+Terrain
+ - Added Ambient Occlusion maps for all planets
+ 
+ - Moho
+ - - Main surface texture is now huge hexagonal metal formations covered entirely by dust, tying it in with the surface scatters
+ - - Slopes now better represent a rocky surface
+
+ - Eve
+ - - Eve was already revamped in 1.0
+
+ - Gilly
+ - - Surface texture no longer looks muddy, and aligns more with what we might expect to see for an asteroid of its size
+
+ - Kerbin
+ - - Kerbin was already revamped in 1.0
+
+ - Mun
+ - - The Mun was already revamped in 1.0
+
+ - Minmus
+ - - Lowlands are now completely icy/glassy and reflect the surrounding hills as well as the sunlight intensely
+ - - Midlands are dusty and reminiscent of the vanilla Minmus texture
+ - - Slopes are dusty mixed with jagged rock poking through
+ - - Highlands are rocky now instead of some weird sand material
+ - - Revamped Minmus' orbit texture
+
+- Duna
+- - Lowland areas no longer have very striking and unrealistic sand dunes - from afar they looked odd - and now has a more appropriate sand texture
+- - Cliffs are now sandy instead of rocky cliffs that appeared in places cliffs wouldn't normally appear
+- - Added a new jagged rocky texture for the highlands
+
+- Ike
+- - Surface texture is now much more representative of a rocky/dusty hybrid moon
+- - Slopes are now formed of smooth marble instead of dark stone
+
+- Dres
+- - Surface and slope textures revamped, but are mostly similar to before
+
+- Laythe
+- - No change besides ambient occlusion maps
+
+- Vall
+- - Massively improved the icy surface texture
+- - Slopes are now rough ice
+- - Highlands are now rough stone
+
+- Tylo
+- - Surface and slope textures revamped, but are mostly similar to before
+- - Brightened the slopes and reduced their contrast to make them fit in better with the surrounding terrain
+
+- Bop
+- - Bop was already revamped in 1.0
+- - Revamped Bop's orbit texture (in Release 1, but is relevant to the other orbit texture changes in Release 2)
+
+- Pol
+- - Lowland ice is now much more representative of an icy surface
+- - Remastered midlands, highlands and cliff textures
+- - Revamped Pol's orbit texture to better represent the surface
+
+- Eeloo
+- - Added a new lowland texture to approximate the appearance of tholins up close
+- - Remastered the ice surface texture
+
+Scatters - General
+ - Adjuted some scatters to match their updated terrain
+
+For Mod Authors
+ - No changes required for base functionality - Ambient Occlusion texture will default to white (no occlusion) for planets that don't have maps
+ - There is a Parallax Texture Compositor tool that might be useful for authoring displacement and occlusion maps, available here: https://github.com/Gameslinx/ParallaxTextureCompositor/releases/tag/1.0.0
+ - To support ambient occlusion maps, add "_OcclusionMap = [filepath].[extension]" to your Parallax Terrain config. They are set up similarly to displacement and influence maps (RGBA = low/mid/high/steep)
+
+Bug Fixes
+ - Fixed interaction with TUFX HDR causing black quadrants of the screen (fixed in a Release 1 patch)
+ - Fixed NRE spam when crafts are around the sun (fixed in a Release 1 patch)
+ - For mod authors - Errors are now slightly more verbose in the log file when configs are set up improperly
+ - Plus some extra minor fixes that I haven't been tracking
+
+
+## Early Access Release 2.0 -> Early Access Release 3.0
+
+Features / Improvements
+ - Added Parallax Scaled system - Scaled planets have overhauled shaders and textures
+ - Added raymarched shadows implementation to the Scaled scene
+ - Added environment reflections to the Scaled scene
+ - Made the transitions between planets' surface and scaled views much smoother
+ - Overhauled Eeloo completely to make it resemble KSP2 Eeloo. It still has the same number of biomes
+ - Tweaked the main menu sun direction and animation
+ - Added texture exporter (Ctrl+P in the tracking station)
+
+GUI / Accessibility / QoL
+ - Added new global setting 'Collider Lookahead Time' (see Scatters section)
+ - Added new global setting 'Scaled Planet Self Shadows'
+ - Added new global setting 'Load Scaled Textures Immediately'
+
+Scatters
+ - Added collider lookahead in seconds, which will spawn colliders along the craft's velocity vector prematurely. Useful for radar/laser distance mods, or pathfinding
+ - Slightly improve memory usage for scatters, which has a compounding effect when using rescale configs
+
+Bug Fixes
+ - Fixed global settings config not saving properly
+ - For non-patrons compiling from source - Fixed crashes caused by a missing return in code
+ - Fixed scatter system never processing the final biome for a planet due to a texel coordinate sampling error in the scatters compute shader
+
+For Modders
+ - Added new config node to the Body node in ParllaxTerrain configs 'ParallaxScaledProperties'
+
+## Early Access Release 3.0 -> Public Release 1.0.0
+
+GUI / Accessibility / QoL
+ - Added a warning when the reflection quality is set too high
+ - Added tooltips to the main GUI (green P menu) that explain what each setting does
+
+Bug Fixes
+ - Fixed scatterer eclipses not darkening the terrain
+ - Fixed EVE city lights not working on the scaled terrain (needs verification)
