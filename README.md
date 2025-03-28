@@ -1,5 +1,5 @@
 # Parallax Continued
-Available in Early Access at [Linx's Patreon](https://www.patreon.com/linx_)
+Support development at [Linx's Patreon](https://www.patreon.com/linx_)
 
 ## Installation Instructions
 
@@ -8,20 +8,23 @@ Available in Early Access at [Linx's Patreon](https://www.patreon.com/linx_)
     - KSP Burst: https://github.com/KSPModdingLibs/KSPBurst/releases
     
 2. Ensure you have downloaded the following files:
-    - ParallaxContinuedEarlyAccess-Release3.zip
+    - ParallaxContinued.zip
+    - ParallaxContinued_StockTerrainTextures.zip
+    - ParallaxContinued_StockPlanetTextures.zip
+    - ParallaxContinued_StockScatterTextures.zip
     - Optional lifeless Eve patch - Lifeless Eve-1.0.zip
-    - Optional configs for users using rescaled systems - Parallax Rescale Configs.zip
 
-3. Browse to **ParallaxContinuedEarlyAccess-Release3.zip/GameData**
-4. Move **all folders** (ParallaxContinued, Parallax_StockPlanetTextures, Parallax_StockScatterTextures and Parallax_StockTerrainTextures) to **your GameData** folder
-5. If you downloaded the lifeless eve patch, move '**Parallax_LifelessEvePatch**' from '**Parallax_LifelessEvePatch.zip/GameData**' to your **GameData** folder
-6. If you downloaded the rescale configs, move the appropriate Parallax_Rescale_x.x folder to your GameData folder. Choose the one that matches the scale you play at
+3. Browse to **ParallaxContinued.zip/GameData** and move **ParallaxContinued** to your GameData folder
+4. Browse to **ParallaxContinued_StockTerrainTextures.zip/GameData** and move **Parallax_StockTerrainTextures** to your GameData folder
+5. Browse to **ParallaxContinued_StockScatterTextures.zip/GameData** and move **Parallax_StockScatterTextures** to your GameData folder
+6. Browse to **ParallaxContinued_StockPlanetTextures.zip/GameData** and move **Parallax_StockPlanetTextures** to your GameData folder
+7. If you downloaded the lifeless eve patch, move '**ParallaxContinued_LifelessEvePatch**' from '**Parallax_LifelessEvePatch.zip/GameData**' to your **GameData** folder
 
-7. OPTIONAL - Delete the **Settings.cfg** file in your **Kerbal Space Program** folder. This ensures your planet configuration is clean and any junk from previous planet mods is gone.
+8. OPTIONAL - Delete the **Settings.cfg** file in your **Kerbal Space Program** folder. This ensures your planet configuration is clean and any junk from previous planet mods is gone.
 
-8. Launch the game
+9. Launch the game
 
-9. **IMPORTANT - In the main menu, click 'Settings', then 'Graphics', and set 'Terrain Detail' to 'High'**
+10. **IMPORTANT - In the main menu, click 'Settings', then 'Graphics', and set 'Terrain Detail' to 'High'**
 
 NOTE: If you use Deferred, you might need to install Deferred manually (not via CKAN) if CKAN reports a conflict!
 Any issues? You can reach me on Discord (linked in my Patreon description) or the KSP forums as 'Gameslinx'. I go by 'Linx' anywhere else.
