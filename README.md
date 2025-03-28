@@ -12,7 +12,7 @@ Support development at [Linx's Patreon](https://www.patreon.com/linx_)
     - ParallaxContinued_StockTerrainTextures.zip
     - ParallaxContinued_StockPlanetTextures.zip
     - ParallaxContinued_StockScatterTextures.zip
-    - Optional lifeless Eve patch - Lifeless Eve-1.0.zip
+    - Optional lifeless Eve patch - ParallaxContinued_LifelessEvePatch.zip
 
 3. Browse to **ParallaxContinued.zip/GameData** and move **ParallaxContinued** to your GameData folder
 4. Browse to **ParallaxContinued_StockTerrainTextures.zip/GameData** and move **Parallax_StockTerrainTextures** to your GameData folder
