@@ -1,7 +1,7 @@
 # Parallax Continued
 Support development at [Linx's Patreon](https://www.patreon.com/linx_)
 
-## Installation Instructions
+## Installation Instructions - Windows
 
 1. Download and install the required dependencies:
     - Kopernicus: https://github.com/Kopernicus/Kopernicus/releases
@@ -28,6 +28,20 @@ Support development at [Linx's Patreon](https://www.patreon.com/linx_)
 
 NOTE: If you use Deferred, you might need to install Deferred manually (not via CKAN) if CKAN reports a conflict!
 Any issues? You can reach me on Discord (linked in my Patreon description) or the KSP forums as 'Gameslinx'. I go by 'Linx' anywhere else.
+
+## Installation Instructions - Mac
+
+1. Follow the Windows installation instructions first, but **refer to step 2 for running the game**
+2. Run Kerbal Space Program using **CrossOver** with these settings:
+   
+![hWevPwF](https://github.com/user-attachments/assets/6958cf71-8885-47f5-b90b-a30a8980c8d2)
+
+If you don't follow the above step, Parallax Continued will not work!
+
+## Installation Instructions - Linux
+
+1. Follow the Windows installation instructions first, but **refer to step 2 for running the game**
+2. Run Kerbal Space Program using **Proton**
 
 ## Recommended Mods
 Mods that are fully compatible with and enhance the visual experience when installed with Parallax:
