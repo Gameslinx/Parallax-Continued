@@ -408,6 +408,7 @@ namespace Parallax
         }
         static void LogPerformanceStats()
         {
+            // Process renderer
             int numTris = 0;
             foreach (Scatter scatter in scatters)
             {
@@ -419,6 +420,23 @@ namespace Parallax
             ParallaxDebug.Log("");
             ParallaxDebug.Log("Total number of triangles being rendered right now by Parallax: " + numTris);
             ParallaxDebug.Log("Performance logging complete");
+
+            // 0 = total usage, 1 = potential min usage, 2 = wasted
+            int[] stats = new int[3];
+            // Now process scatters on quads
+            foreach (ScatterSystemQuadData quad in ScatterComponent.scatterQuadData.Values)
+            {
+                int[] quadStats = quad.GetMemoryUsage();
+                for (int i = 0; i < quadStats.Length; i++)
+                {
+                    stats[i] += quadStats[i];
+                }
+            }
+
+            ParallaxDebug.Log("");
+            ParallaxDebug.Log("Total memory used by the scatter system quads: " + stats[0]);
+            ParallaxDebug.Log("Potential minimum usage by the scatter system quads: " + stats[1]);
+            ParallaxDebug.Log("Memory wasted by the scatter system quads: " + stats[2]);
         }
         static void RemoveKeywordValues(ShaderProperties shaderProperties, ConfigNode keywordNode)
         {

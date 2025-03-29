@@ -15,9 +15,9 @@ namespace Parallax.Tools
     public class MeshExporter : MonoBehaviour
     {
         // Not used in release versions
-        void Update()
+        void Update_Ignore()
         {
-            return;
+            //return;
 
             bool flag = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha9);
             if (flag)

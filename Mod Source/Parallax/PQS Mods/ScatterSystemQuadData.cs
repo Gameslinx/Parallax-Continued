@@ -400,6 +400,31 @@ namespace Parallax
             data.Cleanup();
             quadScatters.Remove(data);
         }
+
+        // 0 = total, 1 = theoretical min, 2 = wasted
+        public int[] GetMemoryUsage()
+        {
+            int[] localStats = new int[3];
+            foreach (ScatterData data in quadScatters)
+            {
+                int[] scatterStats = data.GetMemoryUsage();
+                for (int i = 0;i < scatterStats.Length;i++)
+                {
+                    localStats[i] += scatterStats[i];
+                }
+            }
+
+            int total = 0;
+            if (sourceVertsBuffer != null) total += sourceVertsBuffer.count * sourceVertsBuffer.stride;
+            if (sourceNormalsBuffer != null) total += sourceNormalsBuffer.count * sourceNormalsBuffer.stride;
+            if (sourceTrianglesBuffer != null) total += sourceTrianglesBuffer.count * sourceTrianglesBuffer.stride;
+            if (sourceColorsBuffer != null) total += sourceColorsBuffer.count * sourceColorsBuffer.stride;
+            if (sourceUVsBuffer != null) total += sourceUVsBuffer.count * sourceUVsBuffer.stride;
+            if (sourceDirsFromCenterBuffer != null) total += sourceDirsFromCenterBuffer.count * sourceDirsFromCenterBuffer.stride;
+
+            return localStats;
+        }
+
         /// <summary>
         /// Releases all memory consumed by this quad. Called when a quad is unloaded, or has a subdivision level below this.
         /// </summary>

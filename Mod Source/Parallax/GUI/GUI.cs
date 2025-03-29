@@ -554,28 +554,5 @@ namespace Parallax
             GUILayout.EndHorizontal();
             return valueWasChanged;
         }
-
-        private static GUIStyle tooltipStyle;
-        private static Rect lastParamRect;
-        private static string activeTooltip = "";
-
-        /// <summary>
-        /// Creates some flavour / info text
-        /// </summary>
-        /// <param name="description"></param>
-        public static void CreateParamDescription(string description)
-        {
-            if (tooltipStyle == null)
-            {
-                tooltipStyle = new GUIStyle();
-            }
-
-            GUILayout.BeginHorizontal();
-
-            GUILayout.Button(new GUIContent("?", "This is an example tooltip"));
-
-
-            GUILayout.EndHorizontal();
-        }
     }
 }
