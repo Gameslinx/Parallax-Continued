@@ -19,9 +19,9 @@ namespace Parallax
         bool showingDensity = false;
         bool showingUVs = false;
 
-        void Update()
+        void Update_Ignore()
         {
-            return;
+            //return;
 
             if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha1))
             {

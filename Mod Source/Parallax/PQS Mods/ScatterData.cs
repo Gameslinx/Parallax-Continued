@@ -481,10 +481,36 @@ namespace Parallax
 
             scatterShader.SetFloat(ParallaxScatterShaderProperties.maxRangeID, scatter.distributionParams.range);
             scatterShader.SetFloat(ParallaxScatterShaderProperties.lod01SplitID, scatter.distributionParams.lod1.range);
-            scatterShader.SetFloat(ParallaxScatterShaderProperties.lod12SplitID, scatter.distributionParams.lod2.range);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.lod12SplitID, scatter.distributionParams.lod2.range); 
 
             scatterShader.DispatchIndirect(evaluateKernel, dispatchArgs, 0);
         }
+
+        // 0 = total, 1 = theoretical min, 2 = wasted
+        /// <summary>
+        /// Get the memory usage of the buffers on this scatter
+        /// </summary>
+        /// <returns></returns>
+        public int[] GetMemoryUsage()
+        {
+            int[] count = new int[3];
+            if (outputScatterDataBuffer != null && outputScatterDataBuffer.IsValid())
+            {
+                int total = outputScatterDataBuffer.count * outputScatterDataBuffer.stride;
+
+                ComputeBuffer temp = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
+                ComputeBuffer.CopyCount(outputScatterDataBuffer, temp, 0);
+                temp.GetData(count);
+                temp.Dispose();
+
+                int inUse = count[0];
+                count = new int[] { total, inUse, total - inUse };
+            }
+            
+
+            return count;
+        }
+
         /// <summary>
         /// Returns true if the scatter is collideable and the quad is fully subdivided
         /// </summary>

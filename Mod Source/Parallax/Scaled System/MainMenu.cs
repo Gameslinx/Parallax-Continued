@@ -365,12 +365,6 @@ namespace Parallax.Scaled_System
             // Set planet opacity
             shadowCommandBuffer.SetGlobalFloat("_ScaledPlanetOpacity", 1.0f);
         }
-        float _delta = 0.0f;
-        float currVel = 0.0f;
-        float rotateSmoothTime = 13.0f;
-        Quaternion deriv1 = Quaternion.identity;
-        Quaternion deriv2 = Quaternion.identity;
-        Quaternion deriv3 = Quaternion.identity;
         public void Update()
         {
             if (mainMenuPlanet == null)

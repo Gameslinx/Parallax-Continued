@@ -125,7 +125,30 @@ float4 GetScaledLandMask(float altitude, float3 flatWorldNormal, float3 worldNor
         float fresnelStrength = FresnelEffect(smoothWorldNormal, viewDir, _AtmosphereThickness);
         fresnelStrength += lerp(1 - fresnelStrength, 0, saturate(_AtmosphereThickness));
         
-        return _AtmosphereRimMap.Sample(point_clamp_sampler_AtmosphereRimMap, float2(textureCoord, 0.5f)).rgb * fresnelStrength;
+        uint width = 1;
+        uint height = 1;
+        _AtmosphereRimMap.GetDimensions(width, height);
+
+        float texelSize = 1.0f / (float)width;
+        float2 uv = float2(textureCoord, 0.5f);
+
+        // Sample positions with 2-pixel and 4-pixel offsets
+        float pos1 = saturate(uv.x - 5.25f * texelSize);
+        float pos2 = saturate(uv.x - 2.75f * texelSize);
+        float pos3 = uv.x;
+        float pos4 = saturate(uv.x + 2.75f * texelSize);
+        float pos5 = saturate(uv.x + 5.25f * texelSize);
+
+        float3 atmoColor = 
+        (
+            _AtmosphereRimMap.Sample(point_clamp_sampler_AtmosphereRimMap, float2(pos1, uv.y)).rgb +
+            _AtmosphereRimMap.Sample(point_clamp_sampler_AtmosphereRimMap, float2(pos2, uv.y)).rgb +
+            _AtmosphereRimMap.Sample(point_clamp_sampler_AtmosphereRimMap, float2(pos3, uv.y)).rgb +
+            _AtmosphereRimMap.Sample(point_clamp_sampler_AtmosphereRimMap, float2(pos4, uv.y)).rgb +
+            _AtmosphereRimMap.Sample(point_clamp_sampler_AtmosphereRimMap, float2(pos5, uv.y)).rgb
+        ) * (1.0f / 5.0f);
+
+        return atmoColor * fresnelStrength;
     }
 #else
     float3 GetAtmosphereColor(float3 smoothWorldNormal, float3 viewDir)
