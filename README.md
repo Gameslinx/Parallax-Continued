@@ -41,7 +41,7 @@ If you don't follow the above step, Parallax Continued will not work!
 ## Installation Instructions - Linux
 
 1. Follow the Windows installation instructions first, but **refer to step 2 for running the game**
-2. Run Kerbal Space Program using **Proton**
+2. Run Kerbal Space Program using **Proton and use DX11**
 
 ## Recommended Mods
 Mods that are fully compatible with and enhance the visual experience when installed with Parallax:
