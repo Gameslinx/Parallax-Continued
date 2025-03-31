@@ -3,6 +3,8 @@ Support development at [Linx's Patreon](https://www.patreon.com/linx_)
 
 ## Installation Instructions - Windows
 
+Make sure you first **uninstall the old Parallax version** if you have it installed.
+
 1. Download and install the required dependencies:
     - Kopernicus: https://github.com/Kopernicus/Kopernicus/releases
     - KSP Burst: https://github.com/KSPModdingLibs/KSPBurst/releases
