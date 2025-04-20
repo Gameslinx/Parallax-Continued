@@ -664,10 +664,10 @@ PlayerSettings:
     m_VersionCode: 1
     m_VersionName: 
   apiCompatibilityLevel: 6
-  cloudProjectId: 
+  cloudProjectId: 8df77231-4015-4260-b8b2-6903863df0fb
   framebufferDepthMemorylessMode: 0
-  projectName: 
-  organizationId: 
+  projectName: Parallax Continued
+  organizationId: gameslinx
   cloudEnabled: 0
   enableNativePlatformBackendsForNewInputSystem: 0
   disableOldInputManagerSupport: 0
