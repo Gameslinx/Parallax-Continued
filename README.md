@@ -66,7 +66,7 @@ Mods that are fully compatible with and enhance the visual experience when insta
 |Nem - Jthero Configs|[Download](https://forum.kerbalspaceprogram.com/topic/226905-1125-aetherium-021-16-feb-2025-random-assortment-of-parallax-continued-configs/)|Public Release|Not maintained by me
 |Beyond Home|Maintainer Contacted
 |Kcalbeloh|[Download](https://drive.google.com/file/d/1co_qgylXOP4WqXgu5gvF4qpDZzZp1qVt/view?usp=drive_link)|Public Release - But does not change the orbit textures|09/02/2025
-|Celestial Harmony|[Download](https://github.com/ProximaCentauri-star/Celestial-Harmony/releases)|Public Release - But does not change the orbit textures|Not maintained by me
+|Celestial Harmony|[Download](https://github.com/ProximaCentauri-star/Celestial-Harmony/releases)|Public Release|Not maintained by me
 |Techo's Stock Planet Revamp|Author Contacted
 |KSRSS Reborn|Removed, as they are broken| | 
 |JNSQ|[Download](https://github.com/yukkine0704/JNSQ_ParallaxScattersContinued/releases)|Public Release|Not maintained by me
