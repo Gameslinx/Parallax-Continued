@@ -70,6 +70,7 @@ Mods that are fully compatible with and enhance the visual experience when insta
 |Techo's Stock Planet Revamp|Author Contacted
 |KSRSS Reborn|Removed, as they are broken| | 
 |JNSQ|[Download](https://github.com/yukkine0704/JNSQ_ParallaxScattersContinued/releases)|Public Release|Not maintained by me
+|1 Thousand Special|[Download](https://forum.kerbalspaceprogram.com/topic/228426-1-thousand-special-planet-pack-ksp-1125/)|Public Release|Not maintained by me
 
 ## License
 All Rights Reserved
