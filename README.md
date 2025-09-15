@@ -60,6 +60,7 @@ Mods that are fully compatible with and enhance the visual experience when insta
 |Stock Planetary System|Fully supported|Public Release|
 |Stock Planetary System|Fully supported - no extra configs needed|Public Release
 |Sol (People looking for RSS Reborn, look here)|[Download](https://docs.google.com/document/d/1GyQlvDE8JD81fL8GPenKOA3Do4GqlDSx0tWsKy_p208/edit?tab=t.0)|Public Release|Not maintained by me
+|Promised Worlds|[Download](https://github.com/PromisedWorlds/PromisedWorlds/releases)|Public Release|Not maintained by me
 |OPM - Jthero Configs|[Download](https://forum.kerbalspaceprogram.com/topic/226905-1125-aetherium-021-16-feb-2025-random-assortment-of-parallax-continued-configs/)|Public Release|Not maintained by me
 |MPE - Jthero Configs|[Download](https://forum.kerbalspaceprogram.com/topic/226905-1125-aetherium-021-16-feb-2025-random-assortment-of-parallax-continued-configs/)|Public Release|Not maintained by me
 |Quack Pack - Jthero Configs|[Download](https://forum.kerbalspaceprogram.com/topic/226905-1125-aetherium-021-16-feb-2025-random-assortment-of-parallax-continued-configs/)|Public Release|Not maintained by me
