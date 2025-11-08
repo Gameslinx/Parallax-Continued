@@ -289,7 +289,7 @@ namespace Parallax
         // initializing or sharing the texture before we apply it.
         static Texture2D CreateUninitializedTexture(in TextureLoaderData data)
         {
-            var flags = TextureCreationFlags.DontInitializePixels | TextureCreationFlags.DontUploadUponCreate;
+            var flags = TextureCreationFlags.DontInitializePixels;
             if (data.mips)
                 flags |= TextureCreationFlags.MipChain;
             if (GraphicsFormatUtility.IsCrunchFormat(data.format))
@@ -315,10 +315,6 @@ namespace Parallax
             DontCreateSharedTextureData = 1 << 4,
             APIShareable = 1 << 5,
             Crunch = 1 << 6,
-            InheritMemoryLabel = 1 << 7,
-            IsNativeTexture = 1 << 8,
-            DontCheckGraphicsCaps = 1 << 9,
-            DontUploadUponCreate = 1 << 10,
         }
 
         // This takes care of completing the read and then disposing of it
