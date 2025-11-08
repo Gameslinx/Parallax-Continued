@@ -247,26 +247,40 @@ namespace Parallax
                     // time so we do it in parallel with the file read.
                     var tex = CreateUninitializedTexture(in textureData);
 
-                    // Now that we've created the texture we need to wait for the read to finish.
-                    handle.JobHandle.Complete();
-                    if (handle.Status == ReadStatus.Failed)
-                    {
-                        ParallaxDebug.LogError($"Error reading DDS file from disk");
-                        return null;
-                    }
+                    bool useRawData = format == TextureFormat.DXT5
+                        || format == TextureFormat.DXT1
+                        || format == TextureFormat.R8
+                        || format == TextureFormat.Alpha8
+                        || format == TextureFormat.R16;
+                    NativeArray<byte> nRawData = new NativeArray<byte>();
+                    if (useRawData)
+                        nRawData = tex.GetRawTextureData<byte>();
 
-                    try
-                    {
-                        tex.LoadRawTextureData(data);
-                    }
-                    catch (Exception e)
-                    {
-                        ParallaxDebug.LogError($"Error loading texture data: {e.Message}");
-                        return null;
-                    }
+                    using (var rawData = nRawData) {
+                        // Now that we've created the texture we need to wait for the read to finish.
+                        handle.JobHandle.Complete();
+                        if (handle.Status == ReadStatus.Failed)
+                        {
+                            ParallaxDebug.LogError($"Error reading DDS file from disk");
+                            return null;
+                        }
 
-                    tex.Apply(false, textureData.unreadable);
-                    return tex;
+                        try
+                        {
+                            if (useRawData)
+                                rawData.CopyFrom(data);
+                            else
+                                tex.LoadRawTextureData(data);
+                        }
+                        catch (Exception e)
+                        {
+                            ParallaxDebug.LogError($"Error loading texture data: {e.Message}");
+                            return null;
+                        }
+
+                        tex.Apply(false, textureData.unreadable);
+                        return tex;
+                    }
                 }
             }
         }
@@ -275,7 +289,7 @@ namespace Parallax
         // initializing or sharing the texture before we apply it.
         static Texture2D CreateUninitializedTexture(in TextureLoaderData data)
         {
-            var flags = TextureCreationFlags.DontInitializePixels | TextureCreationFlags.DontInitializePixels;
+            var flags = TextureCreationFlags.DontInitializePixels | TextureCreationFlags.DontUploadUponCreate;
             if (data.mips)
                 flags |= TextureCreationFlags.MipChain;
             if (GraphicsFormatUtility.IsCrunchFormat(data.format))
