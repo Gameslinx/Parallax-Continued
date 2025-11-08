@@ -11,6 +11,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.IO.LowLevel.Unsafe;
 using Unity.Jobs;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 
 namespace Parallax
 {
@@ -244,10 +245,9 @@ namespace Parallax
                 {
                     // Creating the texture actually takes a decent chunk of
                     // time so we do it in parallel with the file read.
-                    Texture2D tex = new Texture2D(textureData.width, textureData.height, textureData.format, textureData.mips, textureData.linear);
+                    var tex = CreateUninitializedTexture(in textureData);
 
-                    // Now that we've created the texture we need to wait for the
-                    // read to finish.
+                    // Now that we've created the texture we need to wait for the read to finish.
                     handle.JobHandle.Complete();
                     if (handle.Status == ReadStatus.Failed)
                     {
@@ -269,6 +269,42 @@ namespace Parallax
                     return tex;
                 }
             }
+        }
+
+        // This uses a bunch of undocumented flags to prevent unity from
+        // initializing or sharing the texture before we apply it.
+        static Texture2D CreateUninitializedTexture(in TextureLoaderData data)
+        {
+            var flags = TextureCreationFlags.DontInitializePixels | TextureCreationFlags.DontInitializePixels;
+            if (data.mips)
+                flags |= TextureCreationFlags.MipChain;
+            if (GraphicsFormatUtility.IsCrunchFormat(data.format))
+                flags |= TextureCreationFlags.Crunch;
+
+            var format = GraphicsFormatUtility.GetGraphicsFormat(data.format, !data.linear);
+            var uflags = (UnityEngine.Experimental.Rendering.TextureCreationFlags)flags;
+            
+            return new Texture2D(data.width, data.height, format, uflags);
+        }
+
+        // This reflects the actual creation flags in
+        // https://github.com/Unity-Technologies/UnityCsReference/blob/59b03b8a0f179c0b7e038178c90b6c80b340aa9f/Runtime/Export/Graphics/GraphicsEnums.cs#L626
+        //
+        // Most of the extra ones here are completely undocumented.
+        [Flags]
+        enum TextureCreationFlags
+        {
+            None,
+            MipChain = 1 << 0,
+            DontInitializePixels = 1 << 2,
+            DontDestroyTexture = 1 << 3,
+            DontCreateSharedTextureData = 1 << 4,
+            APIShareable = 1 << 5,
+            Crunch = 1 << 6,
+            InheritMemoryLabel = 1 << 7,
+            IsNativeTexture = 1 << 8,
+            DontCheckGraphicsCaps = 1 << 9,
+            DontUploadUponCreate = 1 << 10,
         }
 
         // This takes care of completing the read and then disposing of it
