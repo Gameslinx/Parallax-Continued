@@ -1,10 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
+using Unity.IO.LowLevel.Unsafe;
+using Unity.Jobs;
 using UnityEngine;
 
 namespace Parallax
@@ -133,35 +138,47 @@ namespace Parallax
 
             return rawData;
         }
-        public static Texture2D LoadDDSTexture(string url, bool linear, bool markUnreadable)
+        public static unsafe Texture2D LoadDDSTexture(string url, bool linear, bool markUnreadable)
         {
-            byte[] data = File.ReadAllBytes(url);
-
-            if (data.Length < 128)
+            const int DDS_HEADER_SIZE = 128;
+            byte[] header = new byte[DDS_HEADER_SIZE];
+            long length;
+            using (var file = File.OpenRead(url))
             {
-                ParallaxDebug.LogError("This DDS texture is invalid - File is too small to contain a valid header.");
-                return null;
+                length = file.Length;
+                if (length < 128)
+                {
+                    ParallaxDebug.LogError("This DDS texture is invalid - File is too small to contain a valid header.");
+                    return null;
+                }
+
+                if (length > int.MaxValue)
+                {
+                    ParallaxDebug.LogError("This DDS texture is too large to load");
+                    return null;
+                }
+
+                if (file.Read(header, 0, DDS_HEADER_SIZE) < DDS_HEADER_SIZE)
+                {
+                    ParallaxDebug.LogError("This DDS texture is invalid - File is too small to contain a valid header.");
+                    return null;
+                }
             }
 
-            byte ddsSizeCheck = data[4];
+            byte ddsSizeCheck = header[4];
             if (ddsSizeCheck != 124)
             {
                 ParallaxDebug.LogError("This DDS texture is invalid - Header size check failed.");
                 return null;
             }
 
-            int height = BitConverter.ToInt32(data, 12);
-            int width = BitConverter.ToInt32(data, 16);
+            int height = BitConverter.ToInt32(header, 12);
+            int width = BitConverter.ToInt32(header, 16);
 
-            const int DDS_HEADER_SIZE = 128;
-            byte[] rawData = new byte[data.Length - DDS_HEADER_SIZE];
-
-            Buffer.BlockCopy(data, DDS_HEADER_SIZE, rawData, 0, data.Length - DDS_HEADER_SIZE);
-
-            int mipMapCount = BitConverter.ToInt32(data, 28);
-            uint pixelFormatFlags = BitConverter.ToUInt32(data, 80);
-            uint fourCC = BitConverter.ToUInt32(data, 84);
-            uint BitCount = BitConverter.ToUInt32(data, 88); // Get bitdepth
+            int mipMapCount = BitConverter.ToInt32(header, 28);
+            uint pixelFormatFlags = BitConverter.ToUInt32(header, 80);
+            uint fourCC = BitConverter.ToUInt32(header, 84);
+            uint BitCount = BitConverter.ToUInt32(header, 88); // Get bitdepth
 
             TextureFormat format;
 
@@ -209,56 +226,71 @@ namespace Parallax
             textureData.linear = linear;
             textureData.unreadable = markUnreadable;
 
-            // Create the texture
-            Texture2D tex = new Texture2D(textureData.width, textureData.height, textureData.format, textureData.mips, textureData.linear);
-            Texture2DFromData(tex, rawData, textureData);
-
-            tex.Apply(false, textureData.unreadable);
-
-            return tex;
-        }
-        public static Texture2D Texture2DFromData(byte[] bytes, in TextureLoaderData data)
-        {
-            Texture2D texture = new Texture2D(data.width, data.height, data.format, data.mips, data.linear);
-
-            // Load texture data
-            try
+            using (var data = new NativeArray<byte>(
+                (int)(length - DDS_HEADER_SIZE),
+                // Specifically use TempJob here because Allocator.Temp is a bump
+                // allocator and these are large allocations.
+                Allocator.TempJob,
+                NativeArrayOptions.UninitializedMemory
+            ))
             {
-                texture.LoadRawTextureData(bytes);
-            }
-            catch (Exception e)
-            {
-                ParallaxDebug.LogError($"Error loading texture data: {e.Message}");
-                return null;
-            }
-
-            return texture;
-        }
-        public static Texture2D Texture2DFromData(Texture2D texture, byte[] bytes, in TextureLoaderData data)
-        {
-            //Texture2D texture = new Texture2D(data.width, data.height, data.format, data.mips, data.linear);
-            // Load texture data
-            try
-            {
-                if (texture.format == TextureFormat.DXT5 || texture.format == TextureFormat.DXT1 || texture.format == TextureFormat.R8 || texture.format == TextureFormat.Alpha8 || texture.format == TextureFormat.R16)
+                ReadCommand command = new ReadCommand
                 {
-                    // Could be faster
-                    NativeArray<byte> rawData = texture.GetRawTextureData<byte>();
-                    rawData.CopyFrom(bytes);
-                }
-                else
+                    Buffer = data.GetUnsafePtr(),
+                    Offset = DDS_HEADER_SIZE,
+                    Size = length - DDS_HEADER_SIZE
+                };
+                using (var handle = new SafeReadHandle(AsyncReadManager.Read(url, &command, 1)))
                 {
-                    texture.LoadRawTextureData(bytes);
+                    // Creating the texture actually takes a decent chunk of
+                    // time so we do it in parallel with the file read.
+                    Texture2D tex = new Texture2D(textureData.width, textureData.height, textureData.format, textureData.mips, textureData.linear);
+
+                    // Now that we've created the texture we need to wait for the
+                    // read to finish.
+                    handle.JobHandle.Complete();
+                    if (handle.Status == ReadStatus.Failed)
+                    {
+                        ParallaxDebug.LogError($"Error reading DDS file from disk");
+                        return null;
+                    }
+
+                    try
+                    {
+                        tex.LoadRawTextureData(data);
+                    }
+                    catch (Exception e)
+                    {
+                        ParallaxDebug.LogError($"Error loading texture data: {e.Message}");
+                        return null;
+                    }
+
+                    tex.Apply(false, textureData.unreadable);
+                    return tex;
                 }
-
             }
-            catch (Exception e)
+        }
+
+        // This takes care of completing the read and then disposing of it
+        // appropriately, which saves us a whole bunch of try-catch blocks.
+        readonly struct SafeReadHandle : IDisposable
+        {
+            readonly ReadHandle handle;
+
+            public ReadStatus Status => handle.Status;
+            public JobHandle JobHandle => handle.JobHandle;
+
+            public SafeReadHandle(ReadHandle handle) => this.handle = handle; 
+
+            public void Dispose()
             {
-                ParallaxDebug.LogError($"Error loading texture data: {e.Message}");
-                return null;
+                if (!handle.IsValid())
+                    return;
+                if (handle.Status == ReadStatus.InProgress)
+                    handle.JobHandle.Complete();
+                
+                handle.Dispose();
             }
-
-            return texture;
         }
 
         // Helper function
