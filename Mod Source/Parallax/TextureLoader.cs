@@ -1,24 +1,17 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Parallax.Loading;
-using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
-using Unity.IO.LowLevel.Unsafe;
-using Unity.Jobs;
 using UnityEngine;
-using UnityEngine.Experimental.Rendering;
 
 namespace Parallax
 {
     public class TextureLoader
     {
+        public static Texture2D LoadTexture(string path, bool linear, bool markUnreadable = true)
+        {
+            return TextureLoadManager.LoadTexture(path, linear, markUnreadable);
+        }
 
         struct ScatterTextureEntry
         {
