@@ -1,12 +1,14 @@
 ﻿using Kopernicus.Configuration;
 using LibNoise.Models;
 using Parallax.Harmony_Patches;
+using Parallax.Loading;
 using Parallax.Scaled_System;
 using Parallax.Tools;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -332,33 +334,59 @@ namespace Parallax
             }
             System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
 
+            // Make sure to launch all the loads before we start waiting for
+            // any of them to complete.
+            List<KeyValuePair<string, TextureLoadManager.LoadHandle>> handles = [];
             foreach (KeyValuePair<string, string> textureValue in terrainShaderProperties.shaderTextures)
             {
-                Texture2D tex;
-                if (loadedTextures.ContainsKey(textureValue.Key))
+                var name = textureValue.Key;
+                var path = textureValue.Value;
+
+                TextureLoadManager.LoadHandle handle;
+                if (loadedTextures.TryGetValue(name, out var tex))
                 {
-                    tex = loadedTextures[textureValue.Key];
+                    handle = TextureLoadManager.CreateCompletedHandle(tex, path);
                 }
                 else
                 {
-                    bool linear = TextureUtils.IsLinear(textureValue.Key);
-                    tex = TextureLoader.LoadTexture(textureValue.Value, linear);
-
-                    // Add to active textures
-                    loadedTextures.Add(textureValue.Key, tex);
+                    bool linear = TextureUtils.IsLinear(name);
+                    handle = TextureLoadManager.LoadTextureAsync(path, linear);
                 }
+
+                handles.Add(new(name, handle));
+            }
+
+            foreach (var handlePair in handles)
+            {
+                var name = handlePair.Key;
+                var handle = handlePair.Value;
+
+                Texture2D tex;
+                try
+                {
+                    handle.Complete();
+                    tex = handle.Texture;
+                }
+                catch(Exception e)
+                {
+                    ParallaxDebug.LogError($"Failed to load Parallax Texture: {handle.Path}");
+                    Debug.LogException(e);
+                    continue;
+                }
+
                 // Bump maps need to be linear, while everything else sRGB
                 // This could be handled better, tbh, but at least we're accounting for linear textures this time around
+                parallaxMaterials.parallaxLow.SetTexture(name, tex);
+                parallaxMaterials.parallaxMid.SetTexture(name, tex);
+                parallaxMaterials.parallaxHigh.SetTexture(name, tex);
 
-                parallaxMaterials.parallaxLow.SetTexture(textureValue.Key, tex);
-                parallaxMaterials.parallaxMid.SetTexture(textureValue.Key, tex);
-                parallaxMaterials.parallaxHigh.SetTexture(textureValue.Key, tex);
+                parallaxMaterials.parallaxLowMid.SetTexture(name, tex);
+                parallaxMaterials.parallaxMidHigh.SetTexture(name, tex);
 
-                parallaxMaterials.parallaxLowMid.SetTexture(textureValue.Key, tex);
-                parallaxMaterials.parallaxMidHigh.SetTexture(textureValue.Key, tex);
+                parallaxMaterials.parallaxFull.SetTexture(name, tex);
 
-                parallaxMaterials.parallaxFull.SetTexture(textureValue.Key, tex);
             }
+
             loaded = true;
         }
         public IEnumerator LoadAsync()
@@ -650,6 +678,65 @@ namespace Parallax
             }
 
             System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+
+            // List<string> names = [];
+            // List<TextureLoader.TextureLoadRequest> requests = [];
+
+            // // Now load the textures needed here
+            // foreach (KeyValuePair<string, string> textureValue in scaledMaterialParams.shaderProperties.shaderTextures)
+            // {
+            //     var name = textureValue.Key;
+            //     var path = textureValue.Value;
+
+            //     if (loadedTextures.TryGetValue(name, out var tex))
+            //     {
+            //         scaledMaterial.SetTexture(name, tex);
+            //         if (name == "_HeightMap")
+            //         {
+            //             shadowCasterMaterial.SetTexture("_HeightMap", tex);
+            //         }
+            //         continue;
+            //     }
+
+            //     if (mode == ParallaxScaledBodyMode.FromTerrain || mode == ParallaxScaledBodyMode.CustomRequiresTerrain)
+            //     {
+            //         if (terrainBody.loadedTextures.TryGetValue(name, out tex))
+            //         {
+            //             loadedTextures.Add(name, tex);
+                        
+            //             scaledMaterial.SetTexture(name, tex);
+            //             if (name == "_HeightMap")
+            //             {
+            //                 shadowCasterMaterial.SetTexture("_HeightMap", tex);
+            //             }
+            //             continue;
+            //         }
+            //     }
+
+            //     names.Add(name);
+            //     requests.Add(new ()
+            //     {
+            //         path = path,
+            //         linear = TextureUtils.IsLinear(name),
+            //     });
+            // }
+
+            // // Load all our missing textures at once.
+            // var textures = TextureLoader.BulkLoadTextures([.. requests]);
+            // for (int i = 0; i < names.Count; ++i)
+            // {
+            //     if (textures[i] == null)
+            //         continue;
+            //     var tex = textures[i];
+            //     var name = names[i];
+
+            //     // Add to active textures
+            //     loadedTextures.Add(name, tex);
+
+            //     scaledMaterial.SetTexture(name, tex);
+            //     if (name == "_HeightMap")
+            //         shadowCasterMaterial.SetTexture("_HeightMap", tex);
+            // }
 
             // Now load the textures needed here
             foreach (KeyValuePair<string, string> textureValue in scaledMaterialParams.shaderProperties.shaderTextures)
