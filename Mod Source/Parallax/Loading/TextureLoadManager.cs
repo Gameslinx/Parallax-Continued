@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -9,7 +8,6 @@ using Unity.IO.LowLevel.Unsafe;
 using Unity.Jobs;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
-using UnityEngine.Rendering;
 
 namespace Parallax.Loading;
 
@@ -18,88 +16,11 @@ internal unsafe class TextureLoadManager : MonoBehaviour
 {
     public static TextureLoadManager Instance { get; private set; }
 
-
     void Awake()
     {
         Instance = this;
         DontDestroyOnLoad(this);
-
-        cb = new();
     }
-
-    #region Native Plugin Slots
-    class SlotData
-    {
-        public NativeArray<byte> data;
-        public InFlightDDSLoad load;
-    }
-
-    readonly List<SlotData> slots = [];
-    readonly List<int> freelist = [];
-    uint RegisterSlot(SlotData data)
-    {
-        if (data is null)
-            return uint.MaxValue;
-
-        lock (slots)
-        {
-            int index;
-            if (freelist.Count != 0)
-            {
-                index = freelist[freelist.Count - 1];
-                freelist.RemoveAt(freelist.Count - 1);
-
-                slots[index] = data;
-            }
-            else
-            {
-                index = slots.Count;
-                slots.Add(data);
-            }
-
-            return (uint)index;
-        }
-    }
-
-    SlotData ConsumeSlot(uint slot)
-    {
-        lock (slots)
-        {
-            if (slot >= slots.Count)
-                return null;
-
-            var data = slots[(int)slot];
-            slots[(int)slot] = null;
-
-            if (data is not null)
-                freelist.Add((int)slot);
-
-            return data;
-        }
-    }
-    #endregion
-
-    #region Command Buffer
-    CommandBuffer cb;
-    bool cbDirty = false;
-
-    void IssueTextureUpdate(Texture2D texture, SlotData data)
-    {
-        uint slot = RegisterSlot(data);
-        cb.IssuePluginCustomTextureUpdateV2(CustomTextureUpdatePtr, texture, slot);
-        cbDirty = true;
-    }
-
-    void ExecuteCommandBufferIfDirty()
-    {
-        if (!cbDirty)
-            return;
-
-        Graphics.ExecuteCommandBuffer(cb);
-        cb.Clear();
-        cbDirty = false;
-    }
-    #endregion
 
     #region Update
     readonly List<InFlightLoad> inFlight = [];
@@ -118,8 +39,6 @@ internal unsafe class TextureLoadManager : MonoBehaviour
 
         if (i != j)
             inFlight.RemoveRange(j, inFlight.Count - j);
-
-        ExecuteCommandBufferIfDirty();
     }
     #endregion
 
@@ -182,7 +101,6 @@ internal unsafe class TextureLoadManager : MonoBehaviour
                 return;
 
             inFlight.Complete();
-            Instance?.ExecuteCommandBufferIfDirty();
         }
     }
 
@@ -236,8 +154,6 @@ internal unsafe class TextureLoadManager : MonoBehaviour
             load.path = path;
             if (load.MoveNext())
                 inFlight.Add(load);
-
-            ExecuteCommandBufferIfDirty();
 
             return new LoadHandle(task, load, path);
         }
@@ -588,157 +504,6 @@ internal unsafe class TextureLoadManager : MonoBehaviour
         public void Execute()
         {
             output.Slice().CopyFrom(input);
-        }
-    }
-    #endregion
-
-    #region Unity Rendering Extension
-    [StructLayout(LayoutKind.Sequential)]
-    public struct UnityRenderingExtTextureUpdateParamsV2
-    {
-        /// <summary>
-        /// The source data for the texture update. Must be set by the plugin.
-        /// </summary>
-        public void* texData;
-
-        /// <summary>
-        /// The texture ID of the texture to be updated.
-        /// </summary>
-        public IntPtr textureID;
-
-        /// <summary>
-        /// User defined data. Set by the plugin.
-        /// </summary>
-        public uint userData;
-
-        /// <summary>
-        /// The format of the texture to be updated.
-        /// </summary>
-        public GraphicsFormat format;
-
-        /// <summary>
-        /// The width of the texture.
-        /// </summary>
-        public uint width;
-
-        /// <summary>
-        /// The height of the texture.
-        /// </summary>
-        public uint height;
-
-        /// <summary>
-        /// Texture bytes per pixel.
-        /// </summary>
-        public uint bpp;
-    }
-
-    enum UnityRenderingExtEventType
-    {
-        /// <summary>
-        /// issued during SetStereoTarget and carrying the current 'eye' index as parameter
-        /// </summary>
-        SetStereoTarget,
-
-        /// <summary>
-        /// issued during stereo rendering at the beginning of each eye's rendering loop. It carries the current 'eye' index as parameter
-        /// </summary>
-        SetStereoEye,
-
-        /// <summary>
-        /// issued after the rendering has finished
-        /// </summary>
-        StereoRenderingDone,
-
-        /// <summary>
-        /// issued during BeforeDrawCall and carrying UnityRenderingExtBeforeDrawCallParams as parameter
-        /// </summary>
-        BeforeDrawCall,
-
-        /// <summary>
-        /// issued during AfterDrawCall. This event doesn't carry any parameters
-        /// </summary>
-        AfterDrawCall,
-
-        /// <summary>
-        /// issued during GrabIntoRenderTexture since we can't simply copy the resources
-        /// when custom rendering is used - we need to let plugin handle this. It carries over
-        /// a UnityRenderingExtCustomBlitParams params = { X, source, dest, 0, 0 } ( X means it's irrelevant )
-        /// </summary>
-        CustomGrab,
-
-        /// <summary>
-        ///  issued by plugin to insert custom blits. It carries over UnityRenderingExtCustomBlitParams as param.
-        /// </summary>
-        CustomBlit,
-        UpdateTextureBegin, // Deprecated.
-        UpdateTextureEnd, // Deprecated.
-
-        /// <summary>
-        /// Deprecated. Issued to update a texture. It carries over UnityRenderingExtTextureUpdateParamsV1
-        /// </summary>
-        UpdateTextureBeginV1 = UpdateTextureBegin,
-
-        /// <summary>
-        /// Deprecated. Issued to signal the plugin that the texture update has finished. It carries over the same UnityRenderingExtTextureUpdateParamsV1 as kUnityRenderingExtEventUpdateTextureBeginV1
-        /// </summary>
-        UpdateTextureEndV1 = UpdateTextureEnd,
-
-        /// <summary>
-        /// Issued to update a texture. It carries over UnityRenderingExtTextureUpdateParamsV2
-        /// </summary>
-        UpdateTextureBeginV2,
-
-        /// <summary>
-        /// Issued to signal the plugin that the texture update has finished. It carries over the same UnityRenderingExtTextureUpdateParamsV2 as kUnityRenderingExtEventUpdateTextureBeginV2
-        /// </summary>
-        UpdateTextureEndV2,
-
-        // keep this last
-        EventCount,
-        UserEventsStart = EventCount,
-    }
-
-    delegate void RenderingExtDelegate(int eventID, void* data);
-    
-    static readonly IntPtr CustomTextureUpdatePtr =
-        Marshal.GetFunctionPointerForDelegate<RenderingExtDelegate>(CustomTextureUpdate);
-
-    static void CustomTextureUpdate(int eventID, void* data)
-    {
-        var evt = (UnityRenderingExtEventType)eventID;
-        if (data is null)
-            return;
-        var instance = Instance;
-        if (instance is null)
-            return;
-
-        var p = (UnityRenderingExtTextureUpdateParamsV2*)data;
-
-        try
-        {
-            if (evt == UnityRenderingExtEventType.UpdateTextureBeginV2)
-            {
-                var slot = instance.ConsumeSlot(p->userData);
-                if (slot is null)
-                    return;
-
-                Debug.Log($"Texture info:\n width:  {p->width}\n height: {p->height}\n bpp:    {p->bpp}\n format: {p->format}");
-                Debug.Log($"Buffer length: {slot.data.Length}");
-
-                p->texData = slot.data.GetUnsafeReadOnlyPtr();
-            }
-            else if (evt == UnityRenderingExtEventType.UpdateTextureEndV2)
-            {
-                if (p->texData is null)
-                    return;
-
-                UnsafeUtility.Free(p->texData, Allocator.TempJob);
-            }
-        }
-        catch (Exception e)
-        {
-            // Avoid crashing the rendering thread
-            Debug.LogException(e);
         }
     }
     #endregion
