@@ -48,10 +48,32 @@ namespace Parallax
             instancedMaterialLOD1 = new Material(AssetBundleLoader.parallaxScatterShaders[scatter.distributionParams.lod1.materialOverride.shader]);
             instancedMaterialLOD2 = new Material(AssetBundleLoader.parallaxScatterShaders[scatter.distributionParams.lod2.materialOverride.shader]);
 
+            PreloadTextures();
+
             SetLOD0MaterialParams();
             SetLOD1MaterialParams();
             SetLOD2MaterialParams();
         }
+
+        void PreloadTextures()
+        {
+            var loadedTextures = ConfigLoader.parallaxScatterBodies[planetName].loadedTextures;
+            List<MaterialParams> allParams =
+            [
+                scatter.materialParams,
+                scatter.distributionParams.lod1.materialOverride,
+                scatter.distributionParams.lod2.materialOverride
+            ];
+            var allProperties = allParams.SelectMany(mat => mat.shaderProperties.shaderTextures);
+
+            TextureUtils.LoadScatterTexturesImmediate(
+                allProperties,
+                loadedTextures,
+                (_, _) => {}
+            );
+
+        }
+
         /// <summary>
         /// Sets the actual material parameters for a given set of params and scatter material
         /// </summary>
@@ -96,30 +118,11 @@ namespace Parallax
             }
 
             // Textures
-            foreach (KeyValuePair<string, string> texturePair in properties.shaderTextures)
-            {
-                Texture texture;
-                if (!ConfigLoader.parallaxScatterBodies[planetName].loadedTextures.ContainsKey(texturePair.Value))
-                {
-                    bool linear = TextureUtils.IsLinear(texturePair.Key);
-                    bool isCube = TextureUtils.IsCube(texturePair.Key);
-                    if (!isCube)
-                    {
-                        texture = TextureLoader.LoadTexture(texturePair.Value, linear);
-                    }
-                    else
-                    {
-                        texture = TextureLoader.LoadCubeTexture(texturePair.Value, linear);
-                    }
-                    
-                    ConfigLoader.parallaxScatterBodies[planetName].loadedTextures.Add(texturePair.Value, texture);
-                }
-                else
-                {
-                    texture = ConfigLoader.parallaxScatterBodies[planetName].loadedTextures[texturePair.Value];
-                }
-                material.SetTexture(texturePair.Key, texture);
-            }
+            TextureUtils.LoadScatterTexturesImmediate(
+                properties.shaderTextures,
+                ConfigLoader.parallaxScatterBodies[planetName].loadedTextures,
+                material.SetTexture
+            );
 
             // Floats
             foreach (KeyValuePair<string, float> floatPair in properties.shaderFloats)

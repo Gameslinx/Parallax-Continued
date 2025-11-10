@@ -1,8 +1,11 @@
-﻿using Steamworks;
+﻿using Parallax.Loading;
+using Steamworks;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -233,6 +236,197 @@ namespace Parallax
             }
             return false;
         }
+
+        struct ScatterTextureEntry
+        {
+            public string name;
+            public string path;
+            public TextureLoadManager.LoadHandle handle;
+        }
+
+        internal static void LoadScatterTexturesImmediate(
+            IEnumerable<KeyValuePair<string, string>> textureValues,
+            Dictionary<string, Texture> cache,
+            Action<string, Texture> onLoaded
+        )
+        {
+            // Make sure to launch all the different async loads before we start
+            // blocking on them.
+            HashSet<string> known = [];
+            List<ScatterTextureEntry> handles = [];
+            foreach (var (name, path) in textureValues)
+            {
+                TextureLoadManager.LoadHandle handle;
+                if (known.Contains(path))
+                {
+                    continue;
+                }
+                else if (cache.TryGetValue(path, out var tex))
+                {
+                    onLoaded(name, tex);
+                    continue;
+                }
+                else
+                {
+                    bool linear = IsLinear(name);
+                    handle = TextureLoadManager.LoadTextureAsync(path, linear);
+                }
+
+                handles.Add(new() { name = name, path = path, handle = handle});
+                known.Add(path);
+            }
+
+            // Now we block on the individual loads as we go.
+            foreach (var entry in handles)
+            {
+                Texture2D tex2d;
+                try
+                {
+                    entry.handle.Complete();
+                    tex2d = entry.handle.Texture;
+                }
+                catch (Exception e)
+                {
+                    ParallaxDebug.LogError($"Failed to load Parallax Texture: {entry.handle.Path}");
+                    Debug.LogException(e);
+                    continue;
+                }
+
+                Texture tex = tex2d;
+                if (IsCube(entry.name))
+                    tex = TextureLoader.CubemapFromTexture2D(tex2d);
+
+                cache.Add(entry.path, tex);
+                onLoaded(entry.name, tex);
+            }
+        }
+
+        /// <summary>
+        /// Load a batch of textures immediately, reusing ones in the cache
+        /// if present, and otherwise doing as much work in parallel as
+        /// possible.
+        /// </summary>
+        /// <param name="textureValues"></param>
+        /// <param name="loadedTextures"></param>
+        /// <param name="onLoaded"></param>
+        internal static void LoadTexturesImmediateWithCache(
+            IEnumerable<KeyValuePair<string, string>> textureValues,
+            Dictionary<string, Texture2D> loadedTextures,
+            Action<string, Texture2D> onLoaded
+        )
+        {
+            // Make sure to launch all the different async loads before we start
+            // blocking on them.
+            HashSet<string> known = [];
+            List<KeyValuePair<string, TextureLoadManager.LoadHandle>> handles = [];
+            foreach (var (name, path) in textureValues)
+            {
+                TextureLoadManager.LoadHandle handle;
+                if (known.Contains(name))
+                {
+                    continue;
+                }
+                else if (loadedTextures.TryGetValue(name, out var tex))
+                {
+                    handle = TextureLoadManager.CreateCompletedHandle(tex, path);
+                }
+                else
+                {
+                    bool linear = IsLinear(name);
+                    handle = TextureLoadManager.LoadTextureAsync(path, linear);
+                }
+
+                handles.Add(new(name, handle));
+                known.Add(name);
+            }
+
+            // Now we block on the individual loads as we go.
+            foreach (var (name, handle) in handles)
+            {
+                Texture2D tex;
+                try
+                {
+                    handle.Complete();
+                    tex = handle.Texture;
+                }
+                catch (Exception e)
+                {
+                    ParallaxDebug.LogError($"Failed to load Parallax Texture: {handle.Path}");
+                    Debug.LogException(e);
+                    continue;
+                }
+
+                if (!loadedTextures.ContainsKey(name))
+                    loadedTextures.Add(name, tex);
+                onLoaded(name, tex);
+            }
+        }
+        
+
+        /// <summary>
+        /// Start loading a batch of textures immediately and call
+        /// <paramref name="onLoaded"/> as each texture finishes loading.
+        /// This may happen immediately or spread out over a few frames,
+        /// depending on how much overhead there is when calling
+        /// <see cref="Texture2D.GetRawTextureData{byte}"/>.
+        /// </summary>
+        /// <param name="textureValues"></param>
+        /// <param name="loadedTextures"></param>
+        /// <param name="onLoaded"></param>
+        internal static IEnumerable LoadTexturesAsyncWithCache(
+            IEnumerable<KeyValuePair<string, string>> textureValues,
+            Dictionary<string, Texture2D> loadedTextures,
+            Action<string, Texture2D> onLoaded
+        )
+        {
+            // Make sure to launch all the different async loads before we start
+            // blocking on them.
+            HashSet<string> known = [];
+            List<KeyValuePair<string, TextureLoadManager.LoadHandle>> handles = [];
+            foreach (var (name, path) in textureValues)
+            {
+                TextureLoadManager.LoadHandle handle;
+                if (known.Contains(name))
+                {
+                    continue;
+                }
+                else if (loadedTextures.TryGetValue(name, out var tex))
+                {
+                    handle = TextureLoadManager.CreateCompletedHandle(tex, path);
+                }
+                else
+                {
+                    bool linear = IsLinear(name);
+                    handle = TextureLoadManager.LoadTextureAsync(path, linear);
+                }
+
+                handles.Add(new(name, handle));
+            }
+
+            // Now we block on the individual loads as we go.
+            foreach (var (name, handle) in handles)
+            {
+                if (!handle.IsComplete)
+                    yield return new WaitUntil(() => handle.IsComplete);
+
+                Texture2D tex;
+                try
+                {
+                    handle.Complete();
+                    tex = handle.Texture;
+                }
+                catch (Exception e)
+                {
+                    ParallaxDebug.LogError($"Failed to load Parallax Texture: {handle.Path}");
+                    Debug.LogException(e);
+                    continue;
+                }
+
+                if (!loadedTextures.ContainsKey(name))
+                    loadedTextures.Add(name, tex);
+                onLoaded(name, tex);
+            }
+        }
     }
 
     public static class MatrixUtils
@@ -281,6 +475,16 @@ namespace Parallax
         public static void GetTRSMatrix(Vector3 position, Vector3 rotationAngles, Vector3 scale, Vector3 terrainNormal, Vector3 localNormal, ref Matrix4x4 mat)
         {
             mat = GetTranslationMatrix(position) * TransformToPlanetNormal(localNormal, terrainNormal) * GetRotationMatrix(rotationAngles) * Matrix4x4.Scale(scale);
+        }
+    }
+
+    internal static class KeyValuePairExt
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Deconstruct<K, V>(this KeyValuePair<K, V> pair, out K key, out V value)
+        {
+            key = pair.Key;
+            value = pair.Value;
         }
     }
 }

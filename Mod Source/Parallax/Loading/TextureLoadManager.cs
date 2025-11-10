@@ -11,7 +11,7 @@ using UnityEngine.Experimental.Rendering;
 
 namespace Parallax.Loading;
 
-[KSPAddon(KSPAddon.Startup.MainMenu, once: true)]
+[KSPAddon(KSPAddon.Startup.Instantly, once: true)]
 internal unsafe class TextureLoadManager : MonoBehaviour
 {
     public static TextureLoadManager Instance { get; private set; }
@@ -248,8 +248,6 @@ internal unsafe class TextureLoadManager : MonoBehaviour
         State state;
         SafeReadHandle handle;
         TextureLoadData textureData;
-        NativeArray<byte> fileData;
-        NativeArray<byte> rawTextureData;
         JobHandle job;
 
         public override bool IsComplete => state == State.Done;
@@ -288,31 +286,28 @@ internal unsafe class TextureLoadManager : MonoBehaviour
                 path = path,
                 texture = CreateUninitializedTexture(in textureData, gpuOnly),
                 textureData = textureData,
-                fileData = new NativeArray<byte>(
-                    (int)(length - DDS_HEADER_SIZE),
-                    // Specifically use TempJob here because Allocator.Temp is a bump
-                    // allocator and these are large allocations.
-                    Allocator.TempJob,
-                    NativeArrayOptions.UninitializedMemory
-                )
+               
             };
+            var fileData = new NativeArray<byte>(
+                (int)(length - DDS_HEADER_SIZE),
+                // Specifically use TempJob here because Allocator.Temp is a bump
+                // allocator and these are large allocations.
+                Allocator.TempJob,
+                NativeArrayOptions.UninitializedMemory
+            );
 
             ReadCommand command = new()
             {
-                Buffer = inFlight.fileData.GetUnsafePtr(),
+                Buffer = fileData.GetUnsafePtr(),
                 Offset = DDS_HEADER_SIZE,
                 Size = length - DDS_HEADER_SIZE
             };
             inFlight.handle = new SafeReadHandle(AsyncReadManager.Read(path, &command, 1));
             inFlight.job = inFlight.handle.JobHandle;
-            inFlight.rawTextureData = inFlight.texture.GetRawTextureData<byte>();
-
-            Debug.Log($"texData:  {inFlight.texture.GetRawTextureData<byte>().Length:X}");
-            Debug.Log($"rawData:  {inFlight.fileData.Length:X}");
 
             var copyJob = new CopyJob
             {
-                input = inFlight.fileData,
+                input = fileData,
                 output = inFlight.texture.GetRawTextureData<byte>()
             };
             inFlight.job = copyJob.Schedule(inFlight.job);
@@ -347,10 +342,7 @@ internal unsafe class TextureLoadManager : MonoBehaviour
         public override void Dispose()
         {
             job.Complete();
-
             handle.Dispose();
-            fileData.Dispose();
-            rawTextureData.Dispose();
         }
 
         static TextureLoadData GetTextureMetadata(byte[] header, bool linear, bool markUnreadable)
@@ -496,12 +488,14 @@ internal unsafe class TextureLoadManager : MonoBehaviour
     struct CopyJob : IJob
     {
         [ReadOnly]
+        [DeallocateOnJobCompletion]
         public NativeArray<byte> input;
 
         [WriteOnly]
+        [DeallocateOnJobCompletion]
         public NativeArray<byte> output;
 
-        public void Execute()
+        public readonly void Execute()
         {
             output.Slice().CopyFrom(input);
         }
