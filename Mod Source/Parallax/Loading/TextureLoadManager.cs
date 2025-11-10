@@ -548,10 +548,11 @@ internal unsafe class TextureLoadManager : MonoBehaviour
         if (GraphicsFormatUtility.IsCrunchFormat(data.format))
             flags |= TextureCreationFlags.Crunch;
 
+        int mipCount = !data.mips ? 1 : -1;
         var format = GraphicsFormatUtility.GetGraphicsFormat(data.format, !data.linear);
         var uflags = (UnityEngine.Experimental.Rendering.TextureCreationFlags)flags;
         
-        return new Texture2D(data.width, data.height, format, uflags);
+        return new Texture2D(data.width, data.height, format, mipCount, uflags);
     }
 
     // This takes care of completing the read and then disposing of it
