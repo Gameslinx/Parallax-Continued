@@ -3,6 +3,7 @@
         <TargetFramework>net48</TargetFramework>
         <Platforms>AnyCPU;x86;x64</Platforms>
         <AssemblyName>ParallaxContinued</AssemblyName>
+        <LangVersion>latest</LangVersion>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
         <DebugSymbols>true</DebugSymbols>
