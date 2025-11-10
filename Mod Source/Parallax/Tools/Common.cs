@@ -335,7 +335,7 @@ namespace Parallax
             }
             System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
 
-            TextureUtils.LoadTexturesImmediateWithCache(
+            TextureLoader.LoadTexturesImmediateWithCache(
                 terrainShaderProperties.shaderTextures,
                 loadedTextures,
                 (name, tex) =>
@@ -363,7 +363,7 @@ namespace Parallax
                 yield break;
             }
 
-            yield return TextureUtils.LoadTexturesAsyncWithCache(
+            yield return TextureLoader.LoadTexturesAsyncWithCache(
                 terrainShaderProperties.shaderTextures,
                 loadedTextures,
                 (name, tex) =>
@@ -385,17 +385,13 @@ namespace Parallax
         }
         public static Texture2D LoadTexIfUnloaded(ParallaxTerrainBody body, string path, string key)
         {
-            if (!body.loadedTextures.ContainsKey(key))
-            {
-                bool linear = TextureUtils.IsLinear(key);
-                Texture2D tex = TextureLoader.LoadTexture(path, linear);
-                body.loadedTextures.Add(key, tex);
+            if (body.loadedTextures.TryGetValue(key, out var tex))
                 return tex;
-            }
-            else
-            {
-                return body.loadedTextures[key];
-            }
+
+            bool linear = TextureUtils.IsLinear(key);
+            var handle = TextureLoadManager.LoadTexture(path, linear);
+            body.loadedTextures.Add(key, tex);
+            return tex;
         }
         /// <summary>
         /// Used by the GUI to load textures on texture changes
@@ -644,7 +640,7 @@ namespace Parallax
                 }
             }
 
-            TextureUtils.LoadTexturesImmediateWithCache(
+            TextureLoader.LoadTexturesImmediateWithCache(
                 scaledMaterialParams.shaderProperties.shaderTextures,
                 loadedTextures,
                 (name, tex) =>
@@ -693,7 +689,7 @@ namespace Parallax
                     immediate.Add(new(key, path));
             }
 
-            TextureUtils.LoadTexturesImmediateWithCache(
+            TextureLoader.LoadTexturesImmediateWithCache(
                 immediate,
                 loadedTextures,
                 (name, tex) =>
@@ -745,7 +741,7 @@ namespace Parallax
             // Now load the textures needed here
             var remainder = scaledMaterialParams.shaderProperties.shaderTextures
                 .Where((entry) => !ImmediateTextures.Contains(entry.Key));
-            TextureUtils.LoadTexturesAsyncWithCache(
+            TextureLoader.LoadTexturesAsyncWithCache(
                 remainder,
                 loadedTextures,
                 (name, tex) =>

@@ -66,7 +66,7 @@ namespace Parallax
             ];
             var allProperties = allParams.SelectMany(mat => mat.shaderProperties.shaderTextures);
 
-            TextureUtils.LoadScatterTexturesImmediate(
+            TextureLoader.LoadScatterTexturesImmediate(
                 allProperties,
                 loadedTextures,
                 (_, _) => {}
@@ -118,7 +118,7 @@ namespace Parallax
             }
 
             // Textures
-            TextureUtils.LoadScatterTexturesImmediate(
+            TextureLoader.LoadScatterTexturesImmediate(
                 properties.shaderTextures,
                 ConfigLoader.parallaxScatterBodies[planetName].loadedTextures,
                 material.SetTexture
