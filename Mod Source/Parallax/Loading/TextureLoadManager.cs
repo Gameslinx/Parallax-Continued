@@ -11,6 +11,98 @@ using UnityEngine.Experimental.Rendering;
 
 namespace Parallax.Loading;
 
+/// <summary>
+/// A manager for handling asynchronous texture uploads.
+/// </summary>
+///
+/// <remarks>
+/// Unity makes it remarkably hard to actually load textures asynchronously,
+/// unless you put everything into resource bundles. (And even then it is
+/// finicky). This class represents the best effort I (@Phantomical) have seen
+/// in actually making async texture loading happen in Unity. It might be
+/// possible to do better than this by using native plugins
+/// (notably CommandBuffer.IssuePluginCustomTextureUpdateV2) but I haven't been
+/// able to figure out how to get that to work.
+///
+/// So how does it work?
+///
+/// In a "standard" fast DDS texture load there are 4 major steps:
+/// * Read the texture off of the disk into a byte array.
+/// * Create a new Texture2D with the appropriate size and format.
+/// * Load the raw texture data into the texture.
+/// * Apply the texture so that it gets updated on the GPU.
+///
+/// Once you start working with large most textures of these operations are slow.
+/// The disk read results in large byte arrays, which cause slow GCs. Basically
+/// every Texture2D method (ctor and loading data) seems to result in a large
+/// memset or memcpy internally, which causes a bunch of incredibly slow page
+/// faults. Apply has some overhead but actually happens to be ok, relatively.
+///
+/// We replace or improve most of these one-by-one:
+///
+/// File Reads
+/// ==========
+/// Unity provides a class called AsyncReadManager which allows you to offload
+/// disk reads to a background thread. Instead of calling File.ReadAllBytes we
+/// can instead send off a request and get back a JobHandle that notifies us
+/// when it is done. An important benefit here is that we can now use
+/// NativeArrays instead of managed arrays, so we can avoid the GC entirely.
+///
+/// Depending on how you sequence things, you could call texture.GetRawTextureData()
+/// first and then read the data directly into it, or you could start the read
+/// first and then copy the data in later. As it turns out creating the texture
+/// and calling GetRawTextureData() are both slow so this implementation chooses
+/// to start the disk read first and then do the other main thread work.
+///
+/// Uninitialized Textures
+/// ======================
+/// At this (hypothetical) point, if you were to look at a profile for the texture
+/// loader you would see that most of the time is spent in two places:
+/// - new Texture2D performs a memset to zero out the texture memory
+/// - GetRawTextureData copies the entire texture data.
+///
+/// Since we're going to overwrite the entire texture immediately after, both
+/// of these are unnecessary.
+///
+/// Unity provides no _documented_ way to create an uninitialized texture.
+/// However, if you look in the reference source you will find that there are a
+/// number of commented flags in the TextureCreationFlags enum. One of them,
+/// DontInitializePixels, does exactly what we want.
+///
+/// CreateUninitializedTexture() takes care of providing the appropriate flags
+/// needed to create such a texture.
+///
+/// Async Copy
+/// ==========
+/// Since we are now using GetRawTextureData unconditionally, we can move the
+/// actual copy of texture data out to a job. This usually doesn't do that much
+/// if using a single job, but every bit of main thread time counts once we
+/// start trying to batch together multiple texture loads.
+///
+/// The Rest
+/// ========
+/// Most of the remaining time ends up being spent in GetRawTextureData. Unity
+/// (or at least KSP's version of unity) doesn't really appear to offer any
+/// flags to avoid this. It might be possible to use native plugins to avoid
+/// this but I haven't been able to figure out a way to do this without causing
+/// KSP to segfault.
+///
+/// That means that this is pretty much the limit for what we can do.
+/// 
+/// The final procedure implemented here is:
+/// * Load the file header in order to get the texture size and format.
+/// * Schedule a background job to read the rest of the texture file.
+/// * Create an uninitialized texture
+/// * Call GetRawTextureData() to get a pointer to the texture data.
+/// * Schedule a background job to copy the file data into the texture
+///   after the file read is complete.
+/// * (async) Wait for the jobs to complete.
+/// * Run texture.Apply()
+/// 
+/// During the (async) step callers are free to start more texture loads. This
+/// is actually the ideal way to use this, since the background jobs generally
+/// will complete fairly quickly.
+/// </remarks>
 [KSPAddon(KSPAddon.Startup.Instantly, once: true)]
 internal unsafe class TextureLoadManager : MonoBehaviour
 {
@@ -273,20 +365,11 @@ internal unsafe class TextureLoadManager : MonoBehaviour
                 throw new Exception("Invalid DDS texture - header size check failed");
 
             var textureData = GetTextureMetadata(header, linear, unreadable);
-            var format = textureData.format;
-            bool useRawData = format == TextureFormat.DXT5
-                || format == TextureFormat.DXT1
-                || format == TextureFormat.R8
-                || format == TextureFormat.Alpha8
-                || format == TextureFormat.R16;
-            bool gpuOnly = useRawData && textureData.unreadable;
-
             var inFlight = new InFlightDDSLoad()
             {
                 path = path,
-                texture = CreateUninitializedTexture(in textureData, gpuOnly),
+                texture = CreateUninitializedTexture(in textureData),
                 textureData = textureData,
-               
             };
             var fileData = new NativeArray<byte>(
                 (int)(length - DDS_HEADER_SIZE),
@@ -449,15 +532,13 @@ internal unsafe class TextureLoadManager : MonoBehaviour
 
     // This uses a bunch of undocumented flags to prevent unity from
     // initializing or sharing the texture before we apply it.
-    static Texture2D CreateUninitializedTexture(in TextureLoadData data, bool gpuOnly)
+    static Texture2D CreateUninitializedTexture(in TextureLoadData data)
     {
         var flags = TextureCreationFlags.DontInitializePixels;
         if (data.mips)
             flags |= TextureCreationFlags.MipChain;
         if (GraphicsFormatUtility.IsCrunchFormat(data.format))
             flags |= TextureCreationFlags.Crunch;
-        // if (gpuOnly)
-        //     flags |= TextureCreationFlags.DontCreateSharedTextureData;
 
         var format = GraphicsFormatUtility.GetGraphicsFormat(data.format, !data.linear);
         var uflags = (UnityEngine.Experimental.Rendering.TextureCreationFlags)flags;
