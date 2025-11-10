@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Expansions.Serenity.RobotArmFX;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.IO.LowLevel.Unsafe;
@@ -225,6 +226,7 @@ internal unsafe class TextureLoadManager : MonoBehaviour
         return LoadHandle.Complete(texture, path);
     }
 
+    readonly DisposeSlot<InFlightLoad> LoadSlot = new();
     LoadHandle DoLoadTextureAsync(string path, bool linear, bool unreadable = true)
     {
         ParallaxDebug.Log("Loading Parallax Texture: " + path);
@@ -234,6 +236,8 @@ internal unsafe class TextureLoadManager : MonoBehaviour
 
         try
         {
+            // Ensure that load is properly disposed of if an exception is thrown.
+            using var slot = LoadSlot;
             string filePath = ConfigLoader.GameDataPath + path;
             InFlightLoad load;
 
@@ -241,11 +245,12 @@ internal unsafe class TextureLoadManager : MonoBehaviour
                 load = InFlightDDSLoad.Start(filePath, linear, unreadable);
             else
                 load = InFlightPNGLoad.Start(filePath, linear, unreadable);
+            slot.Value = load;
 
             load.completion = completion;
             load.path = path;
             if (load.MoveNext())
-                inFlight.Add(load);
+                inFlight.Add(slot.Take());
 
             return new LoadHandle(task, load, path);
         }
@@ -337,6 +342,8 @@ internal unsafe class TextureLoadManager : MonoBehaviour
 
         const int DDS_HEADER_SIZE = 128;
 
+        static readonly DisposeSlot<InFlightDDSLoad> Slot = new ();
+
         State state;
         SafeReadHandle handle;
         TextureLoadData textureData;
@@ -371,6 +378,8 @@ internal unsafe class TextureLoadManager : MonoBehaviour
                 texture = CreateUninitializedTexture(in textureData),
                 textureData = textureData,
             };
+            using var slot = Slot;
+            slot.Value = inFlight;
             var fileData = new NativeArray<byte>(
                 (int)(length - DDS_HEADER_SIZE),
                 // Specifically use TempJob here because Allocator.Temp is a bump
@@ -396,9 +405,8 @@ internal unsafe class TextureLoadManager : MonoBehaviour
             inFlight.job = copyJob.Schedule(inFlight.job);
 
             inFlight.state = State.WaitingOnJob;
-            return inFlight;
+            return slot.Take();
         }
-
 
         protected override bool DoMoveNext()
         {
@@ -582,4 +590,29 @@ internal unsafe class TextureLoadManager : MonoBehaviour
         }
     }
     #endregion
+
+    /// <summary>
+    /// A class that allows you to conditionally dispose of a value over a
+    /// region. Using statements make their variable readonly, so this class
+    /// provides a indirection that allows you to move the inner value out.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    class DisposeSlot<T> : IDisposable
+        where T : IDisposable
+    {
+        public T Value = default;
+
+        public T Take()
+        {
+            var value = Value;
+            Value = default;
+            return value;
+        }
+
+        public void Dispose()
+        {
+            Value?.Dispose();
+            Value = default;
+        }
+    }
 }
