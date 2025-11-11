@@ -203,6 +203,10 @@
       <Publicize Include="Assembly-CSharp:MapSO._data" />
       <Publicize Include="Assembly-CSharp:MapSO.PixelIndex" />
       <Publicize Include="Assembly-CSharp" MemberPattern="^MapSO\..*" />
+
+      <!-- Texture2D -->
+      <Publicize Include="UnityEngine.CoreModule:UnityEngine.Texture2D.Internal_Create" />
+      <Publicize Include="UnityEngine.CoreModule:UnityEngine.Texture.ValidateFormat" />
     </ItemGroup>
 
 </Project>

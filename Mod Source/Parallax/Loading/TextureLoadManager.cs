@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq.Expressions;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Expansions.Serenity.RobotArmFX;
 using Unity.Collections;
@@ -542,17 +544,48 @@ internal unsafe class TextureLoadManager : MonoBehaviour
     // initializing or sharing the texture before we apply it.
     static Texture2D CreateUninitializedTexture(in TextureLoadData data)
     {
+        return CreateUninitializedTexture(data.width, data.height, data.format, data.mips, data.linear);
+    }
+
+    /// <summary>
+    /// Create a <see cref="Texture2D"/> without initializing its data.
+    /// </summary>
+    static Texture2D CreateUninitializedTexture(
+        int width,
+        int height,
+        TextureFormat format = TextureFormat.RGBA32,
+        bool mipChain = false,
+        bool linear = false
+    )
+    {
+        // The code in here exactly matches the behaviour of the Texture2D
+        // constructors which directly take a TextureFormat, with one
+        // difference: it includes the DontInitializePixels flag.
+        //
+        // This is necessary because the Texture2D constructors that take
+        // GraphicsFormat validate the format differently than those that take
+        // TextureFormat, and only the GraphicsFormat constructors allow you to
+        // pass TextureCreationFlags.
+        //
+        // I (@Phantomical) have taken at look at decompiled implementation for
+        // Internal_Create_Impl and validated that this works as you would expect.
+
+        var tex = (Texture2D)FormatterServices.GetUninitializedObject(typeof(Texture2D));
+        if (!tex.ValidateFormat(format))
+            return tex;
+
+        var gformat = GraphicsFormatUtility.GetGraphicsFormat(format, isSRGB: !linear);
         var flags = TextureCreationFlags.DontInitializePixels;
-        if (data.mips)
+        int mipCount = !mipChain ? 1 : -1;
+
+        if (mipCount != 1)
             flags |= TextureCreationFlags.MipChain;
-        if (GraphicsFormatUtility.IsCrunchFormat(data.format))
+        if (GraphicsFormatUtility.IsCrunchFormat(format))
             flags |= TextureCreationFlags.Crunch;
 
-        int mipCount = !data.mips ? 1 : -1;
-        var format = GraphicsFormatUtility.GetGraphicsFormat(data.format, !data.linear);
         var uflags = (UnityEngine.Experimental.Rendering.TextureCreationFlags)flags;
-        
-        return new Texture2D(data.width, data.height, format, mipCount, uflags);
+        Texture2D.Internal_Create(tex, width, height, mipCount, gformat, uflags, IntPtr.Zero);
+        return tex;
     }
 
     // This takes care of completing the read and then disposing of it
