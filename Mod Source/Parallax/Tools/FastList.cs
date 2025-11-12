@@ -35,35 +35,48 @@ namespace Parallax
         }
         public void Add(T item)
         {
+            if (item == null) return;
+            
             item.id = list.Count;
             list.Add(item);
         }
         public void Remove(int id)
         {
-            // Handle edge case where there is no item to replace
-            if (list.Count == 1)
+            // cache the count 
+            int count = list.Count;
+            
+            // Ensure the item is within range
+            if ((count - 1) < id || id < 0)
             {
-                list.RemoveAt(0);
+                return;
+            }
+            // Handle edge case where there is no item to replace
+            if (count == 1)
+            {
+                list.Clear();
                 return;
             }
 
-            // Fetch the item from the end of the list to replace the item we're removing
-            T itemToReplace = list[list.Count - 1];
-
-            // Set the replacement item ID to the ID we're removing to maintain ID continuity
-            itemToReplace.id = id;
-
-            // Set the last list element to what we're about to remove
-            list[list.Count - 1] = list[id];
-
-            // Set the (now freed) ID to the replacement
-            list[id] = itemToReplace;
-
+            // Copy the last item to the removed slot.
+            T lastItem = list[count - 1];
+            list[id] = lastItem;
+            lastItem.id = id;
+            
             // Remove the item
             list.RemoveAt(list.Count - 1);
         }
         public void Remove(T item)
         {
+            // ensure the item exists
+            if (item == null || item.id < 0 || item.id >= list.Count) 
+            {
+                return;
+            }
+            // prevent edge case where item id doesnt match list index
+            if (list[item.id] != item)
+            {
+                return;
+            }
             Remove(item.id);
         }
 
@@ -76,6 +89,7 @@ namespace Parallax
         {
             get
             {
+                if (index < 0 || index >= list.Count) return null;
                 return list[index];
             }
         }
