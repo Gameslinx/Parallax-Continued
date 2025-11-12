@@ -244,6 +244,10 @@ namespace Parallax
         static void UpdateScatterSettings()
         {
             ParallaxDebug.Log("Updating scatter system settings from GUI...");
+
+            // check current pause state
+            bool isGamePaused = FlightDriver.paused;
+            
             // Pause to prevent collider issues
             FlightDriver.SetPause(true);
 
@@ -267,7 +271,8 @@ namespace Parallax
 
             FlightGlobals.currentMainBody.pqsController.RebuildSphere();
 
-            FlightDriver.SetPause(false);
+            // Restore previous pause state
+            FlightDriver.SetPause(isGamePaused);
         }
 
         static void UpdateColliderSettings()
