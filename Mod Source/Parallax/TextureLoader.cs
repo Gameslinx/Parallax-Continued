@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Unity.Collections;
 using UnityEngine;
+using DDSHeaders;
 
 namespace Parallax
 {
@@ -135,87 +132,98 @@ namespace Parallax
         }
         public static Texture2D LoadDDSTexture(string url, bool linear, bool markUnreadable)
         {
-            byte[] data = File.ReadAllBytes(url);
-
-            if (data.Length < 128)
+            using (BinaryReader reader = new BinaryReader(File.OpenRead(url)))
             {
-                ParallaxDebug.LogError("This DDS texture is invalid - File is too small to contain a valid header.");
-                return null;
-            }
-
-            byte ddsSizeCheck = data[4];
-            if (ddsSizeCheck != 124)
-            {
-                ParallaxDebug.LogError("This DDS texture is invalid - Header size check failed.");
-                return null;
-            }
-
-            int height = BitConverter.ToInt32(data, 12);
-            int width = BitConverter.ToInt32(data, 16);
-
-            const int DDS_HEADER_SIZE = 128;
-            byte[] rawData = new byte[data.Length - DDS_HEADER_SIZE];
-
-            Buffer.BlockCopy(data, DDS_HEADER_SIZE, rawData, 0, data.Length - DDS_HEADER_SIZE);
-
-            int mipMapCount = BitConverter.ToInt32(data, 28);
-            uint pixelFormatFlags = BitConverter.ToUInt32(data, 80);
-            uint fourCC = BitConverter.ToUInt32(data, 84);
-            uint BitCount = BitConverter.ToUInt32(data, 88); // Get bitdepth
-
-            TextureFormat format;
-
-            if ((pixelFormatFlags & 0x4) != 0) // DDPF_FOURCC
-            {
-                if (fourCC == 0x31545844) // 'DXT1'
+                if (reader.BaseStream.Length < 128)
                 {
-                    format = TextureFormat.DXT1;
+                    ParallaxDebug.LogError("This DDS texture is invalid - File is too small to contain a valid header.");
+                    return null;
                 }
-                else if (fourCC == 0x35545844) // 'DXT5'
+
+                uint magicID = reader.ReadUInt32();
+                if (magicID != DDSValues.uintMagic)
                 {
+                    ParallaxDebug.LogError("This DDS texture is invalid.");
+                    return null;
+                }
+
+                DDSHeader ddsHeader = new DDSHeader(reader);
+                DDSHeaderDX10 ddsHeader10 = (ddsHeader.ddspf.dwFourCC == DDSValues.uintDX10) ? new DDSHeaderDX10(reader) : null;
+
+
+                if (ddsHeader.dwSize != 124)
+                {
+                    ParallaxDebug.LogError("This DDS texture is invalid - Header size check failed.");
+                    return null;
+                }
+
+                byte[] rawData = new byte[reader.BaseStream.Length - reader.BaseStream.Position];
+                Debug.Log($"starting raw read for {url}");
+                var dataRead = reader.BaseStream.ReadAsync(rawData, 0, rawData.Length);
+
+
+                TextureFormat format = TextureFormat.RGBA32;
+
+                if (ddsHeader.ddspf.dwFourCC == DDSValues.uintDXT1)
+                    format = TextureFormat.DXT1;
+                else if (ddsHeader.ddspf.dwFourCC == DDSValues.uintDXT5)
                     format = TextureFormat.DXT5;
+                else if ((ddsHeader.ddspf.dwFlags & 0x40) != 0 && ddsHeader.ddspf.dwFourCC == 0) // DDPF_ALPHAPIXELS (standard L8)
+                    format = TextureFormat.Alpha8;
+                else if ((ddsHeader.ddspf.dwFlags & 0x20000) != 0 && ddsHeader.ddspf.dwFourCC == 0) // DDPF_FOURCC with no FourCC (alternate L8)
+                {
+                    if (ddsHeader.ddspf.dwRGBBitCount == 16)
+                    {
+                        format = TextureFormat.R16;
+                    }
+                    else
+                    {
+                        format = TextureFormat.R8;
+                    }
+                }
+                else if (ddsHeader.ddspf.dwFourCC == DDSValues.uintDX10)
+                {
+                    switch (ddsHeader10.dxgiFormat)
+                    {
+                        //TODO?: Add support for BC1/BC3/BC4 textures that have the DX10 header.
+                        case DXGI_FORMAT.DXGI_FORMAT_BC5_UNORM:
+                            format = TextureFormat.BC5;
+                            break;
+                        case DXGI_FORMAT.DXGI_FORMAT_BC7_UNORM:
+                        case DXGI_FORMAT.DXGI_FORMAT_BC7_UNORM_SRGB:
+                            format = TextureFormat.BC7;
+                            break;
+                        default:
+                            Debug.LogError($"[Parallax]: DDS format {ddsHeader10.dxgiFormat} not supported: " + url);
+                            break;
+
+                    }
                 }
                 else
                 {
                     return null;
                 }
-            }
-            else if ((pixelFormatFlags & 0x40) != 0 && fourCC == 0) // DDPF_ALPHAPIXELS (standard L8)
-            {
-                format = TextureFormat.Alpha8;
-            }
-            else if ((pixelFormatFlags & 0x20000) != 0 && fourCC == 0) // DDPF_FOURCC with no FourCC (alternate L8)
-            {
-                if (BitCount == 16)
-                {
-                    format = TextureFormat.R16;
-                }
-                else
-                {
-                    format = TextureFormat.R8;
-                }
-            }
-            else
-            {
-                return null;
-            }
 
-            // Create the Texture2D with or without mipmaps based on the header
-            TextureLoaderData textureData = new TextureLoaderData();
-            textureData.width = width;
-            textureData.height = height;
-            textureData.format = format;
-            textureData.mips = mipMapCount > 1;
-            textureData.linear = linear;
-            textureData.unreadable = markUnreadable;
+                // Create the Texture2D with or without mipmaps based on the header
+                TextureLoaderData textureData = new TextureLoaderData();
+                textureData.width = (int)ddsHeader.dwWidth;
+                textureData.height = (int)ddsHeader.dwHeight;
+                textureData.format = format;
+                textureData.mips = ddsHeader.dwMipMapCount > 1;
+                textureData.linear = linear;
+                textureData.unreadable = markUnreadable;
 
-            // Create the texture
-            Texture2D tex = new Texture2D(textureData.width, textureData.height, textureData.format, textureData.mips, textureData.linear);
-            Texture2DFromData(tex, rawData, textureData);
+                // Create the texture
+                Texture2D tex = new Texture2D(textureData.width, textureData.height, textureData.format, textureData.mips, textureData.linear);
+                Debug.Log($"waiting on raw read for {url}");
+                dataRead.Wait();
 
-            tex.Apply(false, textureData.unreadable);
+                Texture2DFromData(tex, rawData, textureData);
 
-            return tex;
+                tex.Apply(false, textureData.unreadable);
+
+                return tex;
+            }
         }
         public static Texture2D Texture2DFromData(byte[] bytes, in TextureLoaderData data)
         {
