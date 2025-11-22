@@ -167,6 +167,18 @@
         <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
         <Private>false</Private>
       </Reference>
+      <Reference Include="UnityEngine.UnityWebRequestModule">
+        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.UnityWebRequestModule.dll</HintPath>
+        <Private>false</Private>
+      </Reference>
+      <Reference Include="UnityEngine.UnityWebRequestTextureModule">
+        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.UnityWebRequestTextureModule.dll</HintPath>
+        <Private>false</Private>
+      </Reference>
+      <Reference Include="UnityEngine.UnityWebRequestAssetBundleModule">
+        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.UnityWebRequestAssetBundleModule.dll</HintPath>
+        <Private>false</Private>
+      </Reference>
 
       <!-- Publicizer-->
       <!-- PQS -->
