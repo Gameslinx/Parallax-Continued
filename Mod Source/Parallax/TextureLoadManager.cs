@@ -93,20 +93,24 @@ namespace Parallax
         /// <param name="path">The path of the texture relative to GameData</param>
         /// <param name="options">Options controlling how the texture is loaded.</param>
         /// <returns>A <see cref="LoadRequest"/> which can be used to get the resulting texture.</returns>
-        public static LoadRequest LoadTexture(string path, LoadOptions options)
-        {
-            return Instance.LoadTextureImpl(path, options);
-        }
+        public static LoadRequest LoadTexture(string path, LoadOptions options) =>
+            Instance.LoadTextureImpl(path, options);
 
         /// <summary>
         /// Start loading a texture in the background.
         /// </summary>
         /// <param name="path">The path of the texture relative to GameData</param>
         /// <returns></returns>
-        public static LoadRequest LoadTexture(string path)
-        {
-            return LoadTexture(path, new LoadOptions());
-        }
+        public static LoadRequest LoadTexture(string path) =>
+            LoadTexture(path, new LoadOptions());
+
+        /// <summary>
+        /// Create a <see cref="LoadRequest" that is already complete. /> 
+        /// </summary>
+        /// <param name="texture"></param>
+        /// <returns></returns>
+        public static LoadRequest CompletedRequest(Texture2D texture)
+            => new CompletedLoadRequest(texture);
         
         #region Implementation
         // Actual implementation details of LoadRequest.
@@ -170,6 +174,17 @@ namespace Parallax
             }
         }
 
+        class CompletedLoadRequest : LoadRequest
+        {
+            readonly Texture2D texture;
+
+            public override LoadStatus Status => LoadStatus.Success;
+            public override Texture2D Texture => texture;
+
+            public CompletedLoadRequest(Texture2D texture) => this.texture = texture;
+
+            public override void Complete() { }
+        }
 
         TextureLoadRequest LoadTextureImpl(string path, LoadOptions options)
         {
@@ -364,7 +379,7 @@ namespace Parallax
         // The various derived classes of ICompleteHandler are for various things
         // that we are waiting on to complete.
 
-        public interface ICompleteHandler
+        interface ICompleteHandler
         {
             void Complete();
         }
