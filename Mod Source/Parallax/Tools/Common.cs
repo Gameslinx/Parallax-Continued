@@ -14,7 +14,6 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
 using static System.Net.Mime.MediaTypeNames;
-using TextureHandle = Parallax.TextureLoadManager.TextureHandle;
 
 namespace Parallax
 {
@@ -197,7 +196,7 @@ namespace Parallax
     public class ParallaxTerrainBody
     {
         public string planetName;
-        public Dictionary<string, TextureHandle> loadedTextures = new Dictionary<string, TextureHandle>();
+        public Dictionary<string, TextureLoadManager.TextureHandle<Texture2D>> loadedTextures = [];
 
         // Terrain materials
         public ParallaxMaterials parallaxMaterials = new ParallaxMaterials();
@@ -500,7 +499,7 @@ namespace Parallax
 
         public bool disableDeformity = false;
 
-        public Dictionary<string, TextureHandle> loadedTextures = [];
+        public Dictionary<string, TextureLoadManager.TextureHandle<Texture2D>> loadedTextures = [];
         public float worldSpaceMeshRadius;
 
         private bool loaded = false;

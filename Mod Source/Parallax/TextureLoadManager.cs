@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using Mono.CompilerServices.SymbolWriter;
 using Unity.Jobs;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -52,16 +53,44 @@ public class TextureLoadManager : MonoBehaviour
     /// <param name="path">The path of the texture relative to GameData</param>
     /// <param name="options">Options controlling how the texture is loaded.</param>
     /// <returns>A <see cref="LoadRequest"/> which can be used to get the resulting texture.</returns>
-    public static TextureHandle LoadTexture(string path, TextureLoadOptions options) =>
-        Instance.LoadTextureImpl(path, options);
+    public static TextureHandle<Texture2D> LoadTexture(string path, TextureLoadOptions options) =>
+        Instance.LoadTextureImpl<Texture2D>(path, options);
 
     /// <summary>
     /// Start loading a texture in the background.
     /// </summary>
     /// <param name="path">The path of the texture relative to GameData</param>
     /// <returns></returns>
-    public static TextureHandle LoadTexture(string path) =>
+    public static TextureHandle<Texture2D> LoadTexture(string path) =>
         LoadTexture(path, new() { unreadable = true });
+
+    /// <summary>
+    /// Load a cubemap texture in the background.
+    /// </summary>
+    /// <param name="path">The path of the texture relative to GameData</param>
+    /// <param name="options">Options controlling how the texture is loaded.</param>
+    /// <returns>A <see cref="LoadRequest"/> which can be used to get the resulting texture.</returns>
+    /// <remarks>
+    /// If the cubemap is in an asset bundle then the texture loader will attempt
+    /// to load it directly as a cubemap, otherwise it will fall back to calling
+    /// <see cref="TextureLoader.CubemapFromTexture2D(Texture2D)"/>.
+    /// </remarks>
+    public static TextureHandle<Cubemap> LoadCubemap(string path, TextureLoadOptions options) =>
+        Instance.LoadTextureImpl<Cubemap>(path, options);
+
+    /// <summary>
+    /// Load a cubemap texture in the background.
+    /// </summary>
+    /// <param name="path">The path of the texture relative to GameData</param>
+    /// <param name="options">Options controlling how the texture is loaded.</param>
+    /// <returns>A <see cref="LoadRequest"/> which can be used to get the resulting texture.</returns>
+    /// <remarks>
+    /// If the cubemap is in an asset bundle then the texture loader will attempt
+    /// to load it directly as a cubemap, otherwise it will fall back to calling
+    /// <see cref="TextureLoader.CubemapFromTexture2D(Texture2D)"/>.
+    /// </remarks>
+    public static TextureHandle<Cubemap> LoadCubemap(string path) =>
+        LoadCubemap(path, new() { unreadable = true });
 
     /// <summary>
     /// Remove all textures from the cache. This doesn't destroy them immediately,
@@ -82,7 +111,8 @@ public class TextureLoadManager : MonoBehaviour
     /// <see cref="Acquire"/>. Calling <see cref="Dispose"/> will decrement
     /// the refcount and destroy it once it hits zero.
     /// </remarks>
-    public readonly struct TextureHandle : IDisposable
+    public readonly struct TextureHandle<T> : IDisposable
+        where T : Texture
     {
         readonly CacheEntry entry;
 
@@ -93,7 +123,7 @@ public class TextureLoadManager : MonoBehaviour
         /// Get the texture handle. If the texture is not loaded yet then
         /// this will block until loading completes.
         /// </summary>
-        public Texture2D Texture
+        public T Texture
         {
             get
             {
@@ -103,7 +133,7 @@ public class TextureLoadManager : MonoBehaviour
                 if (!entry.IsComplete)
                     entry.Complete();
 
-                return entry.Texture;
+                return (T)entry.Texture;
             }
         }
 
@@ -121,7 +151,7 @@ public class TextureLoadManager : MonoBehaviour
         /// reference count.
         /// </summary>
         /// <returns></returns>
-        public TextureHandle Acquire()
+        public TextureHandle<T> Acquire()
         {
             entry?.Acquire();
             return this;
@@ -131,7 +161,7 @@ public class TextureLoadManager : MonoBehaviour
         /// Take ownership of the <see cref="Texture2D"/> from the shared cache.
         /// </summary>
         /// <returns></returns>
-        public Texture2D Leak()
+        public T Leak()
         {
             if (entry is null)
                 return null;
@@ -149,6 +179,10 @@ public class TextureLoadManager : MonoBehaviour
             entry?.Release();
         }
 
+        // Allow converting to a generic texture handle where necessary.
+        public static implicit operator TextureHandle<Texture>(TextureHandle<T> handle) =>  
+            new(handle.entry);
+
         private TextureHandle(CacheEntry entry) => this.entry = entry;
 
         /// <summary>
@@ -156,22 +190,23 @@ public class TextureLoadManager : MonoBehaviour
         /// </summary>
         /// <param name="entry"></param>
         /// <returns></returns>
-        internal static TextureHandle Acquire(object entry)
+        internal static TextureHandle<T> Acquire(object entry)
         {
             var centry = (CacheEntry) entry;
             centry.Acquire();
-            return new TextureHandle(centry);
+            return new TextureHandle<T>(centry);
         }
     }
 
     public class TextureHandleYieldInstruction : CustomYieldInstruction
     {
-        readonly TextureHandle handle;
+        readonly CacheEntry entry;
 
-        public override bool keepWaiting => handle.IsComplete;
+        public override bool keepWaiting => entry.IsComplete;
 
-        public TextureHandleYieldInstruction(TextureHandle handle)
-            => this.handle = handle;
+        // For use internal to TextureLoadManager only.
+        internal TextureHandleYieldInstruction(object entry)
+            => this.entry = (CacheEntry)entry;
     }
 
     #region Texture Cache
@@ -197,7 +232,7 @@ public class TextureLoadManager : MonoBehaviour
         }
 
         public CacheKey key;
-        public Texture2D texture;
+        public Texture texture;
         public Exception exception;
         public int refcount;
 
@@ -218,7 +253,7 @@ public class TextureLoadManager : MonoBehaviour
             }
         }
 
-        public Texture2D Texture
+        public Texture Texture
         {
             get
             {
@@ -231,7 +266,7 @@ public class TextureLoadManager : MonoBehaviour
 
         public bool IsComplete => Status != LoadStatus.Pending;
 
-        public void SetTexture(Texture2D texture) => this.texture = texture;
+        public void SetTexture(Texture texture) => this.texture = texture;
 
         public void SetException(Exception exception) => this.exception = exception;
 
@@ -276,7 +311,8 @@ public class TextureLoadManager : MonoBehaviour
     #endregion
     
     #region Implementation
-    TextureHandle LoadTextureImpl(string path, TextureLoadOptions options)
+    TextureHandle<T> LoadTextureImpl<T>(string path, TextureLoadOptions options)
+        where T : Texture
     {
         var key = new CacheKey
         {
@@ -284,7 +320,7 @@ public class TextureLoadManager : MonoBehaviour
             path = path
         };
         if (TextureCache.TryGetValue(key, out var entry))
-            return TextureHandle.Acquire(entry);
+            return TextureHandle<T>.Acquire(entry);
 
         entry = new CacheEntry
         {
@@ -293,20 +329,21 @@ public class TextureLoadManager : MonoBehaviour
         };
 
         TextureCache.Add(key, entry);
-        var coro = CatchExceptions(DoLoadTexture(entry, path, options), entry);
+        var coro = CatchExceptions(DoLoadTexture<T>(entry, path, options), entry);
         entry.coroutine = coro;
 
         StartCoroutine(coro);
-        return TextureHandle.Acquire(entry);
+        return TextureHandle<T>.Acquire(entry);
     }
 
-    IEnumerator DoLoadTexture(CacheEntry entry, string path, TextureLoadOptions options)
+    IEnumerator DoLoadTexture<T>(CacheEntry entry, string path, TextureLoadOptions options)
+        where T : Texture
     {
         using var coroguard = new EntryClearGuard(entry);
         // Ensure that there's always one reference count when running. That
         // way if the user has already disposed of the handle then the texture
         // will be destroyed on completion.
-        using var texguard = TextureHandle.Acquire(entry);
+        using var texguard = TextureHandle<Texture>.Acquire(entry);
 
         // We try to load from the asset bundle first.
         if (options.AssetBundle is not null)
@@ -316,9 +353,19 @@ public class TextureLoadManager : MonoBehaviour
             yield return handle;
 
             var bundle = handle.Bundle;
-            var assetreq = bundle.LoadAssetAsync<Texture2D>(path);
+            var assetreq = bundle.LoadAssetAsync<Texture>(path);
             entry.completeHandler = new AssetBundleRequestCompleteHandler(assetreq);
             yield return assetreq;
+
+            // Allow directly loading Cubemaps as a bonus
+            if (typeof(T) == typeof(Cubemap))
+            {
+                if (assetreq.asset is Cubemap cubemap)
+                {
+                    entry.SetTexture(cubemap);
+                    yield break;
+                }
+            }
 
             if (assetreq.asset is Texture2D texture)
             {
@@ -349,7 +396,16 @@ public class TextureLoadManager : MonoBehaviour
                 yield break;
             }
 
-            entry.SetTexture(DownloadHandlerTexture.GetContent(uwr));
+            var texture = DownloadHandlerTexture.GetContent(uwr);
+            if (typeof(T) == typeof(Cubemap))
+            {
+                var cubemap = TextureLoader.CubemapFromTexture2D(texture);
+                entry.SetTexture(cubemap);
+            }
+            else
+            {
+                entry.SetTexture(texture);
+            }
         }
     }
     #endregion
