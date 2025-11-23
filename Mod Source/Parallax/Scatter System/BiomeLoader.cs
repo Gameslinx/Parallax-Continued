@@ -20,7 +20,14 @@ namespace Parallax
             stopwatch.Start();
 
             // Get the quad density map
-            Texture2D quadDensityMap = TextureLoader.LoadTexture("ParallaxContinued/Textures/PluginData/quadDensityMap.dds", true, false);
+            var options = new TextureLoadOptions
+            {
+                linear = true,
+                unreadable = false
+            };
+            Texture2D quadDensityMap = TextureLoadManager
+                .LoadTexture("ParallaxContinued/Textures/PluginData/quadDensityMap.dds", options)
+                .Leak();
             quadDensityData = new float[quadDensityMap.width, quadDensityMap.height];
 
             // Copy data from texture to 2d float array for speed

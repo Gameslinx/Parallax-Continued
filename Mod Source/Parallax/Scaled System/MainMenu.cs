@@ -318,7 +318,14 @@ namespace Parallax.Scaled_System
             }
 
             // Load the blue noise texture - uncompressed DDS Luminance 8, linear
-            blueNoiseTexture = TextureLoader.LoadTexture("ParallaxContinued/Textures/PluginData/blueNoise.dds", true, true);
+            var options = new TextureLoadOptions
+            {
+                linear = true,
+                unreadable = true
+            };
+            blueNoiseTexture = TextureLoadManager
+                .LoadTexture("ParallaxContinued/Textures/PluginData/blueNoise.dds", options)
+                .Leak();
             body.shadowCasterMaterial.SetTexture("_BlueNoise", blueNoiseTexture);
 
             // Computed the max shadow ray distance
