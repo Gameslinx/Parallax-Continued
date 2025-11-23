@@ -1053,7 +1053,7 @@ namespace Parallax
 
         // Shared textures across the planet
         // Holds Texture2D and Cubemaps
-        public Dictionary<string, Texture> loadedTextures = new Dictionary<string, Texture>();
+        public Dictionary<string, TextureLoadManager.TextureHandle<Texture>> loadedTextures = [];
 
         /// <summary>
         /// Contains all scatters for fast iteration, but not sharedScatters
@@ -1094,10 +1094,8 @@ namespace Parallax
         public void UnloadTextures()
         {
             ParallaxDebug.Log("Unloading textures for " + planetName);
-            foreach (KeyValuePair<string, Texture> texturePair in loadedTextures)
-            {
-                UnityEngine.Object.Destroy(texturePair.Value);
-            }
+            foreach (var handle in loadedTextures.Values)
+                handle.Dispose();
             loadedTextures.Clear();
         }
     }

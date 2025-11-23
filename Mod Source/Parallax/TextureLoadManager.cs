@@ -2,13 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using Mono.CompilerServices.SymbolWriter;
 using Unity.Jobs;
 using UnityEngine;
 using UnityEngine.Networking;
 
 namespace Parallax;
-
 
 public struct TextureLoadOptions()
 {
