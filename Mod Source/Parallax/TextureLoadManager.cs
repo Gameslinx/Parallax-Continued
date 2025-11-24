@@ -10,6 +10,12 @@ namespace Parallax;
 public struct TextureLoadOptions()
 {
     /// <summary>
+    /// The asset bundle to load textures from. If <c>null</c> then textures
+    /// will be loaded directly from the paths on the file system.
+    /// </summary>
+    public string AssetBundle;
+
+    /// <summary>
     /// Whether this texture should be loaded as if it was a linear format
     /// or whether it has gamma correction.
     ///
@@ -204,11 +210,12 @@ public class TextureLoadManager : MonoBehaviour
     #region Texture Cache
     internal struct CacheKey
     {
+        public string assetBundle;
         public string path;
 
-        public override int GetHashCode()
+        public readonly override int GetHashCode()
         {
-            return path.GetHashCode();
+            return (assetBundle?.GetHashCode() ?? 0) ^ path.GetHashCode();
         }
     }
 
@@ -257,7 +264,20 @@ public class TextureLoadManager : MonoBehaviour
 
         public bool IsComplete => Status != LoadStatus.Pending;
 
-        public void SetTexture(Texture texture) => this.texture = texture;
+        /// <summary>
+        /// Set the texture for this entry. If needed, the texture will be
+        /// converted to the desired format.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="texture"></param>
+        public void SetTexture<T>(Texture texture)
+            where T : Texture
+        {
+            if (typeof(T) == typeof(Cubemap) && texture is Texture2D tex2d)
+                this.texture = TextureLoader.CubemapFromTexture2D(tex2d);
+            else
+                this.texture = texture;
+        }
 
         public void SetException(Exception exception) => this.exception = exception;
 
@@ -310,6 +330,7 @@ public class TextureLoadManager : MonoBehaviour
     {
         var key = new CacheKey
         {
+            assetBundle = options.AssetBundle,
             path = path
         };
         if (TextureCache.TryGetValue(key, out var entry))
@@ -349,15 +370,46 @@ public class TextureLoadManager : MonoBehaviour
         if (typeof(T) == typeof(Cubemap))
             options.unreadable = false;
 
-        path = GetAbsolutePath(path);
+        // We try to load from the asset bundle first.
+        if (options.AssetBundle is not null)
+        {
+            var handle = LoadAssetBundleAsync(options.AssetBundle);
+            entry.completeHandler = handle;
+            yield return handle;
 
-        Texture2D texture;
+            var bundle = handle.Bundle;
+            var assetreq = bundle.LoadAssetAsync<Texture>(path);
+            entry.completeHandler = new AssetBundleRequestCompleteHandler(assetreq);
+            yield return assetreq;
+
+            if (assetreq.asset is not null)
+            {
+                // If we directly match the requested texture type then we're good
+                // to go.
+                if (assetreq.asset is T tex)
+                {
+                    entry.SetTexture<T>(tex);
+                    yield break;
+                }
+
+                if (typeof(T) == typeof(Cubemap) && assetreq.asset is Texture2D tex2d)
+                {
+                    entry.SetTexture<T>(tex2d);
+                    yield break;
+                }
+
+                // Log a warning if we find the asset but it was not in the right format
+                ParallaxDebug.LogError($"Texture {path} in asset bundle {options.AssetBundle} could not be converted to {typeof(T).Name}");
+            }
+        }
+
+        path = GetAbsolutePath(path);
 
         // DDS textures cannot be handled with UnityWebRequest and need special handling.
         if (path.EndsWith(".dds"))
         {
             // We don't support loading DDS textures asynchronously yet.
-            texture = TextureLoader.LoadDDSTexture(path, options.linear, options.unreadable);
+            entry.SetTexture<T>(TextureLoader.LoadDDSTexture(path, options.linear, options.unreadable));
         }
         else
         {
@@ -372,18 +424,132 @@ public class TextureLoadManager : MonoBehaviour
                 yield break;
             }
 
-            texture = DownloadHandlerTexture.GetContent(uwr);
+            entry.SetTexture<T>(DownloadHandlerTexture.GetContent(uwr));
+        }
+    }
+    #endregion
+
+    #region Asset Bundles
+    class AssetBundleHandle : ISetException, ICompleteHandler
+    {
+        public AssetBundleCreateRequest request;
+        AssetBundle bundle;
+        Exception exception;
+        public int refcount;
+
+        public AssetBundle Bundle
+        {
+            get
+            {
+                if (exception is not null)
+                    throw exception;
+                return bundle;
+            }
+        }
+        public bool IsComplete => exception is not null || bundle is not null;
+
+        public AssetBundleHandle(AssetBundleCreateRequest request)
+        {
+            this.request = request;
         }
 
-        if (typeof(T) == typeof(Cubemap))
+        public AssetBundleHandle(AssetBundle bundle)
         {
-            var cubemap = TextureLoader.CubemapFromTexture2D(texture);
-            entry.SetTexture(cubemap);
+            this.bundle = bundle;
         }
-        else
+
+        public void SetBundle(AssetBundle bundle) => this.bundle = bundle;
+
+        public void SetException(Exception exception) => this.exception = exception;
+
+        public void Complete()
         {
-            entry.SetTexture(texture);
+            if (request.assetBundle == null)
+                SetException(new Exception("Failed to load asset bundle"));
+            else
+                SetBundle(request.assetBundle);
         }
+
+        public AssetBundle GetBundle() => bundle;
+
+        public RefCountGuard Guard() => new RefCountGuard(this);
+
+        public class RefCountGuard : CustomYieldInstruction, IDisposable
+        {
+            readonly AssetBundleHandle handle;
+
+            public override bool keepWaiting => !handle.IsComplete;
+
+            public RefCountGuard(AssetBundleHandle handle)
+            {
+                this.handle = handle;
+                handle.refcount += 1;
+            }
+
+            public void Dispose()
+            {
+                handle.refcount -= 1;
+            }
+        }
+    }
+
+    readonly Dictionary<string, AssetBundleHandle> ActiveBundles = new Dictionary<string, AssetBundleHandle>();
+
+    AssetBundleHandle LoadAssetBundleAsync(string path)
+    {
+        if (ActiveBundles.TryGetValue(path, out var handle))
+            return handle;
+
+        var request = AssetBundle.LoadFromFileAsync(GetAbsolutePath(path));
+        handle = new AssetBundleHandle(request);
+
+        ActiveBundles.Add(path, handle);
+        StartCoroutine(CatchExceptions(DoLoadAssetBundle(handle), handle));
+        StartCoroutine(DelayedAssetBundleCleanup(handle, path));
+        return handle;
+    }
+
+    IEnumerator DoLoadAssetBundle(AssetBundleHandle handle)
+    {
+        using var guard = handle.Guard();
+        var request = handle.request;
+        yield return request;
+        handle.Complete();
+    }
+
+    /// <summary>
+    /// Asset bundles need to be explicitly unloaded if they are not attached
+    /// to a scene. This coroutine waits 5 frames after the bundle is completed
+    /// so that other requests in the same frames can reuse it.
+    /// </summary>
+    /// <param name="handle"></param>
+    /// <param name="path"></param>
+    /// <returns></returns>
+    IEnumerator DelayedAssetBundleCleanup(AssetBundleHandle handle, string path)
+    {
+        yield return new WaitForEndOfFrame();
+        yield return handle.Guard();
+
+        // Wait 5 frames before unloading the asset bundle so we can coalesce
+        // multiple loads from the same bundle together.
+        int count = 0;
+        while (count < 5)
+        {
+            if (handle.refcount != 0)
+                count = 0;
+            else
+                count += 1;
+
+            yield return null;
+        }
+
+        ActiveBundles.Remove(path);
+
+        var bundle = handle.GetBundle();
+        if (bundle is null)
+            yield break;
+
+        bundle.Unload(false);
     }
     #endregion
 
@@ -405,6 +571,11 @@ public class TextureLoadManager : MonoBehaviour
         {
             while (!request.isDone) { }
         }
+    }
+
+    class AssetBundleRequestCompleteHandler(AssetBundleRequest request) : ICompleteHandler
+    {
+        public void Complete() => _ = request.asset;
     }
 
     #endregion
