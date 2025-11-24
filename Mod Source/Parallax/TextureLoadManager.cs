@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using Unity.Jobs;
 using UnityEngine;
@@ -130,12 +131,14 @@ public class TextureLoadManager : MonoBehaviour
 
         public bool IsComplete => entry?.IsComplete ?? true;
 
+        public int ReferenceCount => entry?.refcount ?? 0;
+
         /// <summary>
         /// Get a <see cref="CustomYieldInstruction"/> that can be used to
         /// wait until the texture has been loaded.
         /// </summary>
         /// <returns></returns>
-        public TextureHandleYieldInstruction Wait() => new(this);
+        public TextureHandleYieldInstruction Wait() => new(entry);
 
         /// <summary>
         /// Acquire a new handle for the same texture, increasing the
@@ -267,10 +270,7 @@ public class TextureLoadManager : MonoBehaviour
 
             while (!IsComplete)
             {
-                if (completeHandler is null)
-                    break;
-
-                completeHandler.Complete();
+                completeHandler?.Complete();
                 completeHandler = null;
 
                 coroutine.MoveNext();
@@ -288,10 +288,16 @@ public class TextureLoadManager : MonoBehaviour
             if (refcount != 0)
                 return;
 
+            if (Instance is not null
+                && Instance.TextureCache.TryGetValue(key, out var entry)
+                && ReferenceEquals(entry, this))
+            {
+                Instance.TextureCache.Remove(key);
+            }
+
             if (texture is null)
                 return;
 
-            TextureLoadManager.Instance?.TextureCache.Remove(key);
             Destroy(texture);
         }
     }
@@ -311,6 +317,11 @@ public class TextureLoadManager : MonoBehaviour
         if (TextureCache.TryGetValue(key, out var entry))
             return TextureHandle<T>.Acquire(entry);
 
+        if (typeof(T) == typeof(Cubemap))
+            ParallaxDebug.Log($"Loading Parallax Cubemap: {path}");
+        else
+            ParallaxDebug.Log($"Loading Parallax Texture: {path}");
+
         entry = new CacheEntry
         {
             key = key,
@@ -321,8 +332,11 @@ public class TextureLoadManager : MonoBehaviour
         var coro = CatchExceptions(DoLoadTexture<T>(entry, path, options), entry);
         entry.coroutine = coro;
 
+        // Needs to happen before we start the coroutine
+        var handle = TextureHandle<T>.Acquire(entry);
+
         StartCoroutine(coro);
-        return TextureHandle<T>.Acquire(entry);
+        return handle;
     }
 
     IEnumerator DoLoadTexture<T>(CacheEntry entry, string path, TextureLoadOptions options)
@@ -334,8 +348,10 @@ public class TextureLoadManager : MonoBehaviour
         // will be destroyed on completion.
         using var texguard = TextureHandle<Texture>.Acquire(entry);
 
-        path = GetAbsolutePath(path);
+        if (typeof(T) == typeof(Cubemap))
+            options.unreadable = false;
 
+        path = GetAbsolutePath(path);
 
         Texture2D texture;
 

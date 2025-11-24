@@ -73,7 +73,7 @@ namespace Parallax
 
             foreach (var (name, path) in properties.shaderTextures)
             {
-                if (loadedTextures.ContainsKey(name))
+                if (loadedTextures.ContainsKey($"{path}"))
                     continue;
 
                 bool linear = TextureUtils.IsLinear(name);
@@ -90,13 +90,14 @@ namespace Parallax
                 else
                     handle = TextureLoadManager.LoadCubemap(path, options);
 
-                loadedTextures.Add(name, handle);
+                loadedTextures.Add(path, handle);
             }
         }
 
         /// <summary>
         /// Sets the actual material parameters for a given set of params and scatter material
         /// </summary>
+        /// <param name="prefix">A prefix to use to make loaded keys unique</prefix>
         /// <param name="materialParams"></param>
         /// <param name="material"></param>
         public void SetMaterialParams(in MaterialParams materialParams, Material material)
@@ -139,10 +140,24 @@ namespace Parallax
 
             // Textures
             var loadedTextures = ConfigLoader.parallaxScatterBodies[planetName].loadedTextures;
-            foreach (var name in properties.shaderTextures.Keys)
+            foreach (var (name, path) in properties.shaderTextures)
             {
+                var handle = loadedTextures[path];
+                
+                Texture tex;
+                try
+                {
+                    tex = handle.Texture;
+                }
+                catch (Exception e)
+                {
+                    ParallaxDebug.LogError($"Failed to load texture {handle.Path}");
+                    Debug.LogException(e);
+                    continue;
+                }
+
                 // Texture load was started in PreloadTextures
-                material.SetTexture(name, loadedTextures[name].Texture);
+                material.SetTexture(name, tex);
             }
 
             // Floats

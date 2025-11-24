@@ -688,16 +688,19 @@ namespace Parallax
 
         public void Load()
         {
+
             // First check for terrain body's terrain textures and load them
             if (!terrainBody.Loaded && mode != ParallaxScaledBodyMode.Baked)
-            {
-                terrainBody.Load();
-            }
+                terrainBody.StartLoadingTextures();
 
-            System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+            // Start loading our own textures in the background while that happens
+            StartLoadingTextures();
+
+            if (!terrainBody.Loaded && mode != ParallaxScaledBodyMode.Baked)
+                terrainBody.Load();
 
             // Now load the textures needed here
-            StartLoadingTextures();
+            System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
 
             foreach (var name in scaledMaterialParams.shaderProperties.shaderTextures.Keys)
             {
@@ -753,17 +756,52 @@ namespace Parallax
 
             isLoading = true;
 
+            Coroutine terrainBodyLoad = null;
+
             // If we need them, make sure that all the terrain body texture entries are there
             if (!terrainBody.Loaded && mode != ParallaxScaledBodyMode.Baked)
-                terrainBody.StartLoadingTextures();
+                terrainBodyLoad = ScaledManager.Instance.StartCoroutine(terrainBody.LoadAsync());
 
             StartLoadingTextures();
 
-            // Give the background loads a chance to work during the frame.
-            yield return new WaitForEndOfFrame();
+            // Now load the textures needed here
+            foreach (var name in scaledMaterialParams.shaderProperties.shaderTextures.Keys)
+            {
+                var handle = loadedTextures[name];
+                if (!handle.IsComplete)
+                    yield return handle.Wait();
 
-            if (!isLoading)
-                yield break;
+                if (!isLoading)
+                    yield break;
+
+                Texture2D tex;
+                try
+                {
+                    tex = handle.Texture;
+                }
+                catch (Exception e)
+                {
+                    ParallaxDebug.LogError($"Failed to load texture {handle.Path}");
+                    Debug.LogException(e);
+                    continue;
+                }
+
+                scaledMaterial.SetTexture(name, tex);
+                if (name == "_HeightMap")
+                {
+                    shadowCasterMaterial.SetTexture("_HeightMap", tex);
+                }
+            }
+
+            if (terrainBodyLoad is not null)
+                yield return terrainBodyLoad;
+
+            #if false
+            // // Give the background loads a chance to work during the frame.
+            // yield return new WaitForEndOfFrame();
+
+            // if (!isLoading)
+            //     yield break;
 
             // Now load the textures we need to have loaded immediately
             foreach (var name in BaseTextures)
@@ -834,6 +872,7 @@ namespace Parallax
                     shadowCasterMaterial.SetTexture("_HeightMap", tex);
                 }
             }
+            #endif
 
             bool hasOcean = scaledMaterialParams.shaderKeywords.Contains("OCEAN");
             bool hasOceanColormap = scaledMaterialParams.shaderKeywords.Contains("OCEAN_FROM_COLORMAP");
