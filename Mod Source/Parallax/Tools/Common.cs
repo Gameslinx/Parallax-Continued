@@ -201,6 +201,8 @@ namespace Parallax
         // Terrain materials
         public ParallaxMaterials parallaxMaterials = new ParallaxMaterials();
 
+        public string assetBundle = null;
+
         public ShaderProperties terrainShaderProperties;
         public bool emissive = false;
 
@@ -335,7 +337,8 @@ namespace Parallax
                 var options = new TextureLoadOptions
                 {
                     linear = TextureUtils.IsLinear(name),
-                    unreadable = true
+                    unreadable = true,
+                    assetBundle = assetBundle,
                 };
                 loadedTextures.Add(name, TextureLoadManager.LoadTexture(path, options));
             }
@@ -433,7 +436,8 @@ namespace Parallax
                 var options = new TextureLoadOptions
                 {
                     linear = TextureUtils.IsLinear(key),
-                    unreadable = true
+                    unreadable = true,
+                    assetBundle = body.assetBundle
                 };
                 handle = TextureLoadManager.LoadTexture(path, options);
                 body.loadedTextures.Add(key, handle);
@@ -445,7 +449,7 @@ namespace Parallax
             }
             catch (Exception e)
             {
-                ParallaxDebug.LogError($"Failed to load texture {handle.Path ?? "<null>"}");
+                ParallaxDebug.LogError($"Failed to load texture {handle.Path ?? path}");
                 Debug.LogException(e);
                 return null;
             }
@@ -489,6 +493,8 @@ namespace Parallax
 
         // Material for shadow casting
         public Material shadowCasterMaterial;
+        
+        public string assetBundle;
 
         public MaterialParams scaledMaterialParams;
         public ParallaxScaledBodyMode mode = ParallaxScaledBodyMode.FromTerrain;
@@ -680,7 +686,8 @@ namespace Parallax
                 var options = new TextureLoadOptions
                 {
                     linear = TextureUtils.IsLinear(name),
-                    unreadable = true
+                    unreadable = true,
+                    assetBundle = assetBundle
                 };
                 loadedTextures.Add(name, TextureLoadManager.LoadTexture(path, options));
             }
@@ -1084,6 +1091,7 @@ namespace Parallax
         public string scatterName;
         public string modelPath;
         public bool useCraftPosition = false;
+        public string assetBundle = null;
 
         public OptimizationParams optimizationParams;
         public SubdivisionParams subdivisionParams;

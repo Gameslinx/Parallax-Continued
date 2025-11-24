@@ -13,7 +13,7 @@ public struct TextureLoadOptions()
     /// The asset bundle to load textures from. If <c>null</c> then textures
     /// will be loaded directly from the paths on the file system.
     /// </summary>
-    public string AssetBundle;
+    public string assetBundle;
 
     /// <summary>
     /// Whether this texture should be loaded as if it was a linear format
@@ -330,7 +330,7 @@ public class TextureLoadManager : MonoBehaviour
     {
         var key = new CacheKey
         {
-            assetBundle = options.AssetBundle,
+            assetBundle = options.assetBundle,
             path = path
         };
         if (TextureCache.TryGetValue(key, out var entry))
@@ -371,9 +371,9 @@ public class TextureLoadManager : MonoBehaviour
             options.unreadable = false;
 
         // We try to load from the asset bundle first.
-        if (options.AssetBundle is not null)
+        if (options.assetBundle is not null)
         {
-            var handle = LoadAssetBundleAsync(options.AssetBundle);
+            var handle = LoadAssetBundleAsync(options.assetBundle);
             entry.completeHandler = handle;
             yield return handle;
 
@@ -399,7 +399,7 @@ public class TextureLoadManager : MonoBehaviour
                 }
 
                 // Log a warning if we find the asset but it was not in the right format
-                ParallaxDebug.LogError($"Texture {path} in asset bundle {options.AssetBundle} could not be converted to {typeof(T).Name}");
+                ParallaxDebug.LogError($"Texture {path} in asset bundle {options.assetBundle} could not be converted to {typeof(T).Name}");
             }
         }
 

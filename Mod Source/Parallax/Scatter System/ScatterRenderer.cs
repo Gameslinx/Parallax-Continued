@@ -81,7 +81,8 @@ namespace Parallax
                 var options = new TextureLoadOptions
                 {
                     linear = linear,
-                    unreadable = true
+                    unreadable = true,
+                    assetBundle = scatter.assetBundle
                 };
 
                 TextureLoadManager.TextureHandle<Texture> handle;

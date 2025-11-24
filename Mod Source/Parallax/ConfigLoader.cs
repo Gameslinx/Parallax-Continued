@@ -440,6 +440,8 @@ namespace Parallax
             // Grab the template
             body.terrainShaderProperties = shaderPropertiesTemplate.Clone() as ShaderProperties;
 
+            bodyNode.TryGetValue("assetBundle", ref body.assetBundle);
+
             // Now get every value defined in the template
             string[] textureProperties = body.terrainShaderProperties.shaderTextures.Keys.ToArray();
             string[] floatProperties = body.terrainShaderProperties.shaderFloats.Keys.ToArray();
@@ -513,6 +515,8 @@ namespace Parallax
                 ParallaxDebug.LogCritical("Unable to parse the scaled body mode '" + mode + "'. Possible values are 'FromTerrain' and 'Custom'. 'Defaulting to 'FromTerrain'");
             }
             scaledBody.mode = bodyMode;
+
+            bodyNode.TryGetValue("assetBundle", ref scaledBody.assetBundle);
 
             // Planet properties
             string minTerrainAltitudeString = ConfigUtils.TryGetConfigValue(bodyNode, "minTerrainAltitude");
@@ -757,6 +761,9 @@ namespace Parallax
                         string collisionLevelString = ConfigUtils.TryGetConfigValue(node, "collisionLevel");
                         int collisionLevel = (int)ConfigUtils.TryParse(body, "collisionLevel", collisionLevelString, typeof(int));
 
+                        string assetBundle = null;
+                        node.TryGetValue("assetBundle", ref assetBundle);
+
                         // Use craft position for distance culling?
                         bool useCraftPosition = false;
                         node.TryGetValue("useCraftPositionForDistanceCulling", ref useCraftPosition);
@@ -764,6 +771,7 @@ namespace Parallax
                         Scatter scatter = new Scatter(scatterName);
                         scatter.modelPath = model;
                         scatter.useCraftPosition = useCraftPosition;
+                        scatter.assetBundle = assetBundle;
 
                         OptimizationParams optimizationParams = GetOptimizationParams(body, node.GetNode("Optimizations"));
                         SubdivisionParams subdivisionParams = GetSubdivisionParams(body, node.GetNode("SubdivisionSettings"));
