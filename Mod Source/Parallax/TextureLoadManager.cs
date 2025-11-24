@@ -1,9 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
-using Unity.Jobs;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -401,35 +399,12 @@ public class TextureLoadManager : MonoBehaviour
         void Complete();
     }
 
-    class JobCompleteHandler : ICompleteHandler
+    class WebRequestCompleteHandler(UnityWebRequest request) : ICompleteHandler
     {
-        JobHandle job;
-
-        public JobCompleteHandler(JobHandle job) => this.job = job;
-
-        public void Complete() => job.Complete();
-    }
-
-    class WebRequestCompleteHandler : ICompleteHandler
-    {
-        UnityWebRequest request;
-
-        public WebRequestCompleteHandler(UnityWebRequest request) => this.request = request;
-
         public void Complete()
         {
-            // Does this work?
             while (!request.isDone) { }
         }
-    }
-
-    class AssetBundleRequestCompleteHandler : ICompleteHandler
-    {
-        AssetBundleRequest request;
-
-        public AssetBundleRequestCompleteHandler(AssetBundleRequest request) => this.request = request;
-
-        public void Complete() => _ = request.asset;
     }
 
     #endregion
@@ -466,14 +441,9 @@ public class TextureLoadManager : MonoBehaviour
         return Path.Combine(KSPUtil.ApplicationRootPath, "GameData", path);
     }
 
-    class TextureDisposeGuard : IDisposable
+    class TextureDisposeGuard(Texture2D texture) : IDisposable
     {
-        public Texture2D texture;
-
-        public TextureDisposeGuard(Texture2D texture)
-        {
-            this.texture = texture;
-        }
+        public Texture2D texture = texture;
 
         public void Clear() => texture = null;
 
