@@ -764,12 +764,29 @@ namespace Parallax
 
             StartLoadingTextures();
 
+            // Give the async texture loads some time to complete while the
+            // the rest of the frame is running.
+            yield return new WaitForEndOfFrame();
+
+            // Ensure that the base textures are ordered first
+            var names = BaseTextures
+                .Where(scaledMaterialParams.shaderProperties.shaderTextures.ContainsKey)
+                .Concat(
+                    scaledMaterialParams.shaderProperties.shaderTextures.Keys
+                        .Where(name => !BaseTextures.Contains(name))
+                );
+
             // Now load the textures needed here
             foreach (var name in scaledMaterialParams.shaderProperties.shaderTextures.Keys)
             {
                 var handle = loadedTextures[name];
                 if (!handle.IsComplete)
-                    yield return handle.Wait();
+                {
+                    // Load height, color, and normal maps immediately but wait
+                    // for everything else.
+                    if (!BaseTextures.Contains(name))
+                        yield return handle.Wait();
+                }
 
                 if (!isLoading)
                     yield break;
