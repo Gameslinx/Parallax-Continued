@@ -196,7 +196,7 @@ namespace Parallax
     public class ParallaxTerrainBody
     {
         public string planetName;
-        public Dictionary<string, Texture2D> loadedTextures = new Dictionary<string, Texture2D>();
+        public Dictionary<string, TextureLoadManager.TextureHandle<Texture2D>> loadedTextures = [];
 
         // Terrain materials
         public ParallaxMaterials parallaxMaterials = new ParallaxMaterials();
@@ -324,6 +324,23 @@ namespace Parallax
                 parallaxMaterials.parallaxFull.SetColor(colorPair.Key, colorPair.Value);
             }
         }
+
+        internal void StartLoadingTextures()
+        {
+            foreach (var (name, path) in terrainShaderProperties.shaderTextures)
+            {
+                if (loadedTextures.ContainsKey(name))
+                    continue;
+
+                var options = new TextureLoadOptions
+                {
+                    linear = TextureUtils.IsLinear(name),
+                    unreadable = true
+                };
+                loadedTextures.Add(name, TextureLoadManager.LoadTexture(path, options));
+            }
+        }
+
         public void Load()
         {
             if (loaded)
@@ -332,33 +349,37 @@ namespace Parallax
             }
             System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
 
-            foreach (KeyValuePair<string, string> textureValue in terrainShaderProperties.shaderTextures)
+            StartLoadingTextures();
+
+            foreach (var name in terrainShaderProperties.shaderTextures.Keys)
             {
                 Texture2D tex;
-                if (loadedTextures.ContainsKey(textureValue.Key))
-                {
-                    tex = loadedTextures[textureValue.Key];
-                }
-                else
-                {
-                    bool linear = TextureUtils.IsLinear(textureValue.Key);
-                    tex = TextureLoader.LoadTexture(textureValue.Value, linear);
+                var request = loadedTextures[name];
 
-                    // Add to active textures
-                    loadedTextures.Add(textureValue.Key, tex);
+                try
+                {
+                    tex = request.Texture;
                 }
+                catch (Exception e)
+                {
+                    ParallaxDebug.LogError($"Failed to load texture {request.Path}");
+                    Debug.LogException(e);
+                    continue;
+                }
+
                 // Bump maps need to be linear, while everything else sRGB
                 // This could be handled better, tbh, but at least we're accounting for linear textures this time around
 
-                parallaxMaterials.parallaxLow.SetTexture(textureValue.Key, tex);
-                parallaxMaterials.parallaxMid.SetTexture(textureValue.Key, tex);
-                parallaxMaterials.parallaxHigh.SetTexture(textureValue.Key, tex);
+                parallaxMaterials.parallaxLow.SetTexture(name, tex);
+                parallaxMaterials.parallaxMid.SetTexture(name, tex);
+                parallaxMaterials.parallaxHigh.SetTexture(name, tex);
 
-                parallaxMaterials.parallaxLowMid.SetTexture(textureValue.Key, tex);
-                parallaxMaterials.parallaxMidHigh.SetTexture(textureValue.Key, tex);
+                parallaxMaterials.parallaxLowMid.SetTexture(name, tex);
+                parallaxMaterials.parallaxMidHigh.SetTexture(name, tex);
 
-                parallaxMaterials.parallaxFull.SetTexture(textureValue.Key, tex);
+                parallaxMaterials.parallaxFull.SetTexture(name, tex);
             }
+
             loaded = true;
         }
         public IEnumerator LoadAsync()
@@ -370,50 +391,63 @@ namespace Parallax
                 yield break;
             }
 
-            foreach (KeyValuePair<string, string> textureValue in terrainShaderProperties.shaderTextures)
+            StartLoadingTextures();
+
+            foreach (var name in terrainShaderProperties.shaderTextures.Keys)
             {
                 Texture2D tex;
-                if (loadedTextures.ContainsKey(textureValue.Key))
-                {
-                    tex = loadedTextures[textureValue.Key];
-                }
-                else
-                {
-                    bool linear = TextureUtils.IsLinear(textureValue.Key);
-                    tex = TextureLoader.LoadTexture(textureValue.Value, linear);
+                var request = loadedTextures[name];
 
-                    // Add to active textures
-                    loadedTextures.Add(textureValue.Key, tex);
-                    yield return null;
-                    if (!isLoading) { yield break; }
+                yield return request.Wait();
+                try
+                {
+                    tex = request.Texture;
                 }
+                catch (Exception e)
+                {
+                    ParallaxDebug.LogError($"Failed to load texture {request.Path}");
+                    Debug.LogException(e);
+                    continue;
+                }
+
                 // Bump maps need to be linear, while everything else sRGB
                 // This could be handled better, tbh, but at least we're accounting for linear textures this time around
 
-                parallaxMaterials.parallaxLow.SetTexture(textureValue.Key, tex);
-                parallaxMaterials.parallaxMid.SetTexture(textureValue.Key, tex);
-                parallaxMaterials.parallaxHigh.SetTexture(textureValue.Key, tex);
+                parallaxMaterials.parallaxLow.SetTexture(name, tex);
+                parallaxMaterials.parallaxMid.SetTexture(name, tex);
+                parallaxMaterials.parallaxHigh.SetTexture(name, tex);
 
-                parallaxMaterials.parallaxLowMid.SetTexture(textureValue.Key, tex);
-                parallaxMaterials.parallaxMidHigh.SetTexture(textureValue.Key, tex);
+                parallaxMaterials.parallaxLowMid.SetTexture(name, tex);
+                parallaxMaterials.parallaxMidHigh.SetTexture(name, tex);
 
-                parallaxMaterials.parallaxFull.SetTexture(textureValue.Key, tex);
+                parallaxMaterials.parallaxFull.SetTexture(name, tex);
             }
+
             loaded = true;
             isLoading = false;
         }
         public static Texture2D LoadTexIfUnloaded(ParallaxTerrainBody body, string path, string key)
         {
-            if (!body.loadedTextures.ContainsKey(key))
+            if (!body.loadedTextures.TryGetValue(key, out var handle))
             {
-                bool linear = TextureUtils.IsLinear(key);
-                Texture2D tex = TextureLoader.LoadTexture(path, linear);
-                body.loadedTextures.Add(key, tex);
-                return tex;
+                var options = new TextureLoadOptions
+                {
+                    linear = TextureUtils.IsLinear(key),
+                    unreadable = true
+                };
+                handle = TextureLoadManager.LoadTexture(path, options);
+                body.loadedTextures.Add(key, handle);
             }
-            else
+
+            try
             {
-                return body.loadedTextures[key];
+                return handle.Texture;
+            }
+            catch (Exception e)
+            {
+                ParallaxDebug.LogError($"Failed to load texture {handle.Path ?? "<null>"}");
+                Debug.LogException(e);
+                return null;
             }
         }
         /// <summary>
@@ -427,23 +461,9 @@ namespace Parallax
         public void Unload()
         {
             isLoading = false;
-            // Check to see if a scaled body that requires these textures exists
-            if (ConfigLoader.parallaxScaledBodies.ContainsKey(planetName))
-            {
-                ParallaxScaledBody scaledBody = ConfigLoader.parallaxScaledBodies[planetName];
-                if ((scaledBody.mode == ParallaxScaledBodyMode.FromTerrain || scaledBody.mode == ParallaxScaledBodyMode.CustomRequiresTerrain) && (scaledBody.Loaded || scaledBody.IsLoading))
-                {
-                    // Remain loaded - the scaled planet uses these textures and is still visible
-                    return;
-                }
-            }
-
             // Unload all textures
-            Texture2D[] textures = loadedTextures.Values.ToArray();
-            for (int i = 0 ; i < textures.Length; i++)
-            {
-                UnityEngine.Object.Destroy(textures[i]);
-            }
+            foreach (var handle in loadedTextures.Values)
+                handle.Dispose();
             loadedTextures.Clear();
             loaded = false;
         }
@@ -479,7 +499,7 @@ namespace Parallax
 
         public bool disableDeformity = false;
 
-        public Dictionary<string, Texture2D> loadedTextures = new Dictionary<string, Texture2D>();
+        public Dictionary<string, TextureLoadManager.TextureHandle<Texture2D>> loadedTextures = [];
         public float worldSpaceMeshRadius;
 
         private bool loaded = false;
@@ -641,48 +661,65 @@ namespace Parallax
         {
             return (float)(celestialBody.Radius * ScaledSpace.InverseScaleFactor);
         }
+
+        internal void StartLoadingTextures()
+        {
+            foreach (var (name, path) in scaledMaterialParams.shaderProperties.shaderTextures)
+            {
+                if (loadedTextures.ContainsKey(name))
+                    continue;
+
+                // Check to see if the texture we're trying to load is a terrain texture
+                if ((mode == ParallaxScaledBodyMode.FromTerrain || mode == ParallaxScaledBodyMode.CustomRequiresTerrain)
+                    && terrainBody.loadedTextures.TryGetValue(name, out var handle))
+                {
+                    loadedTextures.Add(name, handle.Acquire());
+                    continue;
+                }
+
+                var options = new TextureLoadOptions
+                {
+                    linear = TextureUtils.IsLinear(name),
+                    unreadable = true
+                };
+                loadedTextures.Add(name, TextureLoadManager.LoadTexture(path, options));
+            }
+        }
+
         public void Load()
         {
+
             // First check for terrain body's terrain textures and load them
             if (!terrainBody.Loaded && mode != ParallaxScaledBodyMode.Baked)
-            {
-                terrainBody.Load();
-            }
+                terrainBody.StartLoadingTextures();
 
-            System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+            // Start loading our own textures in the background while that happens
+            StartLoadingTextures();
+
+            if (!terrainBody.Loaded && mode != ParallaxScaledBodyMode.Baked)
+                terrainBody.Load();
 
             // Now load the textures needed here
-            foreach (KeyValuePair<string, string> textureValue in scaledMaterialParams.shaderProperties.shaderTextures)
+            System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+
+            foreach (var name in scaledMaterialParams.shaderProperties.shaderTextures.Keys)
             {
                 Texture2D tex;
+                var request = loadedTextures[name];
 
-                // Texture already loaded? Use it
-                if (loadedTextures.ContainsKey(textureValue.Key))
+                try
                 {
-                    tex = loadedTextures[textureValue.Key];
+                    tex = request.Texture;
                 }
-                else
+                catch (Exception e)
                 {
-                    // Check to see if the texture we're trying to load is a terrain texture
-                    if ((mode == ParallaxScaledBodyMode.FromTerrain || mode == ParallaxScaledBodyMode.CustomRequiresTerrain) && terrainBody.loadedTextures.ContainsKey(textureValue.Key))
-                    {
-                        // Point to the terrain texture
-                        tex = terrainBody.loadedTextures[textureValue.Key];
-                        loadedTextures.Add(textureValue.Key, tex);
-                    }
-                    else
-                    {
-                        // This texture is unique
-                        bool linear = TextureUtils.IsLinear(textureValue.Key);
-                        tex = TextureLoader.LoadTexture(textureValue.Value, linear);
-
-                        // Add to active textures
-                        loadedTextures.Add(textureValue.Key, tex);
-                    }
+                    ParallaxDebug.LogError($"Failed to load texture {request.Path}");
+                    Debug.LogException(e);
+                    continue;
                 }
 
-                scaledMaterial.SetTexture(textureValue.Key, tex);
-                if (textureValue.Key == "_HeightMap")
+                scaledMaterial.SetTexture(name, tex);
+                if (name == "_HeightMap")
                 {
                     shadowCasterMaterial.SetTexture("_HeightMap", tex);
                 }
@@ -705,6 +742,9 @@ namespace Parallax
             loaded = true;
         }
 
+        // Textures that need to be loaded during the first frame.
+        private static readonly string[] BaseTextures = ["_HeightMap", "_NormalMap", "_BumpMap", "_ColorMap"];
+
         /// <summary>
         /// Spread the load over a few frames. Not fully async, due to Unity Texture2D limitation
         /// </summary>
@@ -716,94 +756,62 @@ namespace Parallax
 
             isLoading = true;
 
-            foreach (KeyValuePair<string, string> textureValue in scaledMaterialParams.shaderProperties.shaderTextures)
-            {
-                // Base planet texture
-                if (textureValue.Key == "_HeightMap" || textureValue.Key == "_NormalMap" || textureValue.Key == "_BumpMap" || textureValue.Key == "_ColorMap")
-                {
-                    Texture2D tex;
-                    if (loadedTextures.ContainsKey(textureValue.Key))
-                    {
-                        tex = loadedTextures[textureValue.Key];
-                    }
-                    else
-                    {
-                        bool linear = TextureUtils.IsLinear(textureValue.Key);
-                        tex = TextureLoader.LoadTexture(textureValue.Value, linear);
+            Coroutine terrainBodyLoad = null;
 
-                        // Add to active textures to prevent load later on
-                        loadedTextures.Add(textureValue.Key, tex);
-                    }
-
-                    // Set on the material immediately
-                    scaledMaterial.SetTexture(textureValue.Key, tex);
-                    if (textureValue.Key == "_HeightMap")
-                    {
-                        shadowCasterMaterial.SetTexture("_HeightMap", tex);
-                    }
-                }
-            }
-
-            // Wait a frame - above was pretty expensive
-            yield return null;
-
-            if (!isLoading) { yield break; }
-
-            //
-            //  Base maps loaded, now load the terrain in a coroutine
-            //
-
-            
-            // First check for terrain body's terrain textures and load them
+            // If we need them, make sure that all the terrain body texture entries are there
             if (!terrainBody.Loaded && mode != ParallaxScaledBodyMode.Baked)
-            {
-                ScaledManager.Instance.StartCoroutine(terrainBody.LoadAsync());
-                yield return new WaitUntil(() => terrainBody.Loaded == true);
-            }
+                terrainBodyLoad = ScaledManager.Instance.StartCoroutine(terrainBody.LoadAsync());
 
-            if (!isLoading) { yield break; }
+            StartLoadingTextures();
+
+            // Give the async texture loads some time to complete while the
+            // the rest of the frame is running.
+            yield return new WaitForEndOfFrame();
+
+            // Ensure that the base textures are ordered first
+            var names = BaseTextures
+                .Where(scaledMaterialParams.shaderProperties.shaderTextures.ContainsKey)
+                .Concat(
+                    scaledMaterialParams.shaderProperties.shaderTextures.Keys
+                        .Where(name => !BaseTextures.Contains(name))
+                );
 
             // Now load the textures needed here
-            foreach (KeyValuePair<string, string> textureValue in scaledMaterialParams.shaderProperties.shaderTextures)
+            foreach (var name in scaledMaterialParams.shaderProperties.shaderTextures.Keys)
             {
+                var handle = loadedTextures[name];
+                if (!handle.IsComplete)
+                {
+                    // Load height, color, and normal maps immediately but wait
+                    // for everything else.
+                    if (!BaseTextures.Contains(name))
+                        yield return handle.Wait();
+                }
+
+                if (!isLoading)
+                    yield break;
+
                 Texture2D tex;
-
-                // Texture already loaded? Use it
-                if (loadedTextures.ContainsKey(textureValue.Key))
+                try
                 {
-                    tex = loadedTextures[textureValue.Key];
+                    tex = handle.Texture;
                 }
-                else
+                catch (Exception e)
                 {
-                    // Check to see if the texture we're trying to load is a terrain texture
-                    if ((mode == ParallaxScaledBodyMode.FromTerrain 
-                        || mode == ParallaxScaledBodyMode.CustomRequiresTerrain) 
-                        && terrainBody.loadedTextures.ContainsKey(textureValue.Key)
-                        && terrainBody.terrainShaderProperties.shaderTextures[textureValue.Key] == scaledMaterialParams.shaderProperties.shaderTextures[textureValue.Key])
-                    {
-                        // Point to the terrain texture
-                        tex = terrainBody.loadedTextures[textureValue.Key];
-                        loadedTextures.Add(textureValue.Key, tex);
-                    }
-                    else
-                    {
-                        // This texture is unique
-                        bool linear = TextureUtils.IsLinear(textureValue.Key);
-                        tex = TextureLoader.LoadTexture(textureValue.Value, linear);
-
-                        // Add to active textures
-                        loadedTextures.Add(textureValue.Key, tex);
-                        yield return null;
-                        if (!isLoading) { yield break; }
-                    }
+                    ParallaxDebug.LogError($"Failed to load texture {handle.Path}");
+                    Debug.LogException(e);
+                    continue;
                 }
 
-                scaledMaterial.SetTexture(textureValue.Key, tex);
-                if (textureValue.Key == "_HeightMap")
+                scaledMaterial.SetTexture(name, tex);
+                if (name == "_HeightMap")
                 {
                     shadowCasterMaterial.SetTexture("_HeightMap", tex);
                 }
             }
+
+            if (terrainBodyLoad is not null)
+                yield return terrainBodyLoad;
 
             bool hasOcean = scaledMaterialParams.shaderKeywords.Contains("OCEAN");
             bool hasOceanColormap = scaledMaterialParams.shaderKeywords.Contains("OCEAN_FROM_COLORMAP");
@@ -834,21 +842,12 @@ namespace Parallax
             // Prevent LoadAsync from continuing, if it was
             isLoading = false;
 
-            // First destroy our textures
-            Texture2D[] textures = loadedTextures.Values.ToArray();
-            string[] keys = loadedTextures.Keys.ToArray();
-            for (int i = 0; i < textures.Length; i++)
-            {
-                // This texture belongs to the terrain body, and will be handled by it later
-                if (terrainBody.loadedTextures.ContainsKey(keys[i]))
-                {
-                    continue;
-                }
-                else
-                {
-                    UnityEngine.Object.Destroy(textures[i]);
-                }
-            }
+            // First destroy our textures.
+            // We may be sharing the textures with the terrain but the handle
+            // takes care of tracking that and only disposing them when needed.
+            foreach (var handle in loadedTextures.Values)
+                handle.Dispose();
+
             loadedTextures.Clear();
             loaded = false;
             
@@ -1032,7 +1031,7 @@ namespace Parallax
 
         // Shared textures across the planet
         // Holds Texture2D and Cubemaps
-        public Dictionary<string, Texture> loadedTextures = new Dictionary<string, Texture>();
+        public Dictionary<string, TextureLoadManager.TextureHandle<Texture>> loadedTextures = [];
 
         /// <summary>
         /// Contains all scatters for fast iteration, but not sharedScatters
@@ -1073,10 +1072,8 @@ namespace Parallax
         public void UnloadTextures()
         {
             ParallaxDebug.Log("Unloading textures for " + planetName);
-            foreach (KeyValuePair<string, Texture> texturePair in loadedTextures)
-            {
-                UnityEngine.Object.Destroy(texturePair.Value);
-            }
+            foreach (var handle in loadedTextures.Values)
+                handle.Dispose();
             loadedTextures.Clear();
         }
     }

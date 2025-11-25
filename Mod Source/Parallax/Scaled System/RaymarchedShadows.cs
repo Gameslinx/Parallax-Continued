@@ -51,7 +51,14 @@ namespace Parallax.Scaled_System
         void Start()
         {
             // Load the texture - uncompressed DDS Luminance 8, linear
-            blueNoiseTexture = TextureLoader.LoadTexture("ParallaxContinued/Textures/PluginData/blueNoise.dds", true, true);
+            var options = new TextureLoadOptions
+            {
+                linear = true,
+                unreadable = true
+            };
+            blueNoiseTexture = TextureLoadManager
+                .LoadTexture("ParallaxContinued/Textures/PluginData/blueNoise.dds", options)
+                .Leak();
 
             // Setup
             foreach (KeyValuePair<string, ParallaxScaledBody> pair in ConfigLoader.parallaxScaledBodies)
