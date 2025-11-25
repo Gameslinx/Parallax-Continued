@@ -48,7 +48,7 @@ namespace Parallax
             // Fixup reflection probe (TODO: Delete when Deferred improves reflection probe implementation / alternative reflection method
             flightProbeObject = GameObject.Find("Reflection Probe");
             FlightReflectionProbe probeComponent = flightProbeObject.GetComponent<FlightReflectionProbe>();
-            probeComponent.probeComponent.size = Vector3.one * 100000.0f;
+            probeComponent.probeComponent.size = Vector3.one * Mathf.Max(1000000f, probeComponent.probeComponent.size.x);
             if (onFlightReflectionProbeReady != null)
             { 
                 onFlightReflectionProbeReady(flightProbeObject.transform);

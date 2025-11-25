@@ -1,5 +1,3 @@
-C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\ParallaxContinued\Plugins\Parallax.dll
-C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\ParallaxContinued\Plugins\Parallax.pdb
 E:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.csproj.AssemblyReference.cache
 E:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.GeneratedMSBuildEditorConfig.editorconfig
 E:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.AssemblyInfoInputs.cache
@@ -13,5 +11,7 @@ D:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48
 D:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.AssemblyInfo.cs
 D:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.csproj.CoreCompileInputs.cache
 D:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.sourcelink.json
-D:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.dll
-D:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\Parallax.pdb
+C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\ParallaxContinued\Plugins\ParallaxContinued.dll
+C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\ParallaxContinued\Plugins\ParallaxContinued.pdb
+D:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\ParallaxContinued.dll
+D:\Productivity\Unity\Parallax Continued\Mod Source\Parallax\obj\x64\Debug\net48\ParallaxContinued.pdb
