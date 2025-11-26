@@ -361,7 +361,7 @@ namespace Parallax
 
                 try
                 {
-                    tex = request.Texture;
+                    tex = request.GetTexture();
                 }
                 catch (Exception e)
                 {
@@ -401,10 +401,11 @@ namespace Parallax
                 Texture2D tex;
                 var request = loadedTextures[name];
 
-                yield return request.Wait();
+                if (!request.IsComplete)
+                    yield return request.Wait();
                 try
                 {
-                    tex = request.Texture;
+                    tex = request.GetTexture();
                 }
                 catch (Exception e)
                 {
@@ -445,7 +446,7 @@ namespace Parallax
 
             try
             {
-                return handle.Texture;
+                return handle.GetTexture();
             }
             catch (Exception e)
             {
@@ -716,7 +717,7 @@ namespace Parallax
 
                 try
                 {
-                    tex = request.Texture;
+                    tex = request.GetTexture();
                 }
                 catch (Exception e)
                 {
@@ -791,7 +792,7 @@ namespace Parallax
                 {
                     // Load height, color, and normal maps immediately but wait
                     // for everything else.
-                    if (!BaseTextures.Contains(name))
+                    // if (!BaseTextures.Contains(name))
                         yield return handle.Wait();
                 }
 
@@ -801,7 +802,7 @@ namespace Parallax
                 Texture2D tex;
                 try
                 {
-                    tex = handle.Texture;
+                    tex = handle.GetTexture();
                 }
                 catch (Exception e)
                 {

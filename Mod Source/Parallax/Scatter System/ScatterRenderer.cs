@@ -148,7 +148,7 @@ namespace Parallax
                 Texture tex;
                 try
                 {
-                    tex = handle.Texture;
+                    tex = handle.GetTexture();
                 }
                 catch (Exception e)
                 {

@@ -2,8 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.ExceptionServices;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.Profiling;
 
 namespace Parallax;
 
@@ -119,18 +122,15 @@ public class TextureLoadManager : MonoBehaviour
         /// Get the texture handle. If the texture is not loaded yet then
         /// this will block until loading completes.
         /// </summary>
-        public T Texture
+        public T GetTexture()
         {
-            get
-            {
-                if (entry is null)
-                    return null;
+            if (entry is null)
+                return null;
 
-                if (!entry.IsComplete)
-                    entry.Complete();
+            if (!entry.IsComplete)
+                entry.Complete();
 
-                return (T)entry.Texture;
-            }
+            return (T)entry.Texture;
         }
 
         public bool IsComplete => entry?.IsComplete ?? true;
@@ -169,7 +169,7 @@ public class TextureLoadManager : MonoBehaviour
             // freed by unity when all existing references are gone.
             Instance?.TextureCache.Remove(entry.key);
 
-            return Texture;
+            return GetTexture();
         }
 
         public void Dispose()
@@ -200,7 +200,7 @@ public class TextureLoadManager : MonoBehaviour
     {
         readonly CacheEntry entry;
 
-        public override bool keepWaiting => entry.IsComplete;
+        public override bool keepWaiting => !entry.IsComplete;
 
         // For use internal to TextureLoadManager only.
         internal TextureHandleYieldInstruction(object entry)
@@ -231,7 +231,7 @@ public class TextureLoadManager : MonoBehaviour
 
         public CacheKey key;
         public Texture texture;
-        public Exception exception;
+        public ExceptionDispatchInfo exception;
         public int refcount;
 
         public ICompleteHandler completeHandler;
@@ -255,8 +255,7 @@ public class TextureLoadManager : MonoBehaviour
         {
             get
             {
-                if (!(exception is null))
-                    throw exception;
+                exception?.Throw();
 
                 return texture;
             }
@@ -279,20 +278,26 @@ public class TextureLoadManager : MonoBehaviour
                 this.texture = texture;
         }
 
-        public void SetException(Exception exception) => this.exception = exception;
+        public void SetException(ExceptionDispatchInfo exception) => this.exception = exception;
+        public void SetException(Exception exception) =>
+            SetException(ExceptionDispatchInfo.Capture(exception));
 
         public void Complete()
         {
             if (coroutine is null)
                 return;
 
+            Profiler.BeginSample($"TextureLoadManager.Complete: {key.path}");
+
             while (!IsComplete)
             {
                 completeHandler?.Complete();
                 completeHandler = null;
 
-                coroutine.MoveNext();
+                coroutine?.MoveNext();
             }
+
+            Profiler.EndSample();
         }
     
         public void Acquire()
@@ -348,7 +353,10 @@ public class TextureLoadManager : MonoBehaviour
         };
 
         TextureCache.Add(key, entry);
-        var coro = CatchExceptions(DoLoadTexture<T>(entry, path, options), entry);
+        var coro = LoadTextureWrapper(
+            CatchExceptions(DoLoadTexture<T>(entry, path, options), entry),
+            path
+        );
         entry.coroutine = coro;
 
         // Needs to happen before we start the coroutine
@@ -356,6 +364,22 @@ public class TextureLoadManager : MonoBehaviour
 
         StartCoroutine(coro);
         return handle;
+    }
+
+    IEnumerator LoadTextureWrapper(IEnumerator enumerator, string path)
+    {
+        var marker = new ProfilerMarker($"LoadTexture: {path}");
+
+        while(true)
+        {
+            using (var scope = marker.Auto())
+            {
+                if (!enumerator.MoveNext())
+                    break;
+            }
+
+            yield return enumerator.Current;
+        }
     }
 
     IEnumerator DoLoadTexture<T>(CacheEntry entry, string path, TextureLoadOptions options)
@@ -374,13 +398,16 @@ public class TextureLoadManager : MonoBehaviour
         if (options.assetBundle is not null)
         {
             var handle = LoadAssetBundleAsync(options.assetBundle);
+            using var guard = handle.Guard();
             entry.completeHandler = handle;
-            yield return handle;
+            if (!handle.IsComplete)
+                yield return handle;
 
             var bundle = handle.Bundle;
-            var assetreq = bundle.LoadAssetAsync<Texture>(path);
+            var assetreq = bundle.LoadAssetAsync<Texture>(NormalizeAssetBundlePath(path));
             entry.completeHandler = new AssetBundleRequestCompleteHandler(assetreq);
-            yield return assetreq;
+            if (!assetreq.isDone)
+                yield return assetreq;
 
             if (assetreq.asset is not null)
             {
@@ -401,6 +428,13 @@ public class TextureLoadManager : MonoBehaviour
                 // Log a warning if we find the asset but it was not in the right format
                 ParallaxDebug.LogError($"Texture {path} in asset bundle {options.assetBundle} could not be converted to {typeof(T).Name}");
             }
+            else
+            {
+                // Not a warning because this is not an error.
+                // However, it is really useful as a diagnostic if a mod author is
+                // expecting the texture to be within the asset bundle.
+                ParallaxDebug.Log($"Texture {path} not found in asset bundle {options.assetBundle}. Falling back to on-disk texture.");
+            }
         }
 
         path = GetAbsolutePath(path);
@@ -408,8 +442,12 @@ public class TextureLoadManager : MonoBehaviour
         // DDS textures cannot be handled with UnityWebRequest and need special handling.
         if (path.EndsWith(".dds"))
         {
+            Profiler.BeginSample($"LoadDDSTexture ({path})");
+
             // We don't support loading DDS textures asynchronously yet.
             entry.SetTexture<T>(TextureLoader.LoadDDSTexture(path, options.linear, options.unreadable));
+
+            Profiler.EndSample();
         }
         else
         {
@@ -430,23 +468,24 @@ public class TextureLoadManager : MonoBehaviour
     #endregion
 
     #region Asset Bundles
-    class AssetBundleHandle : ISetException, ICompleteHandler
+    class AssetBundleHandle : CustomYieldInstruction, ISetException, ICompleteHandler
     {
         public AssetBundleCreateRequest request;
         AssetBundle bundle;
-        Exception exception;
+        ExceptionDispatchInfo exception;
         public int refcount;
 
         public AssetBundle Bundle
         {
             get
             {
-                if (exception is not null)
-                    throw exception;
+                exception?.Throw();
                 return bundle;
             }
         }
         public bool IsComplete => exception is not null || bundle is not null;
+
+        public override bool keepWaiting => !IsComplete;
 
         public AssetBundleHandle(AssetBundleCreateRequest request)
         {
@@ -460,12 +499,12 @@ public class TextureLoadManager : MonoBehaviour
 
         public void SetBundle(AssetBundle bundle) => this.bundle = bundle;
 
-        public void SetException(Exception exception) => this.exception = exception;
+        public void SetException(ExceptionDispatchInfo exception) => this.exception = exception;
 
         public void Complete()
         {
             if (request.assetBundle == null)
-                SetException(new Exception("Failed to load asset bundle"));
+                throw new Exception("Failed to load asset bundle");
             else
                 SetBundle(request.assetBundle);
         }
@@ -500,13 +539,36 @@ public class TextureLoadManager : MonoBehaviour
         if (ActiveBundles.TryGetValue(path, out var handle))
             return handle;
 
+        ParallaxDebug.Log($"Loading Asset Bundle: {path}");
+
         var request = AssetBundle.LoadFromFileAsync(GetAbsolutePath(path));
         handle = new AssetBundleHandle(request);
 
         ActiveBundles.Add(path, handle);
-        StartCoroutine(CatchExceptions(DoLoadAssetBundle(handle), handle));
+        StartCoroutine(LoadAssetBundleWrapper(
+            CatchExceptions(DoLoadAssetBundle(handle), handle),
+            path
+        ));
         StartCoroutine(DelayedAssetBundleCleanup(handle, path));
         return handle;
+    }
+
+    // The goal of this method is purely to make sure that the correct spans
+    // appear in the profiler.
+    IEnumerator LoadAssetBundleWrapper(IEnumerator enumerator, string path)
+    {
+        var marker = new ProfilerMarker($"LoadAssetBundle: {path}");
+
+        while(true)
+        {
+            using (var scope = marker.Auto())
+            {
+                if (!enumerator.MoveNext())
+                    break;
+            }
+
+            yield return enumerator.Current;
+        }
     }
 
     IEnumerator DoLoadAssetBundle(AssetBundleHandle handle)
@@ -528,7 +590,7 @@ public class TextureLoadManager : MonoBehaviour
     IEnumerator DelayedAssetBundleCleanup(AssetBundleHandle handle, string path)
     {
         yield return new WaitForEndOfFrame();
-        yield return handle.Guard();
+        yield return handle;
 
         // Wait 5 frames before unloading the asset bundle so we can coalesce
         // multiple loads from the same bundle together.
@@ -582,7 +644,7 @@ public class TextureLoadManager : MonoBehaviour
 
     interface ISetException
     {
-        void SetException(Exception exception);
+        void SetException(ExceptionDispatchInfo exception);
     }
 
     static IEnumerator CatchExceptions(IEnumerator enumerator, ISetException handler)
@@ -598,7 +660,7 @@ public class TextureLoadManager : MonoBehaviour
             }
             catch (Exception e)
             {
-                handler.SetException(e);
+                handler.SetException(ExceptionDispatchInfo.Capture(e));
                 break;
             }
 
@@ -610,6 +672,20 @@ public class TextureLoadManager : MonoBehaviour
     static string GetAbsolutePath(string path)
     {
         return Path.Combine(KSPUtil.ApplicationRootPath, "GameData", path);
+    }
+
+    // Normalize the asset bundle path so config writers don't need to worry
+    // about the specific path separator they use.
+    static string NormalizeAssetBundlePath(string path)
+    {
+        // Normalize all \ separators to /, then convert the name to lowercase.
+        // This matches what is exported by the asset bundle script:
+        // - The script normalizes all path separators to be /
+        // - Unity converts all asset bundle names to lowercase.
+
+        return path
+            .Replace('\\', '/')
+            .ToLowerInvariant();
     }
 
     class TextureDisposeGuard(Texture2D texture) : IDisposable
