@@ -420,6 +420,7 @@ namespace Parallax
 
                     ParallaxTerrainBody body = new ParallaxTerrainBody(planetName);
                     body.emissive = isEmissive;
+                    planetNode.TryGetValue("assetBundle", ref body.assetBundle);
 
                     ParseNewBody(body, planetNode.GetNode("ShaderProperties"));
 
@@ -440,8 +441,6 @@ namespace Parallax
             // Grab the template
             body.terrainShaderProperties = shaderPropertiesTemplate.Clone() as ShaderProperties;
 
-            bodyNode.TryGetValue("assetBundle", ref body.assetBundle);
-
             // Now get every value defined in the template
             string[] textureProperties = body.terrainShaderProperties.shaderTextures.Keys.ToArray();
             string[] floatProperties = body.terrainShaderProperties.shaderFloats.Keys.ToArray();
@@ -459,7 +458,7 @@ namespace Parallax
                     Debug.Log("No texture (" + propertyName + ") found on " + body.planetName + ", setting it to default white");
                     configValue = "ParallaxContinued/white.dds";
                 }
-                if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + configValue))
+                if (body.assetBundle is null && !File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + configValue))
                 {
                     ParallaxDebug.LogCritical("This texture file doesn't exist: " + configValue + " for planet: " + body.planetName);
                 }
