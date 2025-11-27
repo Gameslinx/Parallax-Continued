@@ -3,9 +3,15 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.ExceptionServices;
+using System.Runtime.Serialization;
 using Mono.CompilerServices.SymbolWriter;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
+using Unity.IO.LowLevel.Unsafe;
+using Unity.Jobs;
 using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Networking;
 using UnityEngine.Profiling;
 
@@ -537,12 +543,8 @@ public class TextureLoadManager : MonoBehaviour
         // DDS textures cannot be handled with UnityWebRequest and need special handling.
         if (path.EndsWith(".dds"))
         {
-            Profiler.BeginSample($"LoadDDSTexture ({path})");
-
-            // We don't support loading DDS textures asynchronously yet.
-            entry.SetTexture<T>(TextureLoader.LoadDDSTexture(path, options.linear, options.unreadable));
-
-            Profiler.EndSample();
+            foreach (var value in LoadDDSTexture<T>(entry, path, options))
+                yield return value;
         }
         else
         {
@@ -559,6 +561,124 @@ public class TextureLoadManager : MonoBehaviour
 
             entry.SetTexture<T>(DownloadHandlerTexture.GetContent(uwr));
         }
+    }
+    #endregion
+
+    #region DDS Textures
+    const int DDS_HEADER_SIZE = 128;
+
+    static IEnumerable<object> LoadDDSTexture<T>(CacheEntry entry, string path, TextureLoadOptions options)
+        where T : Texture
+    {
+        byte[] header = new byte[DDS_HEADER_SIZE];
+        long length;
+        using (var file = File.OpenRead(path))
+        {
+            length = file.Length;
+
+            if (length < DDS_HEADER_SIZE)
+                throw new Exception("File is too small to be a valid DDS texture");
+            if (length > int.MaxValue)
+                throw new Exception("DDS texture file is too large to load");
+
+            if (file.Read(header, 0, DDS_HEADER_SIZE) < DDS_HEADER_SIZE)
+                throw new Exception("Unable to read the whole texture header");
+        }
+
+        var metadata = TextureLoader.GetDDSTextureMetadata(header, options.linear, options.unreadable);
+        using var data = new NativeArray<byte>(
+            (int)(length - DDS_HEADER_SIZE),
+            Allocator.TempJob,
+            NativeArrayOptions.UninitializedMemory
+        );
+
+        var texture = CreateUninitializedTexture(
+            metadata.width,
+            metadata.height,
+            metadata.format,
+            metadata.mips,
+            metadata.linear
+        );
+
+        using var guard = new TextureDisposeGuard(texture);
+        var handle = LaunchRead(path, data, DDS_HEADER_SIZE);
+
+        entry.completeHandler = new JobCompleteHandler(handle.JobHandle);
+        yield return new WaitUntil(() => !handle.IsValid() || handle.Status != ReadStatus.InProgress);
+        entry.completeHandler = null;
+
+        try {
+            if (handle.Status != ReadStatus.Complete)
+                throw new Exception("Failed to read texture from file system");
+
+            texture.LoadRawTextureData(data);
+            texture.Apply(false, options.unreadable);
+
+            // We don't support loading DDS textures asynchronously yet.
+            entry.SetTexture<T>(texture);
+            guard.Clear();
+        }
+        finally
+        {
+            handle.Dispose();
+        }
+    }
+
+    // This reflects the actual creation flags in
+    // https://github.com/Unity-Technologies/UnityCsReference/blob/59b03b8a0f179c0b7e038178c90b6c80b340aa9f/Runtime/Export/Graphics/GraphicsEnums.cs#L626
+    //
+    // Most of the extra ones here are completely undocumented.
+    [Flags]
+    enum InternalTextureCreationFlags
+    {
+        None,
+        MipChain = 1 << 0,
+        DontInitializePixels = 1 << 2,
+        DontDestroyTexture = 1 << 3,
+        DontCreateSharedTextureData = 1 << 4,
+        APIShareable = 1 << 5,
+        Crunch = 1 << 6,
+    }
+
+    /// <summary>
+    /// Create a <see cref="Texture2D"/> without initializing its data.
+    /// </summary>
+    static Texture2D CreateUninitializedTexture(
+        int width,
+        int height,
+        TextureFormat format = TextureFormat.RGBA32,
+        bool mipChain = false,
+        bool linear = false
+    )
+    {
+        // The code in here exactly matches the behaviour of the Texture2D
+        // constructors which directly take a TextureFormat, with one
+        // difference: it includes the DontInitializePixels flag.
+        //
+        // This is necessary because the Texture2D constructors that take
+        // GraphicsFormat validate the format differently than those that take
+        // TextureFormat, and only the GraphicsFormat constructors allow you to
+        // pass TextureCreationFlags.
+        //
+        // I (@Phantomical) have taken at look at decompiled implementation for
+        // Internal_Create_Impl and validated that this works as you would expect.
+
+        var tex = (Texture2D)FormatterServices.GetUninitializedObject(typeof(Texture2D));
+        if (!tex.ValidateFormat(format))
+            return tex;
+
+        var gformat = GraphicsFormatUtility.GetGraphicsFormat(format, isSRGB: !linear);
+        var flags = InternalTextureCreationFlags.DontInitializePixels;
+        int mipCount = !mipChain ? 1 : -1;
+
+        if (mipCount != 1)
+            flags |= InternalTextureCreationFlags.MipChain;
+        if (GraphicsFormatUtility.IsCrunchFormat(format))
+            flags |= InternalTextureCreationFlags.Crunch;
+
+        var uflags = (TextureCreationFlags)flags;
+        Texture2D.Internal_Create(tex, width, height, mipCount, gformat, uflags, IntPtr.Zero);
+        return tex;
     }
     #endregion
 
@@ -755,6 +875,10 @@ public class TextureLoadManager : MonoBehaviour
         public void Complete() => _ = request.asset;
     }
 
+    class JobCompleteHandler(JobHandle handle) : ICompleteHandler
+    {
+        public void Complete() => handle.Complete();
+    }
     #endregion
 
     interface ISetException
@@ -803,6 +927,18 @@ public class TextureLoadManager : MonoBehaviour
             .ToLowerInvariant();
     }
 
+    static unsafe ReadHandle LaunchRead(string path, NativeArray<byte> array, int offset)
+    {
+        var command = new ReadCommand
+        {
+            Buffer = array.GetUnsafePtr(),
+            Offset = offset,
+            Size = array.Length
+        };
+
+        return AsyncReadManager.Read(path, &command, 1);
+    }
+
     class TextureDisposeGuard(Texture2D texture) : IDisposable
     {
         public Texture2D texture = texture;
@@ -822,6 +958,28 @@ public class TextureLoadManager : MonoBehaviour
         {
             entry.coroutine = null;
             entry.completeHandler = null;
+        }
+    }
+
+    // This takes care of completing the read and then disposing of it
+    // appropriately, which saves us a whole bunch of try-catch blocks.
+    readonly struct SafeReadHandle(ReadHandle handle) : IDisposable
+    {
+        readonly ReadHandle handle = handle;
+
+        public ReadStatus Status => handle.Status;
+        public JobHandle JobHandle => handle.JobHandle;
+
+        public bool IsComplete => !handle.IsValid() || handle.Status != ReadStatus.InProgress;
+
+        public void Dispose()
+        {
+            if (!handle.IsValid())
+                return;
+            if (handle.Status == ReadStatus.InProgress)
+                handle.JobHandle.Complete();
+            
+            handle.Dispose();
         }
     }
 }

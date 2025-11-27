@@ -63,31 +63,23 @@ namespace Parallax
             tex.Apply(true, markUnreadable);
             return tex;
         }
-        public static byte[] LoadDDSTextureData(string url, bool linear, bool markUnreadable, out TextureLoaderData textureData)
-        {
-            textureData = new TextureLoaderData();
 
-            byte[] data = File.ReadAllBytes(url);
+        const int DDS_HEADER_SIZE = 128;
+        internal static TextureLoaderData GetDDSTextureMetadata(byte[] data, bool linear, bool markUnreadable)
+        {
             if (data.Length < 128)
             {
-                ParallaxDebug.LogError("This DDS texture is invalid - File is too small to contain a valid header.");
-                return null;
+                throw new Exception("This DDS texture is invalid - File is too small to contain a valid header.");
             }
 
             byte ddsSizeCheck = data[4];
             if (ddsSizeCheck != 124)
             {
-                ParallaxDebug.LogError("This DDS texture is invalid - Header size check failed.");
-                return null;
+                throw new Exception("This DDS texture is invalid - Header size check failed.");
             }
 
             int height = BitConverter.ToInt32(data, 12);
             int width = BitConverter.ToInt32(data, 16);
-
-            const int DDS_HEADER_SIZE = 128;
-            byte[] rawData = new byte[data.Length - DDS_HEADER_SIZE];
-
-            Buffer.BlockCopy(data, DDS_HEADER_SIZE, rawData, 0, data.Length - DDS_HEADER_SIZE);
 
             int mipMapCount = BitConverter.ToInt32(data, 28);
             uint pixelFormatFlags = BitConverter.ToUInt32(data, 80);
@@ -107,7 +99,7 @@ namespace Parallax
                 }
                 else
                 {
-                    return null;
+                    throw new Exception("Unsupported DDS texture format flags");
                 }
             }
             else if ((pixelFormatFlags & 0x40) != 0 && fourCC == 0) // DDPF_ALPHAPIXELS (standard L8)
@@ -120,16 +112,29 @@ namespace Parallax
             }
             else
             {
-                return null;
+                throw new Exception("Unsupported DDS pixel format flags");
             }
 
             // Create the Texture2D with or without mipmaps based on the header
+            TextureLoaderData textureData;
             textureData.width = width;
             textureData.height = height;
             textureData.format = format;
             textureData.mips = mipMapCount > 1;
             textureData.linear = linear;
             textureData.unreadable = markUnreadable;
+
+            return textureData;
+        }
+
+        public static byte[] LoadDDSTextureData(string url, bool linear, bool markUnreadable, out TextureLoaderData textureData)
+        {
+            byte[] data = File.ReadAllBytes(url);
+            textureData = GetDDSTextureMetadata(data, linear, markUnreadable);
+
+            byte[] rawData = new byte[data.Length - DDS_HEADER_SIZE];
+
+            Buffer.BlockCopy(data, DDS_HEADER_SIZE, rawData, 0, data.Length - DDS_HEADER_SIZE);
 
             return rawData;
         }
@@ -260,6 +265,8 @@ namespace Parallax
 
             return texture;
         }
+
+
 
         // Helper function
         public static Cubemap CubemapFromTexture2D(Texture2D texture)
