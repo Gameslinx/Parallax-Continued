@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Steamworks;
 using UnityEngine;
 
 namespace Parallax
@@ -45,7 +46,10 @@ namespace Parallax
             }
             else
             {
-                body.Load();
+                if (Instance == null)
+                    body.Load();
+                else
+                    Instance.StartCoroutine(body.LoadAsync());
                 currentParallaxBody = body;
             }
         }
