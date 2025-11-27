@@ -86,6 +86,21 @@ public struct TextureLoadOptions()
 public class TextureLoadManager : MonoBehaviour
 {
     public static TextureLoadManager Instance { get; private set; }
+
+    /// <summary>
+    /// How many frames to wait before unloading an asset bundle.
+    /// </summary>
+    /// 
+    /// <remarks>
+    /// Unloading an asset bundle while asset loads are happening in the
+    /// background will block until any queued background reads have completed.
+    /// This value should be set high enough that it doesn't overlap with async
+    /// loads but no higher than that.
+    /// 
+    /// Note that keeping an asset bundle loaded prevents any of its assets
+    /// from being unloaded, so you cannot set this arbitrarily high.
+    /// </remarks>
+    public static int AssetBundleUnloadDelay = 30;
         
     void Awake()
     {
@@ -689,7 +704,7 @@ public class TextureLoadManager : MonoBehaviour
         // Wait 5 frames before unloading the asset bundle so we can coalesce
         // multiple loads from the same bundle together.
         int count = 0;
-        while (count < 5)
+        while (count < AssetBundleUnloadDelay)
         {
             if (handle.refcount != 0)
                 count = 0;
