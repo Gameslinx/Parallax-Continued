@@ -874,6 +874,9 @@ namespace Parallax
                         SharedScatter sharedScatter = new SharedScatter(scatterName, parentScatter);
                         sharedScatter.modelPath = model;
 
+                        if (!node.TryGetValue("assetBundle", ref sharedScatter.assetBundle))
+                            sharedScatter.assetBundle = parentScatter.assetBundle;
+
                         OptimizationParams optimizationParams = GetOptimizationParams(body, node.GetNode("Optimizations"));
                         MaterialParams materialParams = GetMaterialParams(body, node.GetNode("Material"), parentScatter.assetBundle);
                         DistributionParams distributionParams = GetDistributionParams(body, node.GetNode("Distribution"), materialParams, true, parentScatter.assetBundle);
