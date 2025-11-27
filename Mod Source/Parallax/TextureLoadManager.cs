@@ -696,7 +696,7 @@ public class TextureLoadManager : MonoBehaviour
 
     /// <summary>
     /// Asset bundles need to be explicitly unloaded if they are not attached
-    /// to a scene. This coroutine waits 5 frames after the bundle is completed
+    /// to a scene. This coroutine waits some frames after the bundle is completed
     /// so that other requests in the same frames can reuse it.
     /// </summary>
     /// <param name="handle"></param>
