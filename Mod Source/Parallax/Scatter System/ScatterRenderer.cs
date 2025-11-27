@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -82,7 +83,7 @@ namespace Parallax
                 {
                     linear = linear,
                     unreadable = true,
-                    assetBundle = scatter.assetBundle
+                    assetBundle = scatter.assetBundle,
                 };
 
                 TextureLoadManager.TextureHandle<Texture> handle;
@@ -139,28 +140,6 @@ namespace Parallax
                 material.SetInt("_DstMode", (int)UnityEngine.Rendering.BlendMode.Zero);
             }
 
-            // Textures
-            var loadedTextures = ConfigLoader.parallaxScatterBodies[planetName].loadedTextures;
-            foreach (var (name, path) in properties.shaderTextures)
-            {
-                var handle = loadedTextures[path];
-                
-                Texture tex;
-                try
-                {
-                    tex = handle.GetTexture();
-                }
-                catch (Exception e)
-                {
-                    ParallaxDebug.LogError($"Failed to load texture {handle.Path}");
-                    Debug.LogException(e);
-                    continue;
-                }
-
-                // Texture load was started in PreloadTextures
-                material.SetTexture(name, tex);
-            }
-
             // Floats
             foreach (KeyValuePair<string, float> floatPair in properties.shaderFloats)
             {
@@ -184,7 +163,67 @@ namespace Parallax
             {
                 material.SetInt(intPair.Key, intPair.Value);
             }
+
+            // Textures
+            if (ScatterManager.Instance != null)
+                ScatterManager.Instance.StartCoroutine(SetMaterialTexturesAsync(properties, material));
+            else
+                SetMaterialTexturesSync(properties, material);
         }
+
+        private IEnumerator SetMaterialTexturesAsync(ShaderProperties properties, Material material)
+        {
+            var loadedTextures = ConfigLoader.parallaxScatterBodies[planetName].loadedTextures;
+            foreach (var (name, path) in properties.shaderTextures)
+            {
+                var handle = loadedTextures[path];
+                
+                Texture tex;
+                yield return handle.Wait();
+
+                if (this == null || material == null)
+                    yield break;
+
+                try
+                {
+                    tex = handle.GetTexture();
+                }
+                catch (Exception e)
+                {
+                    ParallaxDebug.LogError($"Failed to load texture {handle.Path}");
+                    Debug.LogException(e);
+                    continue;
+                }
+
+                // Texture load was started in PreloadTextures
+                material.SetTexture(name, tex);
+            }
+        }
+
+        private void SetMaterialTexturesSync(ShaderProperties properties, Material material)
+        {
+            var loadedTextures = ConfigLoader.parallaxScatterBodies[planetName].loadedTextures;
+            foreach (var (name, path) in properties.shaderTextures)
+            {
+                var handle = loadedTextures[path];
+                
+                Texture tex;
+                try
+                {
+                    tex = handle.GetTexture();
+                }
+                catch (Exception e)
+                {
+                    ParallaxDebug.LogError($"Failed to load texture {handle.Path}");
+                    Debug.LogException(e);
+                    continue;
+                }
+
+                // Texture load was started in PreloadTextures
+                material.SetTexture(name, tex);
+            }
+        }
+
         /// <summary>
         /// Explicitly set LOD0 material params
         /// </summary>
