@@ -733,7 +733,7 @@ namespace Parallax
                     linear = TextureUtils.IsLinear(name),
                     unreadable = true,
                     assetBundle = assetBundle,
-                    hint = TextureLoadHint.BatchedSync
+                    hint = TextureLoadHint.BatchedAsync
                 };
                 loadedTextures.Add(name, TextureLoadManager.LoadTexture(path, options));
             }

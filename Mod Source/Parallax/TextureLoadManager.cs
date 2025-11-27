@@ -24,7 +24,7 @@ public enum TextureLoadHint
     /// <remarks>
     /// This tends to result in unity spacing the texture loads out so that only
     /// one completes every frame. Unless you are loading LZMA-compressed asset
-    /// bundles it is recommended to use <see cref="BatchedSync"/> instead,
+    /// bundles it is recommended to use <see cref="BatchedAsync"/> instead,
     /// since loading the asset bundle is very quick and it will result in much
     /// lower overall latency.
     /// </remarks>
@@ -41,7 +41,7 @@ public enum TextureLoadHint
     /// switch. Otherwise you will need to wait until <c>Update</c> is called
     /// before any texture loads will even start.
     /// </remarks>
-    BatchedSync,
+    BatchedAsync,
 
     /// <summary>
     /// Do everything synchronously. Only use this if you are loading a single
@@ -80,7 +80,7 @@ public struct TextureLoadOptions()
     /// texture loader to optimize what operations it performs to give the
     /// minimum latency.
     /// </summary>
-    public TextureLoadHint hint = TextureLoadHint.BatchedSync;
+    public TextureLoadHint hint = TextureLoadHint.BatchedAsync;
 }
 
 [KSPAddon(KSPAddon.Startup.Instantly, once: true)]
