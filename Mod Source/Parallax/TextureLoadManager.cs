@@ -10,6 +10,45 @@ using UnityEngine.Profiling;
 
 namespace Parallax;
 
+/// <summary>
+/// Hints about how the application intends to load textures.
+/// </summary>
+public enum TextureLoadHint
+{
+    /// <summary>
+    /// Load everything async. Both the asset bundle and textures will be loaded
+    /// using their async variants.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// This tends to result in unity spacing the texture loads out so that only
+    /// one completes every frame. Unless you are loading LZMA-compressed asset
+    /// bundles it is recommended to use <see cref="BatchedSync"/> instead,
+    /// since loading the asset bundle is very quick and it will result in much
+    /// lower overall latency.
+    /// </remarks>
+    Asynchronous,
+
+    /// <summary>
+    /// Load the asset bundle synchronously but load the textures within
+    /// asynchronously.
+    /// </summary>
+    ///
+    /// <remarks>
+    /// This is the default because it starts all the texture loads immediately,
+    /// which results in much lower overall latency when running during scene
+    /// switch. Otherwise you will need to wait until <c>Update</c> is called
+    /// before any texture loads will even start.
+    /// </remarks>
+    BatchedSync,
+
+    /// <summary>
+    /// Do everything synchronously. Only use this if you are loading a single
+    /// texture and intend to immediately block on it.
+    /// </summary>
+    Synchronous,
+}
+
 public struct TextureLoadOptions()
 {
     /// <summary>
@@ -34,6 +73,13 @@ public struct TextureLoadOptions()
     /// the configured setting within the asset bundle.
     /// </summary>
     public bool unreadable = true;
+
+    /// <summary>
+    /// Hints about how this texture is going to be loaded. This allows the
+    /// texture loader to optimize what operations it performs to give the
+    /// minimum latency.
+    /// </summary>
+    public TextureLoadHint hint = TextureLoadHint.BatchedSync;
 }
 
 [KSPAddon(KSPAddon.Startup.Instantly, once: true)]
@@ -397,29 +443,57 @@ public class TextureLoadManager : MonoBehaviour
         // We try to load from the asset bundle first.
         if (options.assetBundle is not null)
         {
-            var handle = LoadAssetBundleAsync(options.assetBundle);
+            AssetBundleHandle handle;
+            // Synchronously load the asset bundle unless the caller explicitly
+            // wants it loaded async.
+            if (options.hint == TextureLoadHint.Asynchronous)
+                handle = LoadAssetBundleAsync(options.assetBundle);
+            else
+                handle = LoadAssetBundleSync(options.assetBundle);
+
             using var guard = handle.Guard();
             entry.completeHandler = handle;
             if (!handle.IsComplete)
                 yield return handle;
 
             var bundle = handle.Bundle;
-            var assetreq = bundle.LoadAssetAsync<Texture>(NormalizeAssetBundlePath(path));
-            entry.completeHandler = new AssetBundleRequestCompleteHandler(assetreq);
-            if (!assetreq.isDone)
-                yield return assetreq;
 
-            if (assetreq.asset is not null)
+            UnityEngine.Object asset;
+            var normalizedPath = NormalizeAssetBundlePath(path);
+            if (!bundle.Contains(normalizedPath))
+            {
+                // Avoid yielding for a frame if the asset bundle doesn't contain
+                // the asset we're looking for.
+                asset = null;
+            }
+            else if (options.hint < TextureLoadHint.Synchronous)
+            {
+                var assetreq = bundle.LoadAssetAsync<Texture>(normalizedPath);
+                entry.completeHandler = new AssetBundleRequestCompleteHandler(assetreq);
+                if (!assetreq.isDone)
+                    yield return assetreq;
+                
+                asset = assetreq.asset;
+            }
+            else
+            {
+                // If there is only one texture being loaded and it is going to
+                // immediately be blocked on then we might as well just load
+                // synchronously.
+                asset = bundle.LoadAsset<Texture>(normalizedPath);
+            }
+
+            if (asset is not null)
             {
                 // If we directly match the requested texture type then we're good
                 // to go.
-                if (assetreq.asset is T tex)
+                if (asset is T tex)
                 {
                     entry.SetTexture<T>(tex);
                     yield break;
                 }
 
-                if (typeof(T) == typeof(Cubemap) && assetreq.asset is Texture2D tex2d)
+                if (typeof(T) == typeof(Cubemap) && asset is Texture2D tex2d)
                 {
                     entry.SetTexture<T>(tex2d);
                     yield break;
@@ -503,7 +577,10 @@ public class TextureLoadManager : MonoBehaviour
 
         public void Complete()
         {
-            if (request.assetBundle == null)
+            if (IsComplete)
+                return;
+
+            if (request?.assetBundle == null)
                 throw new Exception("Failed to load asset bundle");
             else
                 SetBundle(request.assetBundle);
@@ -549,6 +626,23 @@ public class TextureLoadManager : MonoBehaviour
             CatchExceptions(DoLoadAssetBundle(handle), handle),
             path
         ));
+        StartCoroutine(DelayedAssetBundleCleanup(handle, path));
+        return handle;
+    }
+
+    AssetBundleHandle LoadAssetBundleSync(string path)
+    {
+        if (ActiveBundles.TryGetValue(path, out var handle))
+            return handle;
+
+        ParallaxDebug.Log($"Loading Asset Bundle: {path}");
+        
+        var bundle = AssetBundle.LoadFromFile(GetAbsolutePath(path));
+        handle = new AssetBundleHandle(bundle);
+        if (bundle == null)
+            handle.SetException(ExceptionDispatchInfo.Capture(new Exception("Failed to load asset bundle")));
+
+        ActiveBundles.Add(path, handle);
         StartCoroutine(DelayedAssetBundleCleanup(handle, path));
         return handle;
     }
