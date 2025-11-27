@@ -50,6 +50,10 @@ namespace Parallax
 
         // Configs that start with 'Parallax' as the root node
         public UrlDir.UrlConfig globalNode;
+
+        // Cache for asset bundles loaded while validating configs.
+        private static Dictionary<string, AssetBundle> assetBundleCache = [];
+
         public void Awake()
         {
             ParallaxDebug.Log("Starting!");
@@ -60,6 +64,8 @@ namespace Parallax
         {
             ParallaxDebug.Log("Beginning config load");
             System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+
+            using var guard = new AssetBundleCleanupGuard();
 
             // Get system information
             ParallaxSystemInfo.ReadInfo();
@@ -104,6 +110,13 @@ namespace Parallax
                 int reflectionResolution = (int)(Mathf.Pow(2, GameSettings.REFLECTION_PROBE_TEXTURE_RESOLUTION) * 128.0f);
                 ParallaxDebug.LogPopupWarning("Your reflection resolution is set to " + reflectionResolution + " - this will have a huge performance impact! Set 'Reflection Resolution' in the main menu graphics settings to 128 for best performance");
             }
+        }
+
+        private static void ClearAssetBundleCache()
+        {
+            foreach (var bundle in assetBundleCache.Values)
+                bundle?.Unload(true);
+            assetBundleCache.Clear();
         }
 
         public static UrlDir.UrlConfig[] GetConfigsByName(string name)
@@ -448,6 +461,14 @@ namespace Parallax
             string[] colorProperties = body.terrainShaderProperties.shaderColors.Keys.ToArray();
             string[] intProperties = body.terrainShaderProperties.shaderInts.Keys.ToArray();
 
+            if (body.assetBundle is not null)
+            {
+                if (!File.Exists(Path.Combine(KSPUtil.ApplicationRootPath, "GameData", body.assetBundle)))
+                {
+                    ParallaxDebug.LogCritical($"This asset bundle doesn't exist: {body.assetBundle}");
+                }
+            }
+
             // Parse correct value type and set on the shader properties
             foreach (string propertyName in textureProperties)
             {
@@ -458,7 +479,7 @@ namespace Parallax
                     Debug.Log("No texture (" + propertyName + ") found on " + body.planetName + ", setting it to default white");
                     configValue = "ParallaxContinued/white.dds";
                 }
-                if (body.assetBundle is null && !File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + configValue))
+                if (!CheckTextureExists(configValue, body.assetBundle))
                 {
                     ParallaxDebug.LogCritical("This texture file doesn't exist: " + configValue + " for planet: " + body.planetName);
                 }
@@ -565,7 +586,7 @@ namespace Parallax
                 body.scaledMaterialParams.shaderProperties = LookupTemplateConfig(GetConfigByName("ParallaxScaledShaderProperties"), body.scaledMaterialParams.shader, keywords);
 
                 // Populate the values from this material. Do this before appending the terrain shader stuff, as that is already initialised by this point
-                PopulateMaterialValues(ref body.scaledMaterialParams, materialNode, body.planetName);
+                PopulateMaterialValues(ref body.scaledMaterialParams, materialNode, body.planetName, body.assetBundle);
 
                 // Finally, copy terrain properties over to the scaled body
                 body.ReadTerrainShaderProperties();
@@ -579,7 +600,7 @@ namespace Parallax
                 body.scaledMaterialParams.shaderProperties = LookupTemplateConfig(GetConfigByName("ParallaxScaledShaderProperties"), body.scaledMaterialParams.shader, keywords);
 
                 // Populate the values from this material
-                PopulateMaterialValues(ref body.scaledMaterialParams, materialNode, body.planetName);
+                PopulateMaterialValues(ref body.scaledMaterialParams, materialNode, body.planetName, body.assetBundle);
             }
             if (mode == ParallaxScaledBodyMode.CustomRequiresTerrain)
             {
@@ -596,7 +617,7 @@ namespace Parallax
                 body.scaledMaterialParams.shaderProperties = LookupTemplateConfig(GetConfigByName("ParallaxScaledShaderProperties"), body.scaledMaterialParams.shader, keywords);
 
                 // Populate the values from this material
-                PopulateMaterialValues(ref body.scaledMaterialParams, materialNode, body.planetName);
+                PopulateMaterialValues(ref body.scaledMaterialParams, materialNode, body.planetName, body.assetBundle);
 
                 // Append terrain properties and enable appropriate keywords
                 body.ReadTerrainShaderProperties();
@@ -617,7 +638,7 @@ namespace Parallax
                 body.scaledMaterialParams.shaderProperties = LookupTemplateConfig(GetConfigByName("ParallaxScaledShaderProperties"), body.scaledMaterialParams.shader, keywords);
 
                 // Populate the values from this material
-                PopulateMaterialValues(ref body.scaledMaterialParams, materialNode, body.planetName);
+                PopulateMaterialValues(ref body.scaledMaterialParams, materialNode, body.planetName, body.assetBundle);
             }
         }
         public static void ParseScaledMaterialOverride(ParallaxScaledBody body, ParallaxScaledBodyMode mode, ConfigNode overrideNode)
@@ -775,8 +796,8 @@ namespace Parallax
                         OptimizationParams optimizationParams = GetOptimizationParams(body, node.GetNode("Optimizations"));
                         SubdivisionParams subdivisionParams = GetSubdivisionParams(body, node.GetNode("SubdivisionSettings"));
                         NoiseParams noiseParams = GetNoiseParams(body, node.GetNode("DistributionNoise"));
-                        MaterialParams materialParams = GetMaterialParams(body, node.GetNode("Material"));
-                        DistributionParams distributionParams = GetDistributionParams(body, node.GetNode("Distribution"), materialParams, false);
+                        MaterialParams materialParams = GetMaterialParams(body, node.GetNode("Material"), assetBundle);
+                        DistributionParams distributionParams = GetDistributionParams(body, node.GetNode("Distribution"), materialParams, false, assetBundle);
                         BiomeBlacklistParams biomeBlacklistParams = GetBiomeBlacklistParams(body, node.GetNode("Distribution"));
 
                         scatter.optimizationParams = optimizationParams;
@@ -854,8 +875,8 @@ namespace Parallax
                         sharedScatter.modelPath = model;
 
                         OptimizationParams optimizationParams = GetOptimizationParams(body, node.GetNode("Optimizations"));
-                        MaterialParams materialParams = GetMaterialParams(body, node.GetNode("Material"));
-                        DistributionParams distributionParams = GetDistributionParams(body, node.GetNode("Distribution"), materialParams, true);
+                        MaterialParams materialParams = GetMaterialParams(body, node.GetNode("Material"), parentScatter.assetBundle);
+                        DistributionParams distributionParams = GetDistributionParams(body, node.GetNode("Distribution"), materialParams, true, parentScatter.assetBundle);
 
                         sharedScatter.optimizationParams = optimizationParams;
                         sharedScatter.materialParams = materialParams;
@@ -939,7 +960,7 @@ namespace Parallax
 
             return noiseParams;
         }
-        public static DistributionParams GetDistributionParams(string planetName, ConfigNode node, in MaterialParams baseMaterial, bool onlyLODs)
+        public static DistributionParams GetDistributionParams(string planetName, ConfigNode node, in MaterialParams baseMaterial, bool onlyLODs, string assetBundle)
         {
             DistributionParams distributionParams = new DistributionParams();
 
@@ -1000,8 +1021,8 @@ namespace Parallax
             {
                 ParallaxDebug.LogCritical("Unable to locate the required amount of 2 LOD nodes for a scatter on " + planetName);
             }
-            distributionParams.lod1 = ParseLOD(planetName, lodNodes[0], baseMaterial);
-            distributionParams.lod2 = ParseLOD(planetName, lodNodes[1], baseMaterial);
+            distributionParams.lod1 = ParseLOD(planetName, lodNodes[0], baseMaterial, assetBundle);
+            distributionParams.lod2 = ParseLOD(planetName, lodNodes[1], baseMaterial, assetBundle);
 
             return distributionParams;
         }
@@ -1025,7 +1046,7 @@ namespace Parallax
                 return blacklist;
             }
         }
-        public static LOD ParseLOD(string planetName, ConfigNode node, in MaterialParams baseMaterial)
+        public static LOD ParseLOD(string planetName, ConfigNode node, in MaterialParams baseMaterial, string assetBundle)
         {
             LOD lod = new LOD();
 
@@ -1060,7 +1081,7 @@ namespace Parallax
             ConfigNode materialNode = node.GetNode("Material");
             if (materialNode != null)
             {
-                lod.materialOverride = GetMaterialParams(planetName, materialNode);
+                lod.materialOverride = GetMaterialParams(planetName, materialNode, assetBundle);
                 lod.inheritsMaterial = false;
             }
 
@@ -1123,7 +1144,7 @@ namespace Parallax
                 }
             }
         }
-        public static MaterialParams GetMaterialParams(string planetName, ConfigNode node)
+        public static MaterialParams GetMaterialParams(string planetName, ConfigNode node, string assetBundle)
         {
             MaterialParams materialParams = new MaterialParams();
 
@@ -1141,11 +1162,11 @@ namespace Parallax
             materialParams.shaderKeywords = keywords;
             materialParams.shaderProperties = LookupTemplateConfig(GetConfigByName("ParallaxScatterShaderProperties"), shader, keywords);
 
-            PopulateMaterialValues(ref materialParams, node, planetName);
+            PopulateMaterialValues(ref materialParams, node, planetName, assetBundle);
 
             return materialParams;
         }
-        public static void PopulateMaterialValues(ref MaterialParams materialParams, ConfigNode node, string planetName)
+        public static void PopulateMaterialValues(ref MaterialParams materialParams, ConfigNode node, string planetName, string assetBundle)
         {
             // Now we have the shader properties which contains the names (keys) and defaults (values) we can set everything except the textures, which use load on demand
             // Get values from config
@@ -1156,7 +1177,7 @@ namespace Parallax
             {
                 string configValue = ConfigUtils.TryGetConfigValue(node, key);
 
-                if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + configValue))
+                if (!CheckTextureExists(configValue, assetBundle))
                 {
                     ParallaxDebug.LogCritical("This texture file doesn't exist: " + configValue + " for planet: " + planetName);
                 }
@@ -1315,6 +1336,64 @@ namespace Parallax
         void OnDestroy()
         {
 
+        }
+
+        //
+        // Helpers
+        //
+        static bool CheckTextureExists(string path, string assetBundlePath)
+        {
+            string fullPath;
+            if (assetBundlePath is not null)
+            {
+                if (!assetBundleCache.TryGetValue(assetBundlePath, out var assetBundle))
+                {
+                    fullPath = Path.Combine(KSPUtil.ApplicationRootPath, "GameData", assetBundlePath);
+
+                    if (!File.Exists(fullPath))
+                    {
+                        ParallaxDebug.LogCritical($"This asset bundle doesn't exist: {assetBundlePath}");
+                    }
+                    else
+                    {
+                        assetBundle = AssetBundle.LoadFromFile(fullPath);
+                        if (assetBundle == null)
+                            ParallaxDebug.LogCritical($"This asset bundle couldn't be loaded: {assetBundlePath}");
+                    }
+
+                    assetBundleCache.Add(assetBundlePath, assetBundle);
+                }
+
+                // Avoid emitting spurious errors about missing textures if we
+                // couldn't load the asset bundle.
+                if (assetBundle == null)
+                    return true;
+
+                if (assetBundle.Contains(NormalizeAssetBundlePath(path)))
+                    return true;
+            }
+
+            fullPath = Path.Combine(KSPUtil.ApplicationRootPath, "GameData", path);
+            return File.Exists(fullPath);
+        }
+        
+        // Normalize the asset bundle path so config writers don't need to worry
+        // about the specific path separator they use.
+        static string NormalizeAssetBundlePath(string path)
+        {
+            // Normalize all \ separators to /, then convert the name to lowercase.
+            // This matches what is exported by the asset bundle script:
+            // - The script normalizes all path separators to be /
+            // - Unity converts all asset bundle names to lowercase.
+
+            return path
+                .Replace('\\', '/')
+                .ToLowerInvariant();
+        }
+
+        struct AssetBundleCleanupGuard() : IDisposable
+        {
+            public readonly void Dispose() => ClearAssetBundleCache();
         }
     }
 }
