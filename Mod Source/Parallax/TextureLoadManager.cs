@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.ExceptionServices;
+using Mono.CompilerServices.SymbolWriter;
 using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -106,6 +107,11 @@ public class TextureLoadManager : MonoBehaviour
     {
         Instance = this;
         DontDestroyOnLoad(this);
+
+        // Bump up the quality settings buffer so that we can load more textures
+        // at once.
+        if (QualitySettings.asyncUploadBufferSize < 128)
+            QualitySettings.asyncUploadBufferSize = 128;
     }
 
     /// <summary>
