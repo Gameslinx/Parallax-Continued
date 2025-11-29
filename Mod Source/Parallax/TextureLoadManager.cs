@@ -408,11 +408,6 @@ public class TextureLoadManager : MonoBehaviour
         if (TextureCache.TryGetValue(key, out var entry))
             return TextureHandle<T>.Acquire(entry);
 
-        if (typeof(T) == typeof(Cubemap))
-            ParallaxDebug.Log($"Loading Parallax Cubemap: {path}");
-        else
-            ParallaxDebug.Log($"Loading Parallax Texture: {path}");
-
         entry = new CacheEntry
         {
             key = key,
@@ -457,6 +452,11 @@ public class TextureLoadManager : MonoBehaviour
         // way if the user has already disposed of the handle then the texture
         // will be destroyed on completion.
         using var texguard = TextureHandle<Texture>.Acquire(entry);
+
+        if (typeof(T) == typeof(Cubemap))
+            ParallaxDebug.Log($"Loading Parallax Cubemap: {path}");
+        else
+            ParallaxDebug.Log($"Loading Parallax Texture: {path}");
 
         if (typeof(T) == typeof(Cubemap))
             options.unreadable = false;
