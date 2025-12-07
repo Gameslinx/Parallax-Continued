@@ -477,11 +477,25 @@ public class TextureLoadManager : MonoBehaviour
             if (!handle.IsComplete)
                 yield return handle;
 
-            var bundle = handle.Bundle;
+            AssetBundle bundle = null;
+            try
+            {
+                bundle = handle.Bundle;
+            }
+            catch(FileNotFoundException) { }
+            catch (Exception e)
+            {
+                Debug.LogError($"Failed to load asset bundle {options.assetBundle}");
+                Debug.LogException(e);
+            }
 
             UnityEngine.Object asset;
             var normalizedPath = NormalizeAssetBundlePath(path);
-            if (!bundle.Contains(normalizedPath))
+            if (bundle is null)
+            {
+                asset = null;
+            }
+            else if (!bundle.Contains(normalizedPath))
             {
                 // Avoid yielding for a frame if the asset bundle doesn't contain
                 // the asset we're looking for.
@@ -661,7 +675,12 @@ public class TextureLoadManager : MonoBehaviour
         var bundle = AssetBundle.LoadFromFile(GetAbsolutePath(path));
         handle = new AssetBundleHandle(bundle);
         if (bundle == null)
-            handle.SetException(ExceptionDispatchInfo.Capture(new Exception("Failed to load asset bundle")));
+        {
+            var diskPath = GetAbsolutePath(path);
+            if (!File.Exists(diskPath))
+                throw new FileNotFoundException($"No asset bundle file at {path}");
+            throw new Exception("Failed to load asset bundle");
+        }
 
         ActiveBundles.Add(path, handle);
         StartCoroutine(DelayedAssetBundleCleanup(handle, path));
