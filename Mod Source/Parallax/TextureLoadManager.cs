@@ -677,9 +677,13 @@ public class TextureLoadManager : MonoBehaviour
         if (bundle == null)
         {
             var diskPath = GetAbsolutePath(path);
+            Exception exception;
             if (!File.Exists(diskPath))
-                throw new FileNotFoundException($"No asset bundle file at {path}");
-            throw new Exception("Failed to load asset bundle");
+                exception = new FileNotFoundException($"No asset bundle file at {path}");
+            else
+                exception =new Exception("Failed to load asset bundle");
+
+            handle.SetException(ExceptionDispatchInfo.Capture(exception));
         }
 
         ActiveBundles.Add(path, handle);

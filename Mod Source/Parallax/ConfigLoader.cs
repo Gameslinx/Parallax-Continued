@@ -461,14 +461,6 @@ namespace Parallax
             string[] colorProperties = body.terrainShaderProperties.shaderColors.Keys.ToArray();
             string[] intProperties = body.terrainShaderProperties.shaderInts.Keys.ToArray();
 
-            if (body.assetBundle is not null)
-            {
-                if (!File.Exists(Path.Combine(KSPUtil.ApplicationRootPath, "GameData", body.assetBundle)))
-                {
-                    ParallaxDebug.LogCritical($"This asset bundle doesn't exist: {body.assetBundle}");
-                }
-            }
-
             // Parse correct value type and set on the shader properties
             foreach (string propertyName in textureProperties)
             {
@@ -1346,7 +1338,10 @@ namespace Parallax
         //
         static bool CheckTextureExists(string path, string assetBundlePath)
         {
-            string fullPath;
+            string fullPath  = Path.Combine(KSPUtil.ApplicationRootPath, "GameData", path);
+            if (File.Exists(fullPath))
+                return true;
+            
             if (assetBundlePath is not null)
             {
                 if (!assetBundleCache.TryGetValue(assetBundlePath, out var assetBundle))
@@ -1355,7 +1350,8 @@ namespace Parallax
 
                     if (!File.Exists(fullPath))
                     {
-                        ParallaxDebug.LogCritical($"This asset bundle doesn't exist: {assetBundlePath}");
+                        ParallaxDebug.LogCritical($"Could not load {path}. Checked asset bundle {assetBundlePath} but that bundle did not exist");
+                        return false;
                     }
                     else
                     {
@@ -1376,8 +1372,7 @@ namespace Parallax
                     return true;
             }
 
-            fullPath = Path.Combine(KSPUtil.ApplicationRootPath, "GameData", path);
-            return File.Exists(fullPath);
+            return false;
         }
         
         // Normalize the asset bundle path so config writers don't need to worry
