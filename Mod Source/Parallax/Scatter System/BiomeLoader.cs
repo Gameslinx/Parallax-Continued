@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using KSPTextureLoader;
 using UnityEngine;
 
 namespace Parallax
@@ -22,12 +23,14 @@ namespace Parallax
             // Get the quad density map
             var options = new TextureLoadOptions
             {
-                linear = true,
-                unreadable = false
+                Linear = true,
+                Unreadable = false,
+                Hint = TextureLoadHint.Synchronous
             };
-            Texture2D quadDensityMap = TextureLoadManager
-                .LoadTexture("ParallaxContinued/Textures/PluginData/quadDensityMap.dds", options)
-                .Leak();
+            var handle = TextureLoader
+                .LoadTexture<Texture2D>("ParallaxContinued/Textures/PluginData/quadDensityMap.dds", options);
+            ParallaxDebug.LogTextureLoaded(handle);
+            Texture2D quadDensityMap = handle.TakeTexture();
             quadDensityData = new float[quadDensityMap.width, quadDensityMap.height];
 
             // Copy data from texture to 2d float array for speed

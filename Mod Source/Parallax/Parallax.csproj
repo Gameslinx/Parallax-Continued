@@ -132,6 +132,10 @@
         <HintPath>$(GameDataPath)000_KSPBurst\Plugins\Unity.Mathematics.dll</HintPath>
         <Private>false</Private>
       </Reference>
+      <Reference Include="KSPTextureLoader">
+        <HintPath>$(GameDataPath)KSPTextureLoader\Plugins\KSPTextureLoader.dll</HintPath>
+        <Private>false</Private>
+      </Reference>
       <Reference Include="UnityEngine">
         <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.dll</HintPath>
         <Private>false</Private>

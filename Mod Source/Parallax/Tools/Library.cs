@@ -1,4 +1,5 @@
-﻿using Steamworks;
+﻿using KSPTextureLoader;
+using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -48,6 +49,14 @@ namespace Parallax
             string message = ("Error parsing " + name + " on planet: " + planetName + " - Tried parsing as a " + type + " but no matching conversion was found. Value = " + adjustedValue);
             LogError(message);
             LogCritical(message);
+        }
+
+        public static void LogTextureLoaded(TextureHandle handle)
+        {
+            if (handle.AssetBundle is not null)
+                Log($"Loaded Parallax Texture {handle.Path} from asset bundle {handle.AssetBundle}");
+            else
+                Log($"Loaded Parallax Texture {handle.Path}");
         }
     }
     // Config loader try-parse vars
