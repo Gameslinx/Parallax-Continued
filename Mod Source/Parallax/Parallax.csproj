@@ -103,6 +103,7 @@
       </Reference>
       <Reference Include="KSPTextureLoader">
         <HintPath>$(GameDataPath)KSPTextureLoader\Plugins\KSPTextureLoader.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="Microsoft.Extensions.FileSystemGlobbing">
         <HintPath>$(GameDataPath)000_KSPBurst\Plugins\Microsoft.Extensions.FileSystemGlobbing.dll</HintPath>
