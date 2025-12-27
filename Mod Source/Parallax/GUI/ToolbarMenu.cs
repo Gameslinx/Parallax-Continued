@@ -246,7 +246,7 @@ namespace Parallax
             ParallaxDebug.Log("Updating scatter system settings from GUI...");
 
             // check current pause state
-            bool isGamePaused = FlightDriver.paused;
+            bool isGamePaused = FlightDriver.Pause;
             
             // Pause to prevent collider issues
             FlightDriver.SetPause(true);

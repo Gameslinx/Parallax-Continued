@@ -92,7 +92,6 @@
       </Reference>
       <Reference Include="Kopernicus">
         <HintPath>$(GameDataPath)Kopernicus\Plugins\Kopernicus.dll</HintPath>
-        <Private>false</Private>
       </Reference>
       <Reference Include="Kopernicus.Parser">
         <HintPath>$(GameDataPath)Kopernicus\Plugins\Kopernicus.Parser.dll</HintPath>
@@ -101,6 +100,9 @@
       <Reference Include="KSPBurst">
         <HintPath>$(GameDataPath)000_KSPBurst\Plugins\KSPBurst.dll</HintPath>
         <Private>false</Private>
+      </Reference>
+      <Reference Include="KSPTextureLoader">
+        <HintPath>$(GameDataPath)KSPTextureLoader\Plugins\KSPTextureLoader.dll</HintPath>
       </Reference>
       <Reference Include="Microsoft.Extensions.FileSystemGlobbing">
         <HintPath>$(GameDataPath)000_KSPBurst\Plugins\Microsoft.Extensions.FileSystemGlobbing.dll</HintPath>
@@ -130,10 +132,6 @@
       </Reference>
       <Reference Include="Unity.Mathematics">
         <HintPath>$(GameDataPath)000_KSPBurst\Plugins\Unity.Mathematics.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="KSPTextureLoader">
-        <HintPath>$(GameDataPath)KSPTextureLoader\Plugins\KSPTextureLoader.dll</HintPath>
         <Private>false</Private>
       </Reference>
       <Reference Include="UnityEngine">

@@ -1,21 +1,13 @@
-﻿using Kopernicus.Configuration;
-using KSPTextureLoader;
-using LibNoise.Models;
-using Parallax.Harmony_Patches;
-using Parallax.Scaled_System;
+﻿using Parallax.Scaled_System;
 using Parallax.Tools;
 using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
-using static System.Net.Mime.MediaTypeNames;
+using KSPTextureLoader;
 
 namespace Parallax
 {
