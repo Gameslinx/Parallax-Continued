@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using KSPTextureLoader;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -53,12 +54,14 @@ namespace Parallax.Scaled_System
             // Load the texture - uncompressed DDS Luminance 8, linear
             var options = new TextureLoadOptions
             {
-                linear = true,
-                unreadable = true
+                Linear = true,
+                Unreadable = true,
+                Hint = TextureLoadHint.Synchronous
             };
-            blueNoiseTexture = TextureLoadManager
-                .LoadTexture("ParallaxContinued/Textures/PluginData/blueNoise.dds", options)
-                .Leak();
+            var handle = TextureLoader
+                .LoadTexture<Texture2D>("ParallaxContinued/Textures/PluginData/blueNoise.dds", options);
+            ParallaxDebug.LogTextureLoaded(handle);
+            blueNoiseTexture = handle.TakeTexture();
 
             // Setup
             foreach (KeyValuePair<string, ParallaxScaledBody> pair in ConfigLoader.parallaxScaledBodies)

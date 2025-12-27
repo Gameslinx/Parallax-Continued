@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using Kopernicus;
 using Kopernicus.Configuration;
+using KSPTextureLoader;
 using Parallax.Debugging;
 using Smooth.Collections;
 using System;
@@ -8,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection.Emit;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -50,6 +52,7 @@ namespace Parallax
 
         // Configs that start with 'Parallax' as the root node
         public UrlDir.UrlConfig globalNode;
+
         public void Awake()
         {
             ParallaxDebug.Log("Starting!");
@@ -457,7 +460,7 @@ namespace Parallax
                     Debug.Log("No texture (" + propertyName + ") found on " + body.planetName + ", setting it to default white");
                     configValue = "ParallaxContinued/white.dds";
                 }
-                if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + configValue))
+                if (!TextureLoader.TextureExists(configValue))
                 {
                     ParallaxDebug.LogCritical("This texture file doesn't exist: " + configValue + " for planet: " + body.planetName);
                 }
@@ -1149,7 +1152,7 @@ namespace Parallax
             {
                 string configValue = ConfigUtils.TryGetConfigValue(node, key);
 
-                if (!File.Exists(KSPUtil.ApplicationRootPath + "GameData/" + configValue))
+                if (!TextureLoader.TextureExists(configValue))
                 {
                     ParallaxDebug.LogCritical("This texture file doesn't exist: " + configValue + " for planet: " + planetName);
                 }

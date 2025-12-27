@@ -1,6 +1,7 @@
 ﻿using Kopernicus.OnDemand;
 using Kopernicus.RuntimeUtility;
 using Kopernicus;
+using KSPTextureLoader;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -320,12 +321,14 @@ namespace Parallax.Scaled_System
             // Load the blue noise texture - uncompressed DDS Luminance 8, linear
             var options = new TextureLoadOptions
             {
-                linear = true,
-                unreadable = true
+                Linear = true,
+                Unreadable = true,
+                Hint = TextureLoadHint.Synchronous
             };
-            blueNoiseTexture = TextureLoadManager
-                .LoadTexture("ParallaxContinued/Textures/PluginData/blueNoise.dds", options)
-                .Leak();
+            var handle = TextureLoader
+                .LoadTexture<Texture2D>("ParallaxContinued/Textures/PluginData/blueNoise.dds", options);
+            ParallaxDebug.LogTextureLoaded(handle);
+            blueNoiseTexture = handle.TakeTexture();
             body.shadowCasterMaterial.SetTexture("_BlueNoise", blueNoiseTexture);
 
             // Computed the max shadow ray distance
