@@ -57,7 +57,8 @@ namespace Parallax
 
             }
         }
-        void DominantBodyLoaded(string bodyName)
+        void DominantBodyLoaded(string bodyName) => DominantBodyLoaded(bodyName, isRestart: false);
+        void DominantBodyLoaded(string bodyName, bool isRestart)
         {
             ParallaxDebug.Log("[Scatter Manager] body loading " + bodyName);
 
@@ -72,7 +73,13 @@ namespace Parallax
                     scatter.InitShader();
                 }
 
-                currentBiomeMap = FlightGlobals.GetBodyByName(bodyName).BiomeMap.CompileToTexture();
+                if (!isRestart)
+                {
+                    if (currentBiomeMap != null)
+                        UnityEngine.Object.Destroy(currentBiomeMap);
+
+                    currentBiomeMap = FlightGlobals.GetBodyByName(bodyName).BiomeMap.CompileToTexture();
+                }
 
                 foreach (ScatterRenderer renderer in scatterRenderers)
                 {
@@ -86,7 +93,9 @@ namespace Parallax
                 }
             }
         }
-        void DominantBodyUnloaded(string bodyName)
+
+        void DominantBodyUnloaded(string bodyName) => DominantBodyUnloaded(bodyName, isRestart: false);
+        void DominantBodyUnloaded(string bodyName, bool isRestart)
         {
             if (ConfigLoader.parallaxScatterBodies.ContainsKey(bodyName))
             {
@@ -102,14 +111,18 @@ namespace Parallax
                 }
 
                 ParallaxScatterBody body = ConfigLoader.parallaxScatterBodies[bodyName];
-                body.UnloadTextures();
-                UnityEngine.Object.Destroy(currentBiomeMap);
+
+                if (!isRestart)
+                {
+                    body.UnloadTextures();
+                    UnityEngine.Object.Destroy(currentBiomeMap);
+                }
             }
         }
         void DominantBodyRestarted(string bodyName)
         {
-            DominantBodyUnloaded(bodyName);
-            DominantBodyLoaded(bodyName);
+            DominantBodyUnloaded(bodyName, isRestart: true);
+            DominantBodyLoaded(bodyName, isRestart: true);
         }
         // After any world origin shifts
         // Rendering is kicked off from here
