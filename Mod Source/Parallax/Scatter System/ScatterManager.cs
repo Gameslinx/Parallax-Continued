@@ -57,16 +57,28 @@ namespace Parallax
 
             }
         }
-        void DominantBodyLoaded(string bodyName)
+        void DominantBodyLoaded(string bodyName) => DominantBodyLoaded(bodyName, isRestart: false);
+        void DominantBodyLoaded(string bodyName, bool isRestart)
         {
             ParallaxDebug.Log("[Scatter Manager] body loading " + bodyName);
 
             if (ConfigLoader.parallaxScatterBodies.ContainsKey(bodyName))
             {
-                currentBiomeMap = FlightGlobals.GetBodyByName(bodyName).BiomeMap.CompileToTexture();
+                // Make sure to do this before calling CompileToTexture because otherwise it blocks
+                // on the graphics thread being idle. KopernicusCBAttributeMapSO.CompileToTexture
+                // creates a new texture and that can block the render thread for quite a bit when
+                // large textures are used.
                 foreach (Scatter scatter in ConfigLoader.parallaxScatterBodies[bodyName].fastScatters)
                 {
                     scatter.InitShader();
+                }
+
+                if (!isRestart)
+                {
+                    if (currentBiomeMap != null)
+                        UnityEngine.Object.Destroy(currentBiomeMap);
+
+                    currentBiomeMap = FlightGlobals.GetBodyByName(bodyName).BiomeMap.CompileToTexture();
                 }
 
                 foreach (ScatterRenderer renderer in scatterRenderers)
@@ -81,7 +93,9 @@ namespace Parallax
                 }
             }
         }
-        void DominantBodyUnloaded(string bodyName)
+
+        void DominantBodyUnloaded(string bodyName) => DominantBodyUnloaded(bodyName, isRestart: false);
+        void DominantBodyUnloaded(string bodyName, bool isRestart)
         {
             if (ConfigLoader.parallaxScatterBodies.ContainsKey(bodyName))
             {
@@ -97,14 +111,18 @@ namespace Parallax
                 }
 
                 ParallaxScatterBody body = ConfigLoader.parallaxScatterBodies[bodyName];
-                body.UnloadTextures();
-                UnityEngine.Object.Destroy(currentBiomeMap);
+
+                if (!isRestart)
+                {
+                    body.UnloadTextures();
+                    UnityEngine.Object.Destroy(currentBiomeMap);
+                }
             }
         }
         void DominantBodyRestarted(string bodyName)
         {
-            DominantBodyUnloaded(bodyName);
-            DominantBodyLoaded(bodyName);
+            DominantBodyUnloaded(bodyName, isRestart: true);
+            DominantBodyLoaded(bodyName, isRestart: true);
         }
         // After any world origin shifts
         // Rendering is kicked off from here
