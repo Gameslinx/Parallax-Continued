@@ -103,6 +103,13 @@ namespace Parallax
             sourceUVsBuffer = new ComputeBuffer(uvs.Length, sizeof(float) * 3, ComputeBufferType.Structured);
             sourceDirsFromCenterBuffer = new ComputeBuffer(vertices.Length, sizeof(float) * 3, ComputeBufferType.Structured);
 
+            sourceVertsBuffer.name = $"parallax:{quad.sphereRoot.name}/quad/{ID}/source-verts";
+            sourceNormalsBuffer.name = $"parallax:{quad.sphereRoot.name}/quad/{ID}/source-normals";
+            sourceTrianglesBuffer.name = $"parallax:{quad.sphereRoot.name}/quad/{ID}/source-triangles";
+            sourceColorsBuffer.name = $"parallax:{quad.sphereRoot.name}/quad/{ID}/source-colors";
+            sourceUVsBuffer.name = $"parallax:{quad.sphereRoot.name}/quad/{ID}/source-uvs";
+            sourceDirsFromCenterBuffer.name = $"parallax:{quad.sphereRoot.name}/quad/{ID}/source-dirs-from-center";
+
             sourceVertsBuffer.SetData(vertices);
             sourceNormalsBuffer.SetData(normals);
             sourceTrianglesBuffer.SetData(triangles);

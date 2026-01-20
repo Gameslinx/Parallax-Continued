@@ -50,6 +50,7 @@ namespace Parallax
                     ScatterRenderer renderer = perPlanetRenderer.AddComponent<ScatterRenderer>();
                     renderer.planetName = body.Key;
                     renderer.scatter = scatter.Value;
+                    renderer.name = scatter.Key;
                     scatterRenderers.Add(renderer);
                     fastScatterRenderers.Add(scatter.Key, renderer);
                     scatter.Value.renderer = renderer;
