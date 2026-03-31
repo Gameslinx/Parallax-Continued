@@ -90,7 +90,7 @@ namespace Parallax
             globalNode.AddNode(scaledSettingsNode);
             globalNode.AddNode(debugSettingsNode);
             globalNode.AddNode(objectPoolSettingsNode);
-            
+
             rootNode.Save(KSPUtil.ApplicationRootPath + "GameData/ParallaxContinued/Config/ParallaxGlobalSettings.cfg");
         }
     }
@@ -191,6 +191,7 @@ namespace Parallax
     {
         public string planetName;
         public Dictionary<string, TextureHandle<Texture2D>> loadedTextures = [];
+        public Dictionary<string, TextureHandle<Cubemap>> loadedCubemaps = [];
 
         // Terrain materials
         public ParallaxMaterials parallaxMaterials = new ParallaxMaterials();
@@ -323,7 +324,7 @@ namespace Parallax
         {
             foreach (var (name, path) in terrainShaderProperties.shaderTextures)
             {
-                if (loadedTextures.ContainsKey(name))
+                if (loadedTextures.ContainsKey(name) || loadedCubemaps.ContainsKey(name))
                     continue;
 
                 var options = new TextureLoadOptions
@@ -331,10 +332,19 @@ namespace Parallax
                     Linear = TextureUtils.IsLinear(name),
                     Unreadable = true,
                 };
-                var handle = TextureLoader.LoadTexture<Texture2D>(path, options);
-                handle.OnCompleted += ParallaxDebug.LogTextureLoaded;
 
-                loadedTextures.Add(name, handle);
+                if (TextureUtils.IsCube(name))
+                {
+                    var handle = TextureLoader.LoadTexture<Cubemap>(path, options);
+                    handle.OnCompleted += ParallaxDebug.LogTextureLoaded;
+                    loadedCubemaps.Add(name, handle);
+                }
+                else
+                {
+                    var handle = TextureLoader.LoadTexture<Texture2D>(path, options);
+                    handle.OnCompleted += ParallaxDebug.LogTextureLoaded;
+                    loadedTextures.Add(name, handle);
+                }
             }
         }
 
@@ -342,20 +352,29 @@ namespace Parallax
         {
             var shaderTextures = terrainShaderProperties.shaderTextures;
 
-            if (loadedTextures.ContainsKey(name))
+            if (loadedTextures.ContainsKey(name) || loadedCubemaps.ContainsKey(name))
                 return;
             if (!shaderTextures.TryGetValue(name, out var path))
                 return;
-                
+
             var options = new TextureLoadOptions
             {
                 Linear = TextureUtils.IsLinear(name),
                 Unreadable = true,
             };
-            var handle = TextureLoader.LoadTexture<Texture2D>(path, options);
-            handle.OnCompleted += ParallaxDebug.LogTextureLoaded;
 
-            loadedTextures.Add(name, handle);
+            if (TextureUtils.IsCube(name))
+            {
+                var handle = TextureLoader.LoadTexture<Cubemap>(path, options);
+                handle.OnCompleted += ParallaxDebug.LogTextureLoaded;
+                loadedCubemaps.Add(name, handle);
+            }
+            else
+            {
+                var handle = TextureLoader.LoadTexture<Texture2D>(path, options);
+                handle.OnCompleted += ParallaxDebug.LogTextureLoaded;
+                loadedTextures.Add(name, handle);
+            }
         }
 
         public void Load()
@@ -370,6 +389,9 @@ namespace Parallax
 
             foreach (var name in terrainShaderProperties.shaderTextures.Keys)
             {
+                if (loadedCubemaps.ContainsKey(name))
+                    continue;
+
                 Texture2D tex;
                 var request = loadedTextures[name];
 
@@ -384,9 +406,6 @@ namespace Parallax
                     continue;
                 }
 
-                // Bump maps need to be linear, while everything else sRGB
-                // This could be handled better, tbh, but at least we're accounting for linear textures this time around
-
                 parallaxMaterials.parallaxLow.SetTexture(name, tex);
                 parallaxMaterials.parallaxMid.SetTexture(name, tex);
                 parallaxMaterials.parallaxHigh.SetTexture(name, tex);
@@ -395,6 +414,27 @@ namespace Parallax
                 parallaxMaterials.parallaxMidHigh.SetTexture(name, tex);
 
                 parallaxMaterials.parallaxFull.SetTexture(name, tex);
+            }
+
+            foreach (var (name, request) in loadedCubemaps)
+            {
+                try
+                {
+                    Cubemap tex = request.GetTexture();
+                    parallaxMaterials.parallaxLow.SetTexture(name, tex);
+                    parallaxMaterials.parallaxMid.SetTexture(name, tex);
+                    parallaxMaterials.parallaxHigh.SetTexture(name, tex);
+
+                    parallaxMaterials.parallaxLowMid.SetTexture(name, tex);
+                    parallaxMaterials.parallaxMidHigh.SetTexture(name, tex);
+
+                    parallaxMaterials.parallaxFull.SetTexture(name, tex);
+                }
+                catch (Exception e)
+                {
+                    ParallaxDebug.LogError($"Failed to load cubemap {request.Path}");
+                    Debug.LogException(e);
+                }
             }
 
             loaded = true;
@@ -412,6 +452,9 @@ namespace Parallax
 
             foreach (var name in terrainShaderProperties.shaderTextures.Keys)
             {
+                if (loadedCubemaps.ContainsKey(name))
+                    continue;
+
                 Texture2D tex;
                 var request = loadedTextures[name];
 
@@ -428,9 +471,6 @@ namespace Parallax
                     continue;
                 }
 
-                // Bump maps need to be linear, while everything else sRGB
-                // This could be handled better, tbh, but at least we're accounting for linear textures this time around
-
                 parallaxMaterials.parallaxLow.SetTexture(name, tex);
                 parallaxMaterials.parallaxMid.SetTexture(name, tex);
                 parallaxMaterials.parallaxHigh.SetTexture(name, tex);
@@ -441,6 +481,29 @@ namespace Parallax
                 parallaxMaterials.parallaxFull.SetTexture(name, tex);
             }
 
+            foreach (var (name, request) in loadedCubemaps)
+            {
+                if (!request.IsComplete)
+                    yield return request;
+                try
+                {
+                    Cubemap tex = request.GetTexture();
+                    parallaxMaterials.parallaxLow.SetTexture(name, tex);
+                    parallaxMaterials.parallaxMid.SetTexture(name, tex);
+                    parallaxMaterials.parallaxHigh.SetTexture(name, tex);
+
+                    parallaxMaterials.parallaxLowMid.SetTexture(name, tex);
+                    parallaxMaterials.parallaxMidHigh.SetTexture(name, tex);
+
+                    parallaxMaterials.parallaxFull.SetTexture(name, tex);
+                }
+                catch (Exception e)
+                {
+                    ParallaxDebug.LogError($"Failed to load cubemap {request.Path}");
+                    Debug.LogException(e);
+                }
+            }
+
             loaded = true;
             isLoading = false;
         }
@@ -448,6 +511,9 @@ namespace Parallax
         {
             if (!body.loadedTextures.TryGetValue(key, out var handle))
             {
+                if (TextureUtils.IsCube(key))
+                    return null;
+
                 var options = new TextureLoadOptions
                 {
                     Linear = TextureUtils.IsLinear(key),
@@ -471,6 +537,33 @@ namespace Parallax
                 return null;
             }
         }
+        public static Cubemap LoadCubeIfUnloaded(ParallaxTerrainBody body, string path, string key)
+        {
+            if (!body.loadedCubemaps.TryGetValue(key, out var handle))
+            {
+                var options = new TextureLoadOptions
+                {
+                    Linear = TextureUtils.IsLinear(key),
+                    Unreadable = true,
+                    Hint = TextureLoadHint.Synchronous,
+                };
+                handle = TextureLoader.LoadTexture<Cubemap>(path, options);
+                handle.OnCompleted += ParallaxDebug.LogTextureLoaded;
+
+                body.loadedCubemaps.Add(key, handle);
+            }
+
+            try
+            {
+                return handle.GetTexture();
+            }
+            catch (Exception e)
+            {
+                ParallaxDebug.LogError($"Failed to load cubemap {handle.Path ?? path}");
+                Debug.LogException(e);
+                return null;
+            }
+        }
         /// <summary>
         /// Used by the GUI to load textures on texture changes
         /// </summary>
@@ -486,6 +579,9 @@ namespace Parallax
             foreach (var handle in loadedTextures.Values)
                 handle.Dispose();
             loadedTextures.Clear();
+            foreach (var handle in loadedCubemaps.Values)
+                handle.Dispose();
+            loadedCubemaps.Clear();
             loaded = false;
         }
     }
@@ -510,7 +606,7 @@ namespace Parallax
 
         // Material for shadow casting
         public Material shadowCasterMaterial;
-        
+
         public MaterialParams scaledMaterialParams;
         public ParallaxScaledBodyMode mode = ParallaxScaledBodyMode.FromTerrain;
         public Material scaledMaterial;
@@ -521,6 +617,7 @@ namespace Parallax
         public bool disableDeformity = false;
 
         public Dictionary<string, TextureHandle<Texture2D>> loadedTextures = [];
+        public Dictionary<string, TextureHandle<Cubemap>> loadedCubemaps = [];
         public float worldSpaceMeshRadius;
 
         private bool loaded = false;
@@ -530,8 +627,8 @@ namespace Parallax
         }
         private bool isLoading = false;
         public bool IsLoading
-        { 
-            get { return isLoading; } 
+        {
+            get { return isLoading; }
         }
 
         public ParallaxScaledBody(string name)
@@ -561,7 +658,7 @@ namespace Parallax
                 // Shadow caster won't have all the keywords that the main material will, but enable them anyway in case we're using custom shaders
                 shadowCasterMaterial.EnableKeyword(keyword);
             }
-            
+
             UpdateBaseMaterialParams();
 
             // Scaled meshes are denser than terrain, lower the tessellation but reduce edge length
@@ -705,8 +802,7 @@ namespace Parallax
 
             foreach (var (name, path) in textures)
             {
-                TextureHandle<Texture2D> handle;
-                if (loadedTextures.ContainsKey(name))
+                if (loadedTextures.ContainsKey(name) || loadedCubemaps.ContainsKey(name))
                     continue;
 
                 // Check to see if the texture we're trying to load is a terrain texture
@@ -716,10 +812,21 @@ namespace Parallax
                     // loading the texture if we need it.
                     terrainBody.StartLoadByName(name);
 
-                    if (terrainBody.loadedTextures.TryGetValue(name, out handle))
+                    if (TextureUtils.IsCube(name))
                     {
-                        loadedTextures.Add(name, handle.Acquire());
-                        continue;
+                        if (terrainBody.loadedCubemaps.TryGetValue(name, out var cubeHandle))
+                        {
+                            loadedCubemaps.Add(name, cubeHandle.Acquire());
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        if (terrainBody.loadedTextures.TryGetValue(name, out var texHandle))
+                        {
+                            loadedTextures.Add(name, texHandle.Acquire());
+                            continue;
+                        }
                     }
                 }
 
@@ -728,10 +835,19 @@ namespace Parallax
                     Linear = TextureUtils.IsLinear(name),
                     Unreadable = true,
                 };
-                handle = TextureLoader.LoadTexture<Texture2D>(path, options);
-                handle.OnCompleted += ParallaxDebug.LogTextureLoaded;
 
-                loadedTextures.Add(name, handle);
+                if (TextureUtils.IsCube(name))
+                {
+                    var handle = TextureLoader.LoadTexture<Cubemap>(path, options);
+                    handle.OnCompleted += ParallaxDebug.LogTextureLoaded;
+                    loadedCubemaps.Add(name, handle);
+                }
+                else
+                {
+                    var handle = TextureLoader.LoadTexture<Texture2D>(path, options);
+                    handle.OnCompleted += ParallaxDebug.LogTextureLoaded;
+                    loadedTextures.Add(name, handle);
+                }
             }
         }
 
@@ -753,6 +869,9 @@ namespace Parallax
 
             foreach (var name in scaledMaterialParams.shaderProperties.shaderTextures.Keys)
             {
+                if (loadedCubemaps.ContainsKey(name))
+                    continue;
+
                 Texture2D tex;
                 var request = loadedTextures[name];
 
@@ -771,6 +890,24 @@ namespace Parallax
                 if (name == "_HeightMap")
                 {
                     shadowCasterMaterial.SetTexture("_HeightMap", tex);
+                }
+            }
+
+            foreach (var (name, request) in loadedCubemaps)
+            {
+                try
+                {
+                    Cubemap tex = request.GetTexture();
+                    scaledMaterial.SetTexture(name, tex);
+                    if (name == "_HeightCube")
+                    {
+                        shadowCasterMaterial.SetTexture("_HeightCube", tex);
+                    }
+                }
+                catch (Exception e)
+                {
+                    ParallaxDebug.LogError($"Failed to load cubemap {request.Path}");
+                    Debug.LogException(e);
                 }
             }
 
@@ -842,6 +979,9 @@ namespace Parallax
             // Now load the textures needed here
             foreach (var name in scaledMaterialParams.shaderProperties.shaderTextures.Keys)
             {
+                if (loadedCubemaps.ContainsKey(name))
+                    continue;
+
                 var handle = loadedTextures[name];
                 if (!handle.IsComplete)
                     yield return handle;
@@ -865,6 +1005,30 @@ namespace Parallax
                 if (name == "_HeightMap")
                 {
                     shadowCasterMaterial.SetTexture("_HeightMap", tex);
+                }
+            }
+
+            foreach (var (name, cubeHandle) in loadedCubemaps)
+            {
+                if (!cubeHandle.IsComplete)
+                    yield return cubeHandle;
+
+                if (!isLoading)
+                    yield break;
+
+                try
+                {
+                    Cubemap tex = cubeHandle.GetTexture();
+                    scaledMaterial.SetTexture(name, tex);
+                    if (name == "_HeightCube")
+                    {
+                        shadowCasterMaterial.SetTexture("_HeightCube", tex);
+                    }
+                }
+                catch (Exception e)
+                {
+                    ParallaxDebug.LogError($"Failed to load cubemap {cubeHandle.Path}");
+                    Debug.LogException(e);
                 }
             }
 
@@ -907,10 +1071,14 @@ namespace Parallax
             // takes care of tracking that and only disposing them when needed.
             foreach (var handle in loadedTextures.Values)
                 handle.Dispose();
-
             loadedTextures.Clear();
+
+            foreach (var handle in loadedCubemaps.Values)
+                handle.Dispose();
+            loadedCubemaps.Clear();
+
             loaded = false;
-            
+
 
             // Scaled body is always loaded when terrain is loaded
             // So, if terrain is loaded, it could be hanging around for the scaled body
@@ -995,7 +1163,7 @@ namespace Parallax
         simplexPerlin,
         simplexCellular,
         simplexPolkaDot,
-        
+
         // Maybe implement
         cubist,
         sparseConvolution,
@@ -1137,7 +1305,7 @@ namespace Parallax
             loadedTextures.Clear();
         }
     }
-    
+
     // Stores Scatter information
     public class Scatter
     {
