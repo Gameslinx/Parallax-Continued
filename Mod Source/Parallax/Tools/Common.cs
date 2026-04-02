@@ -191,7 +191,6 @@ namespace Parallax
     {
         public string planetName;
         public Dictionary<string, TextureHandle<Texture2D>> loadedTextures = [];
-        public Dictionary<string, TextureHandle<Cubemap>> loadedCubemaps = [];
 
         // Terrain materials
         public ParallaxMaterials parallaxMaterials = new ParallaxMaterials();
@@ -616,8 +615,7 @@ namespace Parallax
 
         public bool disableDeformity = false;
 
-        public Dictionary<string, TextureHandle<Texture2D>> loadedTextures = [];
-        public Dictionary<string, TextureHandle<Cubemap>> loadedCubemaps = [];
+        public Dictionary<string, TextureHandle> loadedTextures = [];
         public float worldSpaceMeshRadius;
 
         private bool loaded = false;
@@ -869,10 +867,7 @@ namespace Parallax
 
             foreach (var name in scaledMaterialParams.shaderProperties.shaderTextures.Keys)
             {
-                if (loadedCubemaps.ContainsKey(name))
-                    continue;
-
-                Texture2D tex;
+                Texture tex;
                 var request = loadedTextures[name];
 
                 try
@@ -989,7 +984,7 @@ namespace Parallax
                 if (!isLoading)
                     yield break;
 
-                Texture2D tex;
+                Texture tex;
                 try
                 {
                     tex = handle.GetTexture();
