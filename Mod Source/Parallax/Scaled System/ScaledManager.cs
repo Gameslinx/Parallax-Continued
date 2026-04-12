@@ -204,7 +204,7 @@ namespace Parallax.Scaled_System
                 CelestialBody kspBody = FlightGlobals.GetBodyByName(body.planetName);
 
                 // Body loaded OnDisable for this component
-                Destroy(kspBody.GetComponent<ScaledOnDemandComponent>());
+                Destroy(kspBody.scaledBody.GetComponent<ScaledOnDemandComponent>());
             }
         }
     }
