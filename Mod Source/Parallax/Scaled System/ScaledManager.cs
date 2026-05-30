@@ -30,8 +30,21 @@ namespace Parallax.Scaled_System
             {
                 ParallaxDebug.Log("Scaled manager destroyed - not in the right scene");
                 Destroy(this);
+                // Don't assign Instance below: this component is being destroyed.
+                // Callers rely on Instance being null in scenes without a ScaledManager
+                // (e.g. the Space Center); see ParallaxScaledBody.LoadAsync.
+                return;
             }
             Instance = this;
+        }
+        public void OnDestroy()
+        {
+            // Avoid leaving Instance pointing at a destroyed component, which would
+            // pass the `Instance == null` guards but fault on use (e.g. StartCoroutine).
+            if (Instance == this)
+            {
+                Instance = null;
+            }
         }
         public void Start()
         {
