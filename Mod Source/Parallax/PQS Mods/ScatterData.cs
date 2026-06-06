@@ -564,10 +564,11 @@ namespace Parallax
                 eventAdded = false;
             }
 
-            // Queue up collider removal
+            // Queue up collider removal, and clear the flag so a repeat Cleanup() can't queue it twice
             if (collidersAdded)
             {
                 CollisionManager.QueueOutgoingData(collisionData);
+                collidersAdded = false;
             }
 
             outputScatterDataBuffer?.Dispose();

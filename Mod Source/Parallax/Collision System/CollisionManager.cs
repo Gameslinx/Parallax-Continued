@@ -28,6 +28,9 @@ namespace Parallax
         // Pointer to Scatter in collideableScatters
         public int collideableScattersIndex;
         public int dataCount;
+
+        // Set once the native arrays have been freed, so we never free them twice
+        public bool disposed = false;
         public ScatterColliderData(ScatterSystemQuadData scatterSystemQuad, NativeArray<PositionData> quadLocalData, int collideableScattersIndex)
         {
             this.scatterSystemQuad = scatterSystemQuad;
@@ -46,6 +49,26 @@ namespace Parallax
                 initializeTo = float.MaxValue
             };
             initDistancesHandle = initJob.Schedule(dataCount, dataCount / 8);
+        }
+        // Frees the native arrays. Safe to call more than once
+        public void Dispose()
+        {
+            if (disposed)
+            {
+                return;
+            }
+            disposed = true;
+
+            // The init job writes lastDistances, so let it finish before we free it
+            initDistancesHandle.Complete();
+            if (lastDistances.IsCreated)
+            {
+                lastDistances.Dispose();
+            }
+            if (quadLocalData.IsCreated)
+            {
+                quadLocalData.Dispose();
+            }
         }
     }
     /// <summary>
@@ -178,6 +201,12 @@ namespace Parallax
         {
             foreach (ScatterColliderData data in incomingData)
             {
+                // Skip data that was already removed and disposed this frame
+                if (data.disposed)
+                {
+                    continue;
+                }
+
                 // Complete the distance initialisation here
                 data.initDistancesHandle.Complete();
                 collisionData.Add(data);
@@ -185,7 +214,7 @@ namespace Parallax
                 // Add job info
                 sqrQuadBounds.Add(data.scatterSystemQuad.sqrQuadWidth);
             }
-            
+
             incomingData.Clear();
         }
         // Remove data from processing
@@ -193,13 +222,21 @@ namespace Parallax
         {
             foreach (ScatterColliderData data in outgoingData)
             {
-                // Mirror the removal from fastlist in our own data here
-                // Remove job info
-                sqrQuadBounds.RemoveAtSwapBack(data.id);
-                collisionData.Remove(data);
+                // Don't remove the same data twice
+                if (data.disposed)
+                {
+                    continue;
+                }
 
-                data.lastDistances.Dispose();
-                data.quadLocalData.Dispose();
+                // Capture the id before the swap-back changes it. Only remove from
+                // sqrQuadBounds if the item was actually in collisionData, so the two stay aligned
+                int id = data.id;
+                if (collisionData.Remove(data) && id >= 0 && id < sqrQuadBounds.Length)
+                {
+                    sqrQuadBounds.RemoveAtSwapBack(id);
+                }
+
+                data.Dispose();
             }
             outgoingData.Clear();
         }
@@ -514,15 +551,25 @@ namespace Parallax
                 CompleteColliderJob();
             }
 
-            // Complete the init distances job in the very rare case it has not completed yet
+            // Dispose anything still active or queued and reset the lists, otherwise a body
+            // reload leaks the native arrays and leaves stale data behind
+            foreach (ScatterColliderData data in collisionData)
+            {
+                data.Dispose();
+            }
             foreach (ScatterColliderData data in incomingData)
             {
-                data.initDistancesHandle.Complete();
-                if (data.lastDistances.IsCreated)
-                {
-                    data.lastDistances.Dispose();
-                }
+                data.Dispose();
             }
+            foreach (ScatterColliderData data in outgoingData)
+            {
+                data.Dispose();
+            }
+
+            collisionData.Clear();
+            incomingData.Clear();
+            outgoingData.Clear();
+            sqrQuadBounds.Clear();
 
             for (int i = 0; i < numCollideableScatters; i++)
             {

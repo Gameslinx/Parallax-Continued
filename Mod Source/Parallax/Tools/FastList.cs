@@ -38,33 +38,45 @@ namespace Parallax
             item.id = list.Count;
             list.Add(item);
         }
-        public void Remove(int id)
+        public bool Remove(int id)
         {
-            // Handle edge case where there is no item to replace
-            if (list.Count == 1)
+            int count = list.Count;
+
+            // Stale or out of range id - nothing to remove
+            if (id < 0 || id >= count)
             {
-                list.RemoveAt(0);
-                return;
+                return false;
             }
 
-            // Fetch the item from the end of the list to replace the item we're removing
-            T itemToReplace = list[list.Count - 1];
+            // Handle edge case where there is no item to replace
+            if (count == 1)
+            {
+                list.Clear();
+                return true;
+            }
 
-            // Set the replacement item ID to the ID we're removing to maintain ID continuity
-            itemToReplace.id = id;
+            // Move the last item into the freed slot to keep id == index
+            T lastItem = list[count - 1];
+            lastItem.id = id;
+            list[id] = lastItem;
 
-            // Set the last list element to what we're about to remove
-            list[list.Count - 1] = list[id];
-
-            // Set the (now freed) ID to the replacement
-            list[id] = itemToReplace;
-
-            // Remove the item
-            list.RemoveAt(list.Count - 1);
+            list.RemoveAt(count - 1);
+            return true;
         }
-        public void Remove(T item)
+        public bool Remove(T item)
         {
-            Remove(item.id);
+            if (item == null || item.id < 0 || item.id >= list.Count)
+            {
+                return false;
+            }
+
+            // After a swap-back the slot may hold a different item - don't remove the wrong one
+            if (list[item.id] != item)
+            {
+                return false;
+            }
+
+            return Remove(item.id);
         }
 
         public IEnumerator GetEnumerator()
