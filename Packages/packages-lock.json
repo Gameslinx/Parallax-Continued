@@ -1,5 +1,12 @@
 {
   "dependencies": {
+    "com.github.steamroller.ksp-texture-bundler": {
+      "version": "https://github.com/Phantomical/KSPTextureBundler.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "386b8fc70a293ce180d36314d9d13877f14533a8"
+    },
     "com.oddworm.heapexplorer": {
       "version": "https://github.com/pschraut/UnityHeapExplorer.git#4.1.1",
       "depth": 0,

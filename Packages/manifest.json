@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.github.steamroller.ksp-texture-bundler": "https://github.com/Phantomical/KSPTextureBundler.git",
     "com.oddworm.heapexplorer": "https://github.com/pschraut/UnityHeapExplorer.git#4.1.1",
     "com.unity.burst": "1.5.0",
     "com.unity.collab-proxy": "1.14.18",

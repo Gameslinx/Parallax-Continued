@@ -1,8 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿#if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 [ExecuteInEditMode]
 public class PlanetPropSetter : MonoBehaviour
@@ -148,3 +146,4 @@ class PlanetPropSetterButton : Editor
         }
     }
 }
+#endif

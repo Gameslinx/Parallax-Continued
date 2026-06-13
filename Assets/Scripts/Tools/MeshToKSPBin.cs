@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿#if UNITY_EDITOR
 using UnityEngine;
 using System.IO;
 using System;
@@ -109,62 +108,63 @@ public class MeshToKSPBin : MonoBehaviour
         theMesh.tangents = tangents;
     }
     public static void SerializeMesh(Mesh mesh, String path)
+    {
+        Debug.Log(mesh.vertexCount);
+        // Open an output file stream
+        FileStream outputStream = new FileStream(path, FileMode.Create, FileAccess.Write);
+        RecalculateTangents(mesh);
+        using (BinaryWriter writer = new BinaryWriter(outputStream))
         {
-            Debug.Log(mesh.vertexCount);
-            // Open an output file stream
-            FileStream outputStream = new FileStream(path, FileMode.Create, FileAccess.Write);
-            RecalculateTangents(mesh);
-            using (BinaryWriter writer = new BinaryWriter(outputStream))
+
+            // Indicate that this is version two of the .bin format
+            writer.Write(-2);
+
+            // Write the vertex count of the mesh
+            writer.Write(mesh.vertices.Length);
+            foreach (Vector3 vertex in mesh.vertices)
             {
-
-                // Indicate that this is version two of the .bin format
-                writer.Write(-2);
-
-                // Write the vertex count of the mesh
-                writer.Write(mesh.vertices.Length);
-                foreach (Vector3 vertex in mesh.vertices)
-                {
-                    writer.Write(vertex.x);
-                    writer.Write(vertex.y);
-                    writer.Write(vertex.z);
-                }
-                writer.Write(mesh.uv.Length);
-                foreach (Vector2 uv in mesh.uv)
-                {
-                    writer.Write(uv.x);
-                    writer.Write(uv.y);
-                }
-                writer.Write(mesh.triangles.Length);
-                foreach (Int32 triangle in mesh.triangles)
-                {
-                    writer.Write(triangle);
-                }
-                writer.Write(mesh.uv2.Length);
-                foreach (Vector2 uv2 in mesh.uv2)
-                {
-                    writer.Write(uv2.x);
-                    writer.Write(uv2.y);
-                }
-                writer.Write(mesh.normals.Length);
-                foreach (Vector3 normal in mesh.normals)
-                {
-                    writer.Write(normal.x);
-                    writer.Write(normal.y);
-                    writer.Write(normal.z);
-                }
-                writer.Write(mesh.tangents.Length);
-                foreach (Vector4 tangent in mesh.tangents)
-                {
-                    writer.Write(tangent.x);
-                    writer.Write(tangent.y);
-                    writer.Write(tangent.z);
-                    writer.Write(tangent.w);
-                }
-
-                // Finish writing
-                writer.Close();
-                outputStream.Close();
+                writer.Write(vertex.x);
+                writer.Write(vertex.y);
+                writer.Write(vertex.z);
             }
+            writer.Write(mesh.uv.Length);
+            foreach (Vector2 uv in mesh.uv)
+            {
+                writer.Write(uv.x);
+                writer.Write(uv.y);
+            }
+            writer.Write(mesh.triangles.Length);
+            foreach (Int32 triangle in mesh.triangles)
+            {
+                writer.Write(triangle);
+            }
+            writer.Write(mesh.uv2.Length);
+            foreach (Vector2 uv2 in mesh.uv2)
+            {
+                writer.Write(uv2.x);
+                writer.Write(uv2.y);
+            }
+            writer.Write(mesh.normals.Length);
+            foreach (Vector3 normal in mesh.normals)
+            {
+                writer.Write(normal.x);
+                writer.Write(normal.y);
+                writer.Write(normal.z);
+            }
+            writer.Write(mesh.tangents.Length);
+            foreach (Vector4 tangent in mesh.tangents)
+            {
+                writer.Write(tangent.x);
+                writer.Write(tangent.y);
+                writer.Write(tangent.z);
+                writer.Write(tangent.w);
+            }
+
+            // Finish writing
+            writer.Close();
+            outputStream.Close();
         }
+    }
 
 }
+#endif

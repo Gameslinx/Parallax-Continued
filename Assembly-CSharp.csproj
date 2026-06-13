@@ -745,6 +745,9 @@
  <Reference Include="UnityEditor.UI">
  <HintPath>D:/Productivity/Unity/Parallax Continued/Library/ScriptAssemblies/UnityEditor.UI.dll</HintPath>
  </Reference>
+ <Reference Include="parallax-editor">
+ <HintPath>D:/Productivity/Unity/Parallax Continued/Library/ScriptAssemblies/parallax-editor.dll</HintPath>
+ </Reference>
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>
