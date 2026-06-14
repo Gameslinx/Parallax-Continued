@@ -63,11 +63,16 @@ namespace Parallax
 
             if (ConfigLoader.parallaxScatterBodies.ContainsKey(bodyName))
             {
-                currentBiomeMap = FlightGlobals.GetBodyByName(bodyName).BiomeMap.CompileToTexture();
+                // Make sure to do this before calling CompileToTexture because otherwise it blocks
+                // on the graphics thread being idle. KopernicusCBAttributeMapSO.CompileToTexture
+                // creates a new texture and that can block the render thread for quite a bit when
+                // large textures are used.
                 foreach (Scatter scatter in ConfigLoader.parallaxScatterBodies[bodyName].fastScatters)
                 {
                     scatter.InitShader();
                 }
+
+                currentBiomeMap = FlightGlobals.GetBodyByName(bodyName).BiomeMap.CompileToTexture();
 
                 foreach (ScatterRenderer renderer in scatterRenderers)
                 {
