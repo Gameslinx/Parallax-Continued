@@ -35,36 +35,46 @@ namespace Parallax
         }
         public void Add(T item)
         {
+            if (item == null) return;
             item.id = list.Count;
             list.Add(item);
         }
         public void Remove(int id)
         {
-            // Handle edge case where there is no item to replace
-            if (list.Count == 1)
+            int count = list.Count;
+
+            // Bounds check
+            if (id < 0 || id >= count)
             {
-                list.RemoveAt(0);
+                return;
+            }
+
+            // Handle edge case where there is no item to replace
+            if (count == 1)
+            {
+                list.Clear();
                 return;
             }
 
             // Fetch the item from the end of the list to replace the item we're removing
-            T itemToReplace = list[list.Count - 1];
+            T itemToReplace = list[count - 1];
 
             // Set the replacement item ID to the ID we're removing to maintain ID continuity
             itemToReplace.id = id;
 
-            // Set the last list element to what we're about to remove
-            list[list.Count - 1] = list[id];
-
             // Set the (now freed) ID to the replacement
             list[id] = itemToReplace;
 
-            // Remove the item
-            list.RemoveAt(list.Count - 1);
+            // Remove the last item
+            list.RemoveAt(count - 1);
         }
         public void Remove(T item)
         {
-            Remove(item.id);
+            if (item == null) return;
+            int id = item.id;
+            if (id < 0 || id >= list.Count) return;
+            if (list[id] != item) return;
+            Remove(id);
         }
 
         public IEnumerator GetEnumerator()
@@ -76,6 +86,7 @@ namespace Parallax
         {
             get
             {
+                if (index < 0 || index >= list.Count) return null;
                 return list[index];
             }
         }

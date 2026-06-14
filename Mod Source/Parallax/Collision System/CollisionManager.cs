@@ -28,12 +28,14 @@ namespace Parallax
         // Pointer to Scatter in collideableScatters
         public int collideableScattersIndex;
         public int dataCount;
+        public bool disposed;
         public ScatterColliderData(ScatterSystemQuadData scatterSystemQuad, NativeArray<PositionData> quadLocalData, int collideableScattersIndex)
         {
             this.scatterSystemQuad = scatterSystemQuad;
             this.quadLocalData = quadLocalData;
             this.collideableScattersIndex = collideableScattersIndex;
             this.dataCount = quadLocalData.Length;
+            this.disposed = false;
             InitializeDistances();
         }
         // Sets all distances to max value
@@ -46,6 +48,13 @@ namespace Parallax
                 initializeTo = float.MaxValue
             };
             initDistancesHandle = initJob.Schedule(dataCount, dataCount / 8);
+        }
+        public void DisposeNativeArrays()
+        {
+            if (disposed) return;
+            disposed = true;
+            if (lastDistances.IsCreated) lastDistances.Dispose();
+            if (quadLocalData.IsCreated) quadLocalData.Dispose();
         }
     }
     /// <summary>
@@ -63,8 +72,8 @@ namespace Parallax
         public static FastList<ScatterColliderData> collisionData = new FastList<ScatterColliderData>(10000);
 
         // Incoming and outgoing data queued to be added/removed
-        static List<ScatterColliderData> incomingData = new List<ScatterColliderData>(1000);
-        static List<ScatterColliderData> outgoingData = new List<ScatterColliderData>(1000);
+        static ConcurrentQueue<ScatterColliderData> incomingData = new ConcurrentQueue<ScatterColliderData>();
+        static ConcurrentQueue<ScatterColliderData> outgoingData = new ConcurrentQueue<ScatterColliderData>();
 
         //static FastList<ScatterTransformData> activeObjects = new FastList<ScatterTransformData>(300);
 
@@ -163,7 +172,7 @@ namespace Parallax
         /// <param name="scatterIndex"></param>
         public static void QueueIncomingData(ScatterColliderData data)
         {
-            incomingData.Add(data);
+            incomingData.Enqueue(data);
         }
         /// <summary>
         /// Queue data to be removed from the collision manager. Removed after the next job completion
@@ -171,12 +180,12 @@ namespace Parallax
         /// <param name="data"></param>
         public static void QueueOutgoingData(ScatterColliderData data)
         {
-            outgoingData.Add(data);
+            outgoingData.Enqueue(data);
         }
         // Add data for processing
         static void AddQueuedData()
         {
-            foreach (ScatterColliderData data in incomingData)
+            while (incomingData.TryDequeue(out ScatterColliderData data))
             {
                 // Complete the distance initialisation here
                 data.initDistancesHandle.Complete();
@@ -185,23 +194,26 @@ namespace Parallax
                 // Add job info
                 sqrQuadBounds.Add(data.scatterSystemQuad.sqrQuadWidth);
             }
-            
-            incomingData.Clear();
         }
         // Remove data from processing
         static void RemoveQueuedData()
         {
-            foreach (ScatterColliderData data in outgoingData)
+            while (outgoingData.TryDequeue(out ScatterColliderData data))
             {
+                // Validate the data is still in the list before removing
+                if (data.disposed || data.id < 0 || data.id >= collisionData.Length)
+                {
+                    data.DisposeNativeArrays();
+                    continue;
+                }
+
                 // Mirror the removal from fastlist in our own data here
                 // Remove job info
                 sqrQuadBounds.RemoveAtSwapBack(data.id);
                 collisionData.Remove(data);
 
-                data.lastDistances.Dispose();
-                data.quadLocalData.Dispose();
+                data.DisposeNativeArrays();
             }
-            outgoingData.Clear();
         }
         // Fetch craft bounds and positions
         // Do this early to prevent calculation for every scatter
@@ -514,15 +526,27 @@ namespace Parallax
                 CompleteColliderJob();
             }
 
-            // Complete the init distances job in the very rare case it has not completed yet
-            foreach (ScatterColliderData data in incomingData)
+            // Drain incoming queue first
+            while (incomingData.TryDequeue(out ScatterColliderData inData))
             {
-                data.initDistancesHandle.Complete();
-                if (data.lastDistances.IsCreated)
-                {
-                    data.lastDistances.Dispose();
-                }
+                inData.initDistancesHandle.Complete();
+                inData.DisposeNativeArrays();
             }
+            // Drain outgoing queue
+            while (outgoingData.TryDequeue(out ScatterColliderData outData))
+            {
+                outData.DisposeNativeArrays();
+            }
+
+            // Dispose all active collision data in the FastList
+            for (int i = collisionData.Length - 1; i >= 0; i--)
+            {
+                ScatterColliderData data = collisionData[i];
+                if (data == null) continue;
+                data.DisposeNativeArrays();
+            }
+            collisionData.Clear();
+            sqrQuadBounds.Clear();
 
             for (int i = 0; i < numCollideableScatters; i++)
             {
