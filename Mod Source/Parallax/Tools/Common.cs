@@ -90,7 +90,7 @@ namespace Parallax
             globalNode.AddNode(scaledSettingsNode);
             globalNode.AddNode(debugSettingsNode);
             globalNode.AddNode(objectPoolSettingsNode);
-            
+
             rootNode.Save(KSPUtil.ApplicationRootPath + "GameData/ParallaxContinued/Config/ParallaxGlobalSettings.cfg");
         }
     }
@@ -190,7 +190,7 @@ namespace Parallax
     public class ParallaxTerrainBody
     {
         public string planetName;
-        public Dictionary<string, TextureHandle<Texture2D>> loadedTextures = [];
+        public Dictionary<string, TextureHandle> loadedTextures = [];
 
         // Terrain materials
         public ParallaxMaterials parallaxMaterials = new ParallaxMaterials();
@@ -331,7 +331,7 @@ namespace Parallax
                     Linear = TextureUtils.IsLinear(name),
                     Unreadable = true,
                 };
-                var handle = TextureLoader.LoadTexture<Texture2D>(path, options);
+                var handle = TextureLoader.LoadTexture<Texture>(path, options);
                 handle.OnCompleted += ParallaxDebug.LogTextureLoaded;
 
                 loadedTextures.Add(name, handle);
@@ -346,13 +346,13 @@ namespace Parallax
                 return;
             if (!shaderTextures.TryGetValue(name, out var path))
                 return;
-                
+
             var options = new TextureLoadOptions
             {
                 Linear = TextureUtils.IsLinear(name),
                 Unreadable = true,
             };
-            var handle = TextureLoader.LoadTexture<Texture2D>(path, options);
+            var handle = TextureLoader.LoadTexture<Texture>(path, options);
             handle.OnCompleted += ParallaxDebug.LogTextureLoaded;
 
             loadedTextures.Add(name, handle);
@@ -370,7 +370,7 @@ namespace Parallax
 
             foreach (var name in terrainShaderProperties.shaderTextures.Keys)
             {
-                Texture2D tex;
+                Texture tex;
                 var request = loadedTextures[name];
 
                 try
@@ -412,7 +412,7 @@ namespace Parallax
 
             foreach (var name in terrainShaderProperties.shaderTextures.Keys)
             {
-                Texture2D tex;
+                Texture tex;
                 var request = loadedTextures[name];
 
                 if (!request.IsComplete)
@@ -444,7 +444,7 @@ namespace Parallax
             loaded = true;
             isLoading = false;
         }
-        public static Texture2D LoadTexIfUnloaded(ParallaxTerrainBody body, string path, string key)
+        public static Texture LoadTexIfUnloaded(ParallaxTerrainBody body, string path, string key)
         {
             if (!body.loadedTextures.TryGetValue(key, out var handle))
             {
@@ -510,7 +510,7 @@ namespace Parallax
 
         // Material for shadow casting
         public Material shadowCasterMaterial;
-        
+
         public MaterialParams scaledMaterialParams;
         public ParallaxScaledBodyMode mode = ParallaxScaledBodyMode.FromTerrain;
         public Material scaledMaterial;
@@ -520,7 +520,7 @@ namespace Parallax
 
         public bool disableDeformity = false;
 
-        public Dictionary<string, TextureHandle<Texture2D>> loadedTextures = [];
+        public Dictionary<string, TextureHandle> loadedTextures = [];
         public float worldSpaceMeshRadius;
 
         private bool loaded = false;
@@ -530,8 +530,8 @@ namespace Parallax
         }
         private bool isLoading = false;
         public bool IsLoading
-        { 
-            get { return isLoading; } 
+        {
+            get { return isLoading; }
         }
 
         public ParallaxScaledBody(string name)
@@ -561,7 +561,7 @@ namespace Parallax
                 // Shadow caster won't have all the keywords that the main material will, but enable them anyway in case we're using custom shaders
                 shadowCasterMaterial.EnableKeyword(keyword);
             }
-            
+
             UpdateBaseMaterialParams();
 
             // Scaled meshes are denser than terrain, lower the tessellation but reduce edge length
@@ -705,7 +705,7 @@ namespace Parallax
 
             foreach (var (name, path) in textures)
             {
-                TextureHandle<Texture2D> handle;
+                TextureHandle handle;
                 if (loadedTextures.ContainsKey(name))
                     continue;
 
@@ -728,7 +728,7 @@ namespace Parallax
                     Linear = TextureUtils.IsLinear(name),
                     Unreadable = true,
                 };
-                handle = TextureLoader.LoadTexture<Texture2D>(path, options);
+                handle = TextureLoader.LoadTexture<Texture>(path, options);
                 handle.OnCompleted += ParallaxDebug.LogTextureLoaded;
 
                 loadedTextures.Add(name, handle);
@@ -753,7 +753,7 @@ namespace Parallax
 
             foreach (var name in scaledMaterialParams.shaderProperties.shaderTextures.Keys)
             {
-                Texture2D tex;
+                Texture tex;
                 var request = loadedTextures[name];
 
                 try
@@ -849,7 +849,7 @@ namespace Parallax
                 if (!isLoading)
                     yield break;
 
-                Texture2D tex;
+                Texture tex;
                 try
                 {
                     tex = handle.GetTexture();
@@ -910,7 +910,7 @@ namespace Parallax
 
             loadedTextures.Clear();
             loaded = false;
-            
+
 
             // Scaled body is always loaded when terrain is loaded
             // So, if terrain is loaded, it could be hanging around for the scaled body
@@ -995,7 +995,7 @@ namespace Parallax
         simplexPerlin,
         simplexCellular,
         simplexPolkaDot,
-        
+
         // Maybe implement
         cubist,
         sparseConvolution,
@@ -1137,7 +1137,7 @@ namespace Parallax
             loadedTextures.Clear();
         }
     }
-    
+
     // Stores Scatter information
     public class Scatter
     {
