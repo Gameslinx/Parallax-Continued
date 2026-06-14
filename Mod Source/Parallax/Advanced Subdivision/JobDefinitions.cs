@@ -11,7 +11,6 @@ using UnityEngine;
 using Unity.Mathematics;
 using Unity.Burst;
 using Unity.Burst.CompilerServices;
-using System.Diagnostics;
 
 namespace Parallax
 {
@@ -249,28 +248,70 @@ namespace Parallax
         }
     }
 
-    // We can't burst compile this code as it accesses an external non-readonly static field, which is a managed type
-    // Either we use an IJobParallelFor or we burst compile as an IJob without the counter
+    [BurstCompile]
     public struct ReadMeshTriangleDataJob : IJobParallelFor
     {
-        [ReadOnly] public NativeStream.Reader newTris;
-        [WriteOnly][NativeDisableParallelForRestriction] public NativeArray<int> outputTris;
-        [ReadOnly] public int uniqueIndex;
-        public void Execute(int index)
+        [ReadOnly]
+        public NativeStream.Reader newTris;
+        [WriteOnly]
+        [NativeDisableParallelForRestriction]
+        public NativeArray<int> outputTris;
+        [NativeDisableParallelForRestriction]
+        public NativeArray<int> triangleReadbackCounters;
+        public int uniqueIndex;
+
+        public unsafe void Execute(int index)
         {
+            if (uniqueIndex > this.triangleReadbackCounters.Length)
+            {
+                Debug.LogError($"[Parallax] Job unique index {uniqueIndex} was out of bounds for triangle readback counters");
+                return;
+            }
+
             int itemsInLocalStream = newTris.BeginForEachIndex(index);
+            // We need to get references to the elements of this native array.
+            // NativeArray doesn't allow that by default so we use raw pointers.
+            int* triangleReadbackCounters = (int*)this.triangleReadbackCounters.GetUnsafePtr();
 
             // We must read back triangles in threes
             for (int i = 0; i < itemsInLocalStream; i += 3)
             {
                 // Compute output array index
-                int zone = Interlocked.Add(ref InterlockedCounters.triangleReadbackCounters[uniqueIndex], 3);
+                int zone = Interlocked.Add(ref triangleReadbackCounters[uniqueIndex], 3);
                 outputTris[zone] = newTris.Read<int>();
                 outputTris[zone + 1] = newTris.Read<int>();
                 outputTris[zone + 2] = newTris.Read<int>();
             }
 
             newTris.EndForEachIndex();
+        }
+
+        public unsafe JobHandle Schedule(int arrayLength, int batchCount, JobHandle dependsOn = default)
+        {
+            var addr = UnsafeUtility.PinGCArrayAndGetDataAddress(
+                InterlockedCounters.triangleReadbackCounters,
+                out var gchandle
+            );
+            triangleReadbackCounters = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<int>(
+                addr,
+                InterlockedCounters.triangleReadbackCounters.Length,
+                Allocator.Invalid
+            );
+            var handle = IJobParallelForExtensions.Schedule(this, arrayLength, batchCount, dependsOn);
+            var job = new FreeGCHandleJob { gchandle = gchandle };
+            job.Schedule(handle);
+
+            return handle;
+        }
+    }
+
+    struct FreeGCHandleJob : IJob
+    {
+        public ulong gchandle;
+
+        public void Execute()
+        {
+            UnsafeUtility.ReleaseGCObject(gchandle);
         }
     }
 }
