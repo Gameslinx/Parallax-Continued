@@ -1,4 +1,5 @@
-﻿using Parallax.PQS_Mods;
+﻿using Parallax.Legacy;
+using Parallax.PQS_Mods;
 using Parallax.Tools;
 using System;
 using System.Collections.Generic;
@@ -347,19 +348,27 @@ namespace Parallax
             Vector3 corner3 = quad.gameObject.transform.TransformPoint(vertices[224]);
             Vector3 corner4 = quad.gameObject.transform.TransformPoint(vertices[210]);
             Vector3 center = quad.gameObject.transform.TransformPoint(vertices[112]);
-
+            
             // Uses a dictionary, at least...
             CBAttributeMapSO.MapAttribute attribute1 = Kopernicus.Utility.GetBiome(body, corner1);
             CBAttributeMapSO.MapAttribute attribute2 = Kopernicus.Utility.GetBiome(body, corner2);
             CBAttributeMapSO.MapAttribute attribute3 = Kopernicus.Utility.GetBiome(body, corner3);
             CBAttributeMapSO.MapAttribute attribute4 = Kopernicus.Utility.GetBiome(body, corner4);
             CBAttributeMapSO.MapAttribute attribute5 = Kopernicus.Utility.GetBiome(body, center);
-
+            
             cornerBiomes[0] = attribute1.name;
             cornerBiomes[1] = attribute2.name;
             cornerBiomes[2] = attribute3.name;
             cornerBiomes[3] = attribute4.name;
             cornerBiomes[4] = attribute5.name;
+
+            // Doubt we'll need this but if we need to validate more corner biomes...
+            //for (int i = 0; i < cornerBiomes.Length; i++)
+            //{
+            //    Vector3 corner = quad.gameObject.transform.TransformPoint(vertices[i]);
+            //    CBAttributeMapSO.MapAttribute attribute = Kopernicus.Utility.GetBiome(body, corner);
+            //    cornerBiomes[i] = attribute.name;
+            //}
         }
         public Vector3[] GetDirectionsFromCenter(Vector3[] vertices, Vector3 planetCenter)
         {

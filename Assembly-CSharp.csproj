@@ -718,8 +718,14 @@
  <Reference Include="Unity.Timeline">
  <HintPath>D:/Productivity/Unity/Parallax Continued/Library/ScriptAssemblies/Unity.Timeline.dll</HintPath>
  </Reference>
+ <Reference Include="parallax-editor">
+ <HintPath>D:/Productivity/Unity/Parallax Continued/Library/ScriptAssemblies/parallax-editor.dll</HintPath>
+ </Reference>
  <Reference Include="Unity.HeapExplorer.Editor.Tests">
  <HintPath>D:/Productivity/Unity/Parallax Continued/Library/ScriptAssemblies/Unity.HeapExplorer.Editor.Tests.dll</HintPath>
+ </Reference>
+ <Reference Include="Unity.AssetBundleBrowser.Editor">
+ <HintPath>D:/Productivity/Unity/Parallax Continued/Library/ScriptAssemblies/Unity.AssetBundleBrowser.Editor.dll</HintPath>
  </Reference>
  <Reference Include="Unity.HeapExplorer.Editor">
  <HintPath>D:/Productivity/Unity/Parallax Continued/Library/ScriptAssemblies/Unity.HeapExplorer.Editor.dll</HintPath>
@@ -744,9 +750,6 @@
  </Reference>
  <Reference Include="UnityEditor.UI">
  <HintPath>D:/Productivity/Unity/Parallax Continued/Library/ScriptAssemblies/UnityEditor.UI.dll</HintPath>
- </Reference>
- <Reference Include="parallax-editor">
- <HintPath>D:/Productivity/Unity/Parallax Continued/Library/ScriptAssemblies/parallax-editor.dll</HintPath>
  </Reference>
   </ItemGroup>
   <ItemGroup>

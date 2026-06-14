@@ -23,7 +23,7 @@ namespace Parallax
         /// Contains the UVs that map the entire planet for sampling the biome map
         /// </summary>
         public static Dictionary<PQ, Vector3[]> quadPlanetUVs = new Dictionary<PQ, Vector3[]>();
-
+        public static Queue<Vector3[]> uvPool = new Queue<Vector3[]>();
         Vector3[] uvCache = new Vector3[225];
 
         bool hasTerrainShader = false;
@@ -51,6 +51,12 @@ namespace Parallax
                     thresholdMultiplier = Math.Max(qec.oceanFactor, qec.coastFactor);
                 }
                 ConfigLoader.parallaxScatterBodies[sphere.name].SetSubdivisionRequirements(sphere.subdivisionThresholds, thresholdMultiplier, sphere.maxLevel);
+
+                int numQuadsToPrepare = 750;
+                for (int i = 0; i < numQuadsToPrepare; i++)
+                {
+                    uvPool.Enqueue(new Vector3[225]);
+                }
             }
         }
         public override void OnQuadBuilt(PQ quad)
@@ -63,7 +69,16 @@ namespace Parallax
                 terrainQuadData.Add(quad, terrainData);
             }
 
-            quadPlanetUVs.Add(quad, uvCache);
+            if (ConfigLoader.parallaxScatterBodies.ContainsKey(sphere.name))
+            {
+                if (quad.subdivision >= ConfigLoader.parallaxScatterBodies[sphere.name].minimumSubdivisionLevel)
+                {
+                    Vector3[] quadUVs = uvPool.Count > 0 ? uvPool.Dequeue() : new Vector3[225];
+
+                    uvCache.CopyTo(quadUVs, 0);
+                    quadPlanetUVs.Add(quad, quadUVs);
+                }
+            }
         }
         public override void OnQuadUpdateNormals(PQ quad)
         {
@@ -81,7 +96,11 @@ namespace Parallax
                 terrainQuadData.Remove(quad);
             }
 
-            quadPlanetUVs.Remove(quad);
+            if (quadPlanetUVs.TryGetValue(quad, out Vector3[] quadUVs))
+            {
+                uvPool.Enqueue(quadUVs);
+                quadPlanetUVs.Remove(quad);
+            }
         }
         // Generate the planet UVs used for sampling the biome map (scatter system)
         // Also contains whether the vertex allows scatters in Z component
