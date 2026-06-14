@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.Rendering;
 
 namespace Parallax.Scaled_System
 {
@@ -30,6 +28,7 @@ namespace Parallax.Scaled_System
             ExtractSkyboxFrom(GalaxyCubeControl.Instance?.gameObject);
             GameObject.DontDestroyOnLoad(this);
         }
+
         public static void ExtractSkyboxFrom(GameObject skybox)
         {
             // We can only successfully get the skybox in flight or tracking station, which works well enough
@@ -107,37 +106,9 @@ namespace Parallax.Scaled_System
             }
 
             int resultDim = skyboxTextures[0].width;
-            RenderTexture rt = new RenderTexture(resultDim, resultDim, 0, GraphicsFormat.R8G8B8A8_UNorm);
-            rt.Create();
 
-            Texture2D[] destTextures = new Texture2D[6];
-
-            for (int i = 0; i < skyboxTextures.Length; i++)
-            {
-                Texture2D tex = skyboxTextures[i];
-
-                Graphics.Blit(tex, rt);
-                RenderTexture.active = rt;
-
-                destTextures[i] = new Texture2D(resultDim, resultDim, TextureFormat.RGBA32, true);
-                destTextures[i].ReadPixels(new Rect(0, 0, resultDim, resultDim), 0, 0, true);
-                destTextures[i].Compress(false);
-                destTextures[i].Apply(true, true);
-            }
-
-            // Restore the original texture limit
-            if (GameSettings.TEXTURE_QUALITY != 0)
-            {
-                // Force full-resolution textures temporarily
-                QualitySettings.masterTextureLimit = previousMasterTextureLimit;
-            }
-
-            Cubemap cube = new Cubemap(resultDim, destTextures[0].format, destTextures[0].mipmapCount);
-
-            for (int i = 0; i < 6; i++)
-            {
-                Graphics.CopyTexture(destTextures[i], 0, cube, i);
-            }
+            if (!TryCopyDirectly(resultDim, skyboxTextures, out var cube))
+                cube = ExtractDownloadAndCompress(resultDim, skyboxTextures);
 
             cubeMap = cube;
 
@@ -151,7 +122,134 @@ namespace Parallax.Scaled_System
             float timeTaken = Time.realtimeSinceStartup - startTime;
             ParallaxDebug.Log("Skybox processing took " + timeTaken.ToString("F2") + " seconds");
         }
+    
+        static bool TryCopyDirectly(
+            int resultDim,
+            Texture2D[] skyboxTextures,
+            out Cubemap cubemap
+        )
+        {
+            var format = skyboxTextures[0].format;
+            var mipmapCount = skyboxTextures[0].mipmapCount;
+            cubemap = null;
+
+            if (!SystemInfo.copyTextureSupport.HasFlag(CopyTextureSupport.DifferentTypes))
+                return false;
+
+            if (!GraphicsFormatUtility.IsCompressedFormat(skyboxTextures[0].graphicsFormat))
+                return false;
+
+            foreach (var tex in skyboxTextures)
+            {
+                if (tex.width != resultDim
+                    || tex.height != resultDim
+                    || tex.format != format
+                    || tex.mipmapCount != mipmapCount)
+                {
+                    return false;
+                }
+            }
+
+            cubemap = new Cubemap(resultDim, format, mipmapCount);
+            cubemap.Apply(false, true);
+            for (int i = 0; i < 6; ++i)
+                Graphics.CopyTexture(skyboxTextures[i], 0, cubemap, i);
+
+            return true;
+        }
+
+        static Cubemap ExtractDownloadAndCompress(
+            int resultDim,
+            Texture2D[] skyboxTextures)
+        {
+
+            RenderTexture rt = new RenderTexture(resultDim, resultDim, 0, GraphicsFormat.R8G8B8A8_UNorm);
+            rt.Create();
+
+            Texture2D[] destTextures = new Texture2D[6];
+            for (int i = 0; i < skyboxTextures.Length; i++)
+            {
+                Texture2D tex = skyboxTextures[i];
+
+                Graphics.Blit(tex, rt);
+                RenderTexture.active = rt;
+
+                destTextures[i] = new Texture2D(resultDim, resultDim, TextureFormat.RGBA32, true);
+                destTextures[i].ReadPixels(new Rect(0, 0, resultDim, resultDim), 0, 0, true);
+                destTextures[i].Compress(false);
+
+                // Destroy the texture at the end of the frame
+                Texture.Destroy(destTextures[i]);
+            }
+
+            RenderTexture.active = null;
+            rt.Release();
+
+            var cubemap = new Cubemap(resultDim, destTextures[0].format, destTextures[0].mipmapCount);
+
+            if (SystemInfo.copyTextureSupport.HasFlag(CopyTextureSupport.DifferentTypes))
+            {
+                foreach (var tex in destTextures)
+                    tex.Apply(false, true);
+
+                cubemap.Apply(false, true);
+                for (int i = 0; i < 6; i++)
+                    Graphics.CopyTexture(skyboxTextures[i], 0, cubemap, i);
+            }
+            else
+            {
+                for (int i = 0; i < 6; i++)
+                {
+                    var tex = destTextures[i];
+                    var data = tex.GetRawTextureData<byte>();
+
+                    int offset = 0;
+                    int size = resultDim;
+                    int mipCount = cubemap.mipmapCount;
+
+                    for (int mip = 0; mip < mipCount; ++mip)
+                    {
+                        var mipsize = (int)GraphicsFormatUtility.ComputeMipmapSize(
+                            size,
+                            size,
+                            cubemap.graphicsFormat
+                        );
+                        if (offset + mipsize > data.Length)
+                            throw new Exception($"dest texture data size was too small (expected at least {offset + mipsize} but got {data.Length})");
+
+                        cubemap.SetPixelData(data, mip, (CubemapFace)i, offset);
+                        offset += mipsize;
+                    }
+                }
+
+                cubemap.Apply(false, true);
+            }
+
+            return cubemap;
+        }
+
+        readonly struct RTGuard(RenderTexture[] textures) : IDisposable
+        {
+            public void Dispose()
+            {
+                foreach (var rt in textures)
+                    rt?.Release();
+            }
+        }
+
+        readonly struct TextureLimitGuard : IDisposable
+        {
+            readonly int prev;
+
+            public TextureLimitGuard()
+            {
+                prev = QualitySettings.masterTextureLimit;
+            }
+
+            public void Dispose() => QualitySettings.masterTextureLimit = prev;
+        }
     }
+
     [KSPAddon(KSPAddon.Startup.MainMenu, false)]
     public class SkyboxControlMainMenu : MonoBehaviour
     {
