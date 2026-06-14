@@ -47,6 +47,18 @@ namespace Parallax.Scaled_System
 
                 body.SetScaledMaterialParams(kspBody);
 
+                // We're already handling the scaled space textures. Leaving this active means that
+                // 1. kopernicus loads textures unnecessarily
+                // 2. there's a race condition between us and kopernicus for who sets the _MainTex
+                //    and _BumpTex properties last.
+                //
+                // This will show as the wrong texture sometimes being loaded when kopernicus OnDemand
+                // happens to run last if the configured textures are different between parallax and
+                // kopernicus.
+                var kopScaledOnDemand = kspBody.scaledBody.GetComponent<Kopernicus.OnDemand.ScaledSpaceOnDemand>();
+                if (kopScaledOnDemand != null)
+                    Destroy(kopScaledOnDemand);
+
                 // This returns a copy of the materials on the mesh
                 Material[] mats = meshRenderer.sharedMaterials;
 
