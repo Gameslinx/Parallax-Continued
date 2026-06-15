@@ -92,6 +92,7 @@
       </Reference>
       <Reference Include="Kopernicus">
         <HintPath>$(GameDataPath)Kopernicus\Plugins\Kopernicus.dll</HintPath>
+        <Private>false</Private>
       </Reference>
       <Reference Include="Kopernicus.Parser">
         <HintPath>$(GameDataPath)Kopernicus\Plugins\Kopernicus.Parser.dll</HintPath>
