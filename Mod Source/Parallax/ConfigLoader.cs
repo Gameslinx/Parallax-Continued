@@ -992,13 +992,19 @@ namespace Parallax
 
             ConfigNode lods = node.GetNode("LODs");
             ConfigNode[] lodNodes = lods.GetNodes("LOD");
-            if (lodNodes.Length < 2)
+            if (lodNodes != null && lodNodes.Length == 2)
             {
-                ParallaxDebug.LogCritical("Unable to locate the required amount of 2 LOD nodes for a scatter on " + planetName);
+                distributionParams.lod1 = ParseLOD(planetName, lodNodes[0], baseMaterial);
+                distributionParams.lod2 = ParseLOD(planetName, lodNodes[1], baseMaterial);
             }
-            distributionParams.lod1 = ParseLOD(planetName, lodNodes[0], baseMaterial);
-            distributionParams.lod2 = ParseLOD(planetName, lodNodes[1], baseMaterial);
-
+            else
+            {
+                ParallaxDebug.LogCritical("Unable to locate the required amount of 2 LOD nodes for a scatter on " + planetName + ".\n\nThe game will hang indefinitely if you progress past the main menu.");
+                distributionParams.lod1 = new LOD();
+                distributionParams.lod2 = new LOD();
+                distributionParams.lod1.modelPathOverride = "ParallaxContinued/Models/errorMesh";
+                distributionParams.lod2.modelPathOverride = "ParallaxContinued/Models/errorMesh";
+            }
             return distributionParams;
         }
         public static BiomeBlacklistParams GetBiomeBlacklistParams(string planetName, ConfigNode node)
@@ -1230,14 +1236,17 @@ namespace Parallax
             if (!File.Exists(lod0ModelPath) || GameDatabase.Instance.GetModel(scatter.modelPath) == null)
             {
                 ParallaxDebug.LogCritical("This model file doesn't exist: " + scatter.modelPath + " on scatter: " + scatter.scatterName);
+                scatter.modelPath = "ParallaxContinued/Models/errorMesh";
             }
             if (!File.Exists(lod1ModelPath) || GameDatabase.Instance.GetModel(scatter.distributionParams.lod1.modelPathOverride) == null)
             {
                 ParallaxDebug.LogCritical("This model file doesn't exist: " + scatter.distributionParams.lod1.modelPathOverride + " on scatter: " + scatter.scatterName);
+                scatter.distributionParams.lod1.modelPathOverride = "ParallaxContinued/Models/errorMesh";
             }
             if (!File.Exists(lod2ModelPath) || GameDatabase.Instance.GetModel(scatter.distributionParams.lod2.modelPathOverride) == null)
             {
                 ParallaxDebug.LogCritical("This model file doesn't exist: " + scatter.distributionParams.lod2.modelPathOverride + " on scatter: " + scatter.scatterName);
+                scatter.distributionParams.lod1.modelPathOverride = "ParallaxContinued/Models/errorMesh";
             }
 
             // Cube the normal deviance, as it gives better results and becomes more sensitive to larger values
