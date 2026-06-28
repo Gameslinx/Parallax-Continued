@@ -272,6 +272,10 @@ namespace Parallax
                 outputLOD0 = new ComputeBuffer(newLOD0Count, TransformData.Size(), ComputeBufferType.Append);
                 outputLOD1 = new ComputeBuffer(newLOD1Count, TransformData.Size(), ComputeBufferType.Append);
                 outputLOD2 = new ComputeBuffer(newLOD2Count, TransformData.Size(), ComputeBufferType.Append);
+
+                outputLOD0.name = $"parallax:{planetName}/scatter/{name}/outputLOD0";
+                outputLOD1.name = $"parallax:{planetName}/scatter/{name}/outputLOD1";
+                outputLOD2.name = $"parallax:{planetName}/scatter/{name}/outputLOD2";
             }
             else
             {
@@ -334,6 +338,10 @@ namespace Parallax
 
             indirectArgsLOD2 = new ComputeBuffer(1, argumentsLod2.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
             indirectArgsLOD2.SetData(argumentsLod2);
+
+            indirectArgsLOD0.name = $"parallax:{planetName}/scatter/{name}/indirectArgsLOD0";
+            indirectArgsLOD1.name = $"parallax:{planetName}/scatter/{name}/indirectArgsLOD1";
+            indirectArgsLOD2.name = $"parallax:{planetName}/scatter/{name}/indirectArgsLOD2";
         }
         // Called on Update from ScatterManager.cs
         public void PreRender()
@@ -386,6 +394,10 @@ namespace Parallax
             ComputeBuffer countBuffer0 = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
             ComputeBuffer countBuffer1 = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
             ComputeBuffer countBuffer2 = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
+
+            countBuffer0.name = $"parallax:{planetName}/scatter/{name}/countBuffer0";
+            countBuffer1.name = $"parallax:{planetName}/scatter/{name}/countBuffer1";
+            countBuffer2.name = $"parallax:{planetName}/scatter/{name}/countBuffer2";
 
             int[] countLOD0 = { 0, 0, 0 };
             int[] countLOD1 = { 0, 0, 0 };
