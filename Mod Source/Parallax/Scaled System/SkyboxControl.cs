@@ -194,7 +194,7 @@ namespace Parallax.Scaled_System
 
                 cubemap.Apply(false, true);
                 for (int i = 0; i < 6; i++)
-                    Graphics.CopyTexture(skyboxTextures[i], 0, cubemap, i);
+                    Graphics.CopyTexture(destTextures[i], 0, cubemap, i);
             }
             else
             {
