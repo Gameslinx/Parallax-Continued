@@ -276,8 +276,8 @@ namespace Parallax
             // We restart from the beginning here by processing incoming/outgoing data and updating the craft and quad positions
             if (!inQuadJob && !inColliderJob && !allComplete) 
             {
-                RemoveQueuedData();
                 AddQueuedData();
+                RemoveQueuedData();
                 UpdateCraftData();
                 UpdateQuadData();
 
