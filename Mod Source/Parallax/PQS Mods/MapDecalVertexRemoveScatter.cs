@@ -6,8 +6,6 @@ using Kopernicus.Configuration.Parsing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Parallax.PQS_Mods
@@ -24,9 +22,10 @@ namespace Parallax.PQS_Mods
         public List<string> blockedScatters;
 
         public double radius;
-        public Vector3 position;
+        public Vector3 position = Vector3.zero;
         public float angle;
-        public Texture2D colorMap;
+        public MapSO colorMap;
+        public Texture2D colorMapT2D = null;
         public MapSO debugColorMap;
         public bool debugShowDecal;
         private double inclusionAngle;
@@ -38,6 +37,7 @@ namespace Parallax.PQS_Mods
         public Quaternion rot;
         private float u;
         private float v;
+        public bool lockToKSC;
         private void Reset()
         {
             radius = 100.0;
@@ -46,14 +46,34 @@ namespace Parallax.PQS_Mods
             vertRot = Vector3.forward;
         }
 
+        private void Start()
+        {
+            if (lockToKSC)
+            {
+                position = SpaceCenter.Instance.SrfNVector;
+                normalisedPosition = position.normalized;
+                inclusionAngle = Math.Atan(radius / sphere.radius) * 4.0;
+                rot = Quaternion.AngleAxis(angle, Vector3.up) * Quaternion.FromToRotation(normalisedPosition, Vector3.up);
+            }
+        }
+
         public override void OnSetup()
         {
+            requirements = (PQS.ModiferRequirements.MeshColorChannel);
             if (blockedScatters == null)
             {
                 ParallaxDebug.LogCritical("PQSMod_MapDecalVertexRemoveScatter: No blocked scatters specified on planet: " + sphere.name);
             }
 
-            requirements = (PQS.ModiferRequirements.MeshColorChannel);
+            if (lockToKSC)
+            {
+                position = SpaceCenter.Instance.SrfNVector;
+            }
+            else if (position.Equals(Vector3.zero))
+            {
+                ParallaxDebug.LogCritical("PQSMod_MapDecalVertexRemoveScatter: Not locked to KSC and no position set, on planet: " + sphere.name);
+            }
+
             normalisedPosition = position.normalized;
             inclusionAngle = Math.Atan(radius / sphere.radius) * 4.0;
             rot = Quaternion.AngleAxis(angle, Vector3.up) * Quaternion.FromToRotation(normalisedPosition, Vector3.up);
@@ -62,6 +82,12 @@ namespace Parallax.PQS_Mods
             {
                 ParallaxDebug.LogCritical("MapDecalVertexRemoveScatter: No color map specified, planet: " + sphere.name);
                 modEnabled = false;
+                return;
+            }
+
+            if (colorMapT2D == null)
+            {
+                colorMapT2D = colorMap.CompileRGBA();
             }
         }
 
@@ -89,10 +115,6 @@ namespace Parallax.PQS_Mods
         }
         public override void OnVertexBuild(PQS.VertexBuildData vertexBuildData)
         {
-            if (!debugShowDecal)
-            {
-                return;
-            }
             if (!quadActive)
             {
                 if (debugShowDecal)
@@ -110,26 +132,20 @@ namespace Parallax.PQS_Mods
             		return;
             	}
             }
-        
-            vertRot = rot * vertexBuildData.directionFromCenter;
-            u = (float)((vertRot.x * sphere.radius / radius + 1.0) * 0.5);
-            v = (float)((vertRot.z * sphere.radius / radius + 1.0) * 0.5);
-        
-            if (u > 1 || v > 1 || u < 0 || v < 0)
+            if ((debugColorMap != null) && debugShowDecal)
             {
-                return;
-            }
 
-            if (debugColorMap != null)
-            {
+                vertRot = rot * vertexBuildData.directionFromCenter;
+                u = (float)((vertRot.x * sphere.radius / radius + 1.0) * 0.5);
+                v = (float)((vertRot.z * sphere.radius / radius + 1.0) * 0.5);
+
+                if (u > 1 || v > 1 || u < 0 || v < 0)
+                {
+                    return;
+                }
                 maskValue = debugColorMap.GetPixelColor(u, v).g;
+                vertexBuildData.vertColor = maskValue > 0.01f ? Color.green : Color.red;
             }
-            else
-            {
-                return;
-            }
-                
-            vertexBuildData.vertColor = maskValue > 0.01f ? Color.green : Color.red;
         }
 
         public override void OnQuadBuilt(PQ quad)
@@ -142,17 +158,23 @@ namespace Parallax.PQS_Mods
     public class MapDecalVertexRemoveScatter : ModLoader<PQSMod_MapDecalVertexRemoveScatter>
     {
         // Vec3 position
-        [ParserTarget("position")]
+        [ParserTarget("position", Optional = true)]
         public Vector3Parser Position
         {
             get { return Mod.position; }
             set { Mod.position = value; }
         }
         // Lat Lon position
-        [ParserTarget("Position")]
+        [ParserTarget("Position", Optional = true)]
         public PositionParser Position2
         {
             set { Mod.position = value; }
+        }
+        [ParserTarget("lockToKSC", Optional = true)]
+        public NumericParser<Boolean> LockToKSC
+        {
+            get { return Mod.lockToKSC; }
+            set { Mod.lockToKSC = value; }
         }
         [ParserTarget("debugShowDecal", Optional = true)]
         public NumericParser<Boolean> DebugShowDecal
@@ -161,7 +183,7 @@ namespace Parallax.PQS_Mods
             set { Mod.debugShowDecal = value; }
         }
         [ParserTarget("colorMap")]
-        public Texture2DParser ColorMap
+        public MapSOParserRGB<MapSO> ColorMap
         {
             get { return Mod.colorMap; }
             set { Mod.colorMap = value; }

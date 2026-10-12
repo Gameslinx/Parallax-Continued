@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Parallax.LateCompatibility
@@ -13,12 +11,14 @@ namespace Parallax.LateCompatibility
     /// </summary>
 
     [KSPAddon(KSPAddon.Startup.MainMenu, true)]
-    class LateCompatibility : MonoBehaviour
+    public class SigmaDimensions : MonoBehaviour
     {
+        public static Dictionary<string, int> defaultPresetMaxLevelDictionary = null;
         public void Start()
         {
             RunCompatibility_SigmaDimensions();
         }
+
         public void RunCompatibility_SigmaDimensions()
         {
             UrlDir.UrlConfig sigDimConfig = ConfigLoader.GetConfigByName("SigmaDimensions");
@@ -88,7 +88,7 @@ namespace Parallax.LateCompatibility
 
                     // Unlikely to reach 14 but it gets slow if it does
                     // Fwiw rescale of 10 will only add 4, and Tylo uses the most at a depth of 9, so we'll hit 13.
-                    parallaxPQSMod.subdivisionLevel = Mathf.Min(parallaxPQSMod.subdivisionLevel, 14);
+                    //parallaxPQSMod.subdivisionLevel = Mathf.Min(parallaxPQSMod.subdivisionLevel, 14);
                 }
 
                 terrainBody.SetMaterialValues();
@@ -99,24 +99,43 @@ namespace Parallax.LateCompatibility
                 CelestialBody cb = FlightGlobals.GetBodyByName(scatterBody.planetName);
                 float resizeValue = (float)cb.Get<double>("resize");
                 float landscapeValue = (float)cb.Get<double>("landscape");
-
+                float pqsRaiseAmountFloat = 0;
+                float pqsPopulationMult = 0;
+                int pqsRaiseAmountInteger = 0;
+                if (resizeValue >= 1)
+                {
+                    pqsRaiseAmountFloat = Mathf.Max(Mathf.Log(resizeValue, 2f),1);
+                    pqsRaiseAmountInteger = (int)Mathf.Round(pqsRaiseAmountFloat);
+                    pqsPopulationMult = Mathf.Abs(pqsRaiseAmountFloat - (pqsRaiseAmountInteger - 1));
+                }
+                else if (resizeValue < 1)
+                {
+                    float resizeValueInverted = (1f / resizeValue);
+                    pqsRaiseAmountFloat = Mathf.Log(resizeValueInverted, 2f) * (-1f);
+                    pqsRaiseAmountInteger = (int)Mathf.Round(pqsRaiseAmountFloat);
+                    pqsPopulationMult = 1f / (2f * Mathf.Abs(pqsRaiseAmountInteger));
+                }
                 foreach (Scatter scatter in scatterBody.fastScatters)
                 {
                     scatter.distributionParams.minAltitude *= resizeValue * landscapeValue;
                     scatter.distributionParams.maxAltitude *= resizeValue * landscapeValue;
 
-                    // Don't care about landscape value because that just scales altitude
-                    // Limit density scalar to 5.5x scale - anything after that we take the density losses to conserve RAM (would be 100x at 10x scale)
-                    float densityScalar = resizeValue;
-                    densityScalar = Mathf.Min(densityScalar, 5.5f);
-
                     // Now scale density appropriately
-                    // Pop mult scales with square of rescale factor - Floor to be conservative, 
-                    scatter.distributionParams.populationMultiplier *= Mathf.FloorToInt(densityScalar * densityScalar);
+                    scatter.distributionParams.populationMultiplier = (int)Math.Round(scatter.distributionParams.populationMultiplier * pqsPopulationMult);
                     scatter.distributionParams.populationMultiplier = Mathf.Max(scatter.distributionParams.populationMultiplier, 1);
+
+                    scatter.distributionParams.spawnChance *= pqsPopulationMult;
 
                     // Adjust distribution noise frequency
                     scatter.noiseParams.frequency *= resizeValue;
+
+                    //Finally ensure we have the maxRenderableCap high enough, seems just multiplying by how many PQS values we raised is enough.
+                    if (pqsRaiseAmountInteger > 1)
+                    {
+                        scatter.optimizationParams.maxRenderableObjectsLOD0 *= pqsRaiseAmountInteger;
+                        scatter.optimizationParams.maxRenderableObjectsLOD1 *= pqsRaiseAmountInteger;
+                        scatter.optimizationParams.maxRenderableObjectsLOD2 *= pqsRaiseAmountInteger;
+                    }
                 }
             }
         }

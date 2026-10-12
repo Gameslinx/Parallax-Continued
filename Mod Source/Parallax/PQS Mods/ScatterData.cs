@@ -236,7 +236,7 @@ namespace Parallax
                 scatterShader.SetVector(ParallaxScatterShaderProperties.blockMapDirectionFromCenterID, (Vector3)parent.blockMapPQSMod.normalisedPosition);
                 scatterShader.SetVector(ParallaxScatterShaderProperties.blockMapRotationID, new Vector4(parent.blockMapPQSMod.rot.x, parent.blockMapPQSMod.rot.y, parent.blockMapPQSMod.rot.z, parent.blockMapPQSMod.rot.w));
                 scatterShader.SetFloat(ParallaxScatterShaderProperties.blockMapRadiusID, (float)parent.blockMapPQSMod.radius);
-                scatterShader.SetTexture(distributeKernel, ParallaxScatterShaderProperties.blockMapID, parent.blockMapPQSMod.colorMap);
+                scatterShader.SetTexture(distributeKernel, ParallaxScatterShaderProperties.blockMapID, parent.blockMapPQSMod.colorMapT2D);
             }
         }
         public void Distribute()

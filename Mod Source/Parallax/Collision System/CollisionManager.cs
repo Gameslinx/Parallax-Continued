@@ -10,6 +10,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using static Kopernicus.ConfigParser.ParserOptions;
+using Parallax.Harmony_Patches;
 
 namespace Parallax
 {

@@ -1,7 +1,4 @@
-﻿using Parallax.Legacy;
-using Parallax.PQS_Mods;
-using Parallax.Tools;
-using System;
+﻿using Parallax.PQS_Mods;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -39,7 +36,7 @@ namespace Parallax
         // Potentially store a scaled version of this to get closer to the desired frequency and reduce precision errors
         // Length parity with quad vertex count
         public Vector3[] directionsFromCenter;
-        public Texture2D blockMapData;
+        public MapSO blockMapData;
         public PQSMod_MapDecalVertexRemoveScatter blockMapPQSMod;   // Only assigned if we have a block map on this quad
 
         // Physical mesh data
