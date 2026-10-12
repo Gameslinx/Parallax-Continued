@@ -58,25 +58,25 @@ namespace Parallax.Harmony_Patches
                     float pqsRaiseAmountFloat = 0;
 
                     //If its null we must build it.  This should only ever happen once.
-                    if (SigmaDimensionsDataHolder.defaultPresetMaxLevelDictionary == null)
+                    if (SigmaDimensions.defaultPresetMaxLevelDictionary == null)
                     {
-                        SigmaDimensionsDataHolder.defaultPresetMaxLevelDictionary = new Dictionary<string, int>();
+                        SigmaDimensions.defaultPresetMaxLevelDictionary = new Dictionary<string, int>();
                         foreach (PQSCache.PQSPreset rawPresets in PQSCache.PresetList.presets)
                         {
                             foreach (PQSCache.PQSSpherePreset preset in rawPresets.spherePresets)
                             {
-                                if (!SigmaDimensionsDataHolder.defaultPresetMaxLevelDictionary.ContainsKey(preset.name))
+                                if (!SigmaDimensions.defaultPresetMaxLevelDictionary.ContainsKey(preset.name))
                                 {
-                                    SigmaDimensionsDataHolder.defaultPresetMaxLevelDictionary.Add(preset.name, preset.maxSubdivision);
+                                    SigmaDimensions.defaultPresetMaxLevelDictionary.Add(preset.name, preset.maxSubdivision);
                                 }
-                                else if (preset.maxSubdivision > SigmaDimensionsDataHolder.defaultPresetMaxLevelDictionary[preset.name])
+                                else if (preset.maxSubdivision > SigmaDimensions.defaultPresetMaxLevelDictionary[preset.name])
                                 {
-                                    SigmaDimensionsDataHolder.defaultPresetMaxLevelDictionary[preset.name] = preset.maxSubdivision;
+                                    SigmaDimensions.defaultPresetMaxLevelDictionary[preset.name] = preset.maxSubdivision;
                                 }
                             }
                         }
                     }
-                    if (SigmaDimensionsDataHolder.defaultPresetMaxLevelDictionary != null)
+                    if (SigmaDimensions.defaultPresetMaxLevelDictionary != null)
                     {
                         if (resizeValue >= 1)
                         {
@@ -91,11 +91,11 @@ namespace Parallax.Harmony_Patches
                         }
                         foreach (PQSCache.PQSPreset rawPresets in PQSCache.PresetList.presets)
                         {
-                            if (rawPresets.spherePresets[0].maxSubdivision != SigmaDimensionsDataHolder.defaultPresetMaxLevelDictionary[rawPresets.spherePresets[0].name] + pqsRaiseAmountInteger)
+                            if (rawPresets.spherePresets[0].maxSubdivision != SigmaDimensions.defaultPresetMaxLevelDictionary[rawPresets.spherePresets[0].name] + pqsRaiseAmountInteger)
                             {
                                 foreach (PQSCache.PQSSpherePreset preset in rawPresets.spherePresets)
                                 {
-                                    preset.maxSubdivision = Math.Max(SigmaDimensionsDataHolder.defaultPresetMaxLevelDictionary[preset.name] + pqsRaiseAmountInteger, 1);
+                                    preset.maxSubdivision = Math.Max(SigmaDimensions.defaultPresetMaxLevelDictionary[preset.name] + pqsRaiseAmountInteger, 1);
                                 }
                             }
                             else

@@ -1,5 +1,6 @@
 ﻿using Kopernicus;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -12,6 +13,7 @@ namespace Parallax.LateCompatibility
     [KSPAddon(KSPAddon.Startup.MainMenu, true)]
     public class SigmaDimensions : MonoBehaviour
     {
+        public static Dictionary<string, int> defaultPresetMaxLevelDictionary = null;
         public void Start()
         {
             RunCompatibility_SigmaDimensions();
