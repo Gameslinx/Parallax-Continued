@@ -207,9 +207,21 @@ float4x4 GetTRSMatrix(float3 position, float3 rotationAngles, float3 scale, floa
     {
         nrm = normalize(terrainNormal);
     }
+    // Build the orientation in the quad's frame, then apply the quad's rotation. Built in world space, it would
+    // depend on the body's orientation in the scene, which changes at each scene load: every scatter would turn
+    // around its normal by the body's rotation since the previous load. CollisionManager.CreateGameObject does the same.
+    float3x3 quadToWorld = (float3x3)_ObjectToWorldMatrix;
+    quadToWorld /= length(quadToWorld._m00_m10_m20);    // Remove the quad's (uniform) scale
+    float3 localNrm = mul(transpose(quadToWorld), nrm);
     float3 up = float3(0, 1, 0);
-    float4x4 mat = TransformToPlanetNormal(up, nrm);
+    float4x4 mat = TransformToPlanetNormal(up, localNrm);
     mat = mul(mat, GetRotationMatrix(rotationAngles));
+    float4x4 quadRotation = float4x4(
+        float4(quadToWorld[0], 0),
+        float4(quadToWorld[1], 0),
+        float4(quadToWorld[2], 0),
+        float4(0, 0, 0, 1));
+    mat = mul(quadRotation, mat);
     return mul(GetTranslationMatrix(position), mul(mat, GetScaleMatrix(scale)));
 }
 

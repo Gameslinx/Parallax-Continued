@@ -487,7 +487,6 @@ namespace Parallax
             go.transform.localPosition = transform.localPos;
             go.transform.localScale = transform.localScale;
 
-            // Ideally I would like this to set localRotation but I spent days trying to get it to work in local space, and couldn't figure it out
             // If align to terrain normal, we need to obtain the terrain normal at this scatter
             Vector3 targetNormal;
             if (scatter.distributionParams.alignToTerrainNormal == 1)
@@ -501,9 +500,12 @@ namespace Parallax
                 targetNormal = Vector3.Normalize(scatterSystemQuad.quad.gameObject.transform.position - scatterSystemQuad.quad.sphereRoot.transform.position);
             }
             
-            Quaternion rotAWorld = Quaternion.FromToRotation(Vector3.up, targetNormal);
-            Quaternion rotBWorld = Quaternion.AngleAxis(transform.rotation, Vector3.up);
-            go.transform.rotation = rotAWorld * rotBWorld;
+            // Orientation built in the quad's frame, like GetTRSMatrix in the compute shader: in world space, it would
+            // depend on the body's orientation in the scene, which changes at each scene load
+            Vector3 localNormal = scatterSystemQuad.quad.gameObject.transform.InverseTransformDirection(targetNormal);
+            Quaternion rotALocal = Quaternion.FromToRotation(Vector3.up, localNormal);
+            Quaternion rotBLocal = Quaternion.AngleAxis(transform.rotation, Vector3.up);
+            go.transform.localRotation = rotALocal * rotBLocal;
 
             go.tag = scatterSystemQuad.quad.tag;
 
