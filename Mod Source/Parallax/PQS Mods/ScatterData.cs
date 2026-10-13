@@ -101,7 +101,10 @@ namespace Parallax
             distributeKernel = GetDistributeKernel();
             evaluateKernel = GetEvaluateKernel();
 
-            outputScatterDataBuffer = new ComputeBuffer(outputSize, PositionData.Size(), ComputeBufferType.Append);
+            outputScatterDataBuffer = new ComputeBuffer(outputSize, PositionData.Size(), ComputeBufferType.Append)
+            {
+                name = $"parallax:{parent.quad.sphereRoot.name}/quad/{parent.quad.name}/scatter-output"
+            };
             scatterShader.SetBuffer(distributeKernel, ParallaxScatterShaderProperties.transformsBufferID, outputScatterDataBuffer);
             scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.positionsBufferID, outputScatterDataBuffer);
 
@@ -255,7 +258,10 @@ namespace Parallax
         public void ComputeDispatchArgs()
         {
             // Stores the count of the generated positions
-            objectLimits = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
+            objectLimits = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments)
+            {
+                name = $"parallax:{parent.quad.sphereRoot.name}/quad/{parent.quad.name}/object-limits"
+            };
             objectLimits.SetData(indirectArgs);
 
             // Read count from AppendStructuredBuffer to the objectlimits, used in the early return check from evaluate - can't process more data than exists
@@ -303,7 +309,10 @@ namespace Parallax
             count[1] = 1;
             count[2] = 1;
 
-            dispatchArgs = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
+            dispatchArgs = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments)
+            {
+                name = $"parallax:{parent.quad.sphereRoot.name}/quad/{parent.quad.name}/dispatch-args"
+            };
             dispatchArgs.SetData(count);
 
             // This function may never execute because the quad tries to cleanup before the readback is complete
@@ -352,7 +361,10 @@ namespace Parallax
             count[1] = 1;
             count[2] = 1;
 
-            dispatchArgs = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
+            dispatchArgs = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments)
+            {
+                name = $"parallax:{parent.quad.sphereRoot.name}/quad/{parent.quad.name}/dispatch-args"
+            };
             dispatchArgs.SetData(count);
 
             // This function may never execute because the quad tries to cleanup before the readback is complete
