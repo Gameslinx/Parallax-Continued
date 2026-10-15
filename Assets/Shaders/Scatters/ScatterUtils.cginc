@@ -161,6 +161,20 @@ float4x4 TransformToPlanetNormal(float3 a, float3 b)
     float v3 = v.z;
     
     float c = dot(a, b);
+    // Near b = -a, 1 + c is the difference of two nearly equal numbers, and the rounding of c becomes most of it:
+    // the object would be stretched, and turned around b otherwise than its collider. For a normalized b,
+    // 1 + c = |v|^2 / (1 - c), where nothing cancels. CollisionManager.RotationFromUp builds the same rotation.
+    float onePlusC = c >= 0 ? 1 + c : dot(v, v) / (1 - c);
+    if (onePlusC <= 0)
+    {
+        // b is exactly -a: half a turn around an axis perpendicular to a, X for a = (0, 1, 0)
+        float3 axis = normalize(cross(a, abs(a.z) < 0.9 ? float3(0, 0, 1) : float3(1, 0, 0)));
+        return float4x4(
+            float4(2 * axis.x * axis - float3(1, 0, 0), 0),
+            float4(2 * axis.y * axis - float3(0, 1, 0), 0),
+            float4(2 * axis.z * axis - float3(0, 0, 1), 0),
+            float4(0, 0, 0, 1));
+    }
     float4x4 V = float4x4(
         float4(0,       v3,     -v2,    0),
         float4(-v3,     0,      v1,     0),
@@ -176,7 +190,7 @@ float4x4 TransformToPlanetNormal(float3 a, float3 b)
         );
     
     float4x4 VSquared = mul(V, V);
-    float lastPart = (1 / (1 + c));
+    float lastPart = 1 / onePlusC;
     
     float4x4 halfMat = VSquared * lastPart;
     float4x4 full = transpose(halfMat + VPlusI);
