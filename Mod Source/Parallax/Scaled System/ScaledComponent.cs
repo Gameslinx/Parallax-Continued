@@ -52,8 +52,9 @@ namespace Parallax.Scaled_System
             }
             else
             {
+                parentStar = Sun.Instance.sun;
                 ParallaxDebug.Log("Warning: Unable to find the parent star for: " + celestialBody.name);
-                ParallaxDebug.Log("Shadow penumbra angle will be defaulted");
+                ParallaxDebug.Log("Shadows will be cast from " + parentStar.name);
             }
 
             // Kick off immediately
@@ -117,6 +118,9 @@ namespace Parallax.Scaled_System
             float penumbraAngle = CalculateSubtendedAngle(celestialBody.transform.position, parentStar.transform.position, (float)parentStar.Radius);
 
             scaledBody.shadowCasterMaterial.SetFloat("_LightWidth", penumbraAngle);
+
+            Vector3 lightDirection = (parentStar.scaledBody.transform.position - celestialBody.scaledBody.transform.position).normalized;
+            scaledBody.shadowCasterMaterial.SetVector("_ShadowLightDirection", lightDirection);
         }
         /// <summary>
         /// Calculates the angle between origin-to-target and target-to-targetradius

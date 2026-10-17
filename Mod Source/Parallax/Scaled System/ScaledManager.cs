@@ -213,7 +213,12 @@ namespace Parallax.Scaled_System
             ParallaxDebug.Log("Scaled component shutting down");
             foreach (ParallaxScaledBody body in ConfigLoader.parallaxScaledBodies.Values)
             {
-                CelestialBody kspBody = FlightGlobals.GetBodyByName(body.planetName);
+                // The bodies could be destroyed before this when the game closes
+                CelestialBody kspBody = FlightGlobals.fetch != null ? FlightGlobals.GetBodyByName(body.planetName) : null;
+                if (kspBody == null || kspBody.scaledBody == null)
+                {
+                    continue;
+                }
 
                 // Body loaded OnDisable for this component
                 Destroy(kspBody.scaledBody.GetComponent<ScaledOnDemandComponent>());

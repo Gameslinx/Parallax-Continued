@@ -20,7 +20,8 @@ namespace Parallax.Scaled_System
         // Meshes to draw
         public Mesh scaledMesh;
 
-        Light mainLight;
+        // Kopernicus gives every star its own scaled light
+        List<Light> starLights = new List<Light>();
         Material compositorMaterial;
 
         // Stores shadow attenuation, 0 or 1
@@ -72,11 +73,14 @@ namespace Parallax.Scaled_System
             }
 
             // Ensure the screenspace mask is generated
-            mainLight = Sun.Instance.scaledSunLight;
-            mainLight.shadows = LightShadows.Soft;
-            mainLight.shadowStrength = 1;
-            mainLight.lightShadowCasterMode = LightShadowCasterMode.Everything;
-            mainLight.shadowResolution = LightShadowResolution.VeryHigh;
+            starLights.AddRange(GetStarLights());
+            foreach (Light light in starLights)
+            {
+                light.shadows = LightShadows.Soft;
+                light.shadowStrength = 1;
+                light.lightShadowCasterMode = LightShadowCasterMode.Everything;
+                light.shadowResolution = LightShadowResolution.VeryHigh;
+            }
 
             // Get the scaled mesh and material for rendering
             scaledMesh = UnityEngine.Object.Instantiate(GameDatabase.Instance.GetModel("ParallaxContinued/Models/ScaledMesh").GetComponent<MeshFilter>().mesh);
@@ -101,6 +105,16 @@ namespace Parallax.Scaled_System
             SetupRenderTextures();
             SetupMaterials();
             SetupLightCommandBuffer(compositorMaterial);
+        }
+        static IEnumerable<Light> GetStarLights()
+        {
+            if (Kopernicus.Components.KopernicusStar.Stars == null)
+            {
+                return new Light[] { Sun.Instance.scaledSunLight };
+            }
+            return Kopernicus.Components.KopernicusStar.Stars
+                .Where(star => star != null && star.scaledSunLight != null)
+                .Select(star => star.scaledSunLight);
         }
         public void Enable()
         {
@@ -186,7 +200,10 @@ namespace Parallax.Scaled_System
         void SetupLightCommandBuffer(Material blitMaterial)
         {
             lightCommandBuffer.Blit(shadowAttenuationRT, BuiltinRenderTextureType.CurrentActive, blitMaterial);
-            mainLight.AddCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
+            foreach (Light light in starLights)
+            {
+                light.AddCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
+            }
         }
 
         bool debug = false;
@@ -243,7 +260,14 @@ namespace Parallax.Scaled_System
                 ScaledCamera.Instance.cam.RemoveCommandBuffer(CameraEvent.BeforeForwardOpaque, shadowCommandBuffer);
             }
             
-            mainLight.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
+            foreach (Light light in starLights)
+            {
+                if (light != null)
+                {
+                    light.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
+                }
+            }
+            starLights.Clear();
 
             lightCommandBuffer.Dispose();
             shadowCommandBuffer.Dispose();

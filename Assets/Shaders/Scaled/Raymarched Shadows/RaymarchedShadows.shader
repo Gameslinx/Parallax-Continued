@@ -23,6 +23,7 @@
         _DisableDisplacement("Disable Displacement", int) = 0
         _LightWidth("Light Width", Range(0.0001, 0.3)) = 0.05
         _MaxRayDistance("Max Ray Distace", Range(0.0001, 100000)) = 1
+        _ShadowLightDirection("Shadow Light Direction", VECTOR) = (0,1,0,0)
 
         // Comment out when compiling
         //_ScaledPlanetOpacity("Scaled planet opacity", Range(0, 1)) = 1
@@ -61,6 +62,9 @@
             float _ScaledPlanetOpacity;
             float _OceanAltitude;
             float _MaxRayDistance;
+
+            // Direction to this planet's parent star
+            float3 _ShadowLightDirection;
 
             // Global integer - Set at runtime from settings
             int _ParallaxScaledShadowStepSize;
@@ -193,7 +197,7 @@
                 float3 dhdz = -normalize(cross(dhdx, dhdy)) * (_MaxRadialAltitude - _MinRadialAltitude) * SHADOW_NORMAL_BIAS;
 
                 float3 rayPos = initialRayPos + dhdz;
-                float3 rayDir = normalize(_WorldSpaceLightPos0);
+                float3 rayDir = normalize(_ShadowLightDirection);
                 
                 float rayDistance = _MaxRayDistance;
                 float stepSize = rayDistance / float(_ParallaxScaledShadowStepSize);
