@@ -203,10 +203,9 @@ namespace Parallax
         {
             foreach (ScatterData scatter in quadScatters)
             {
-                float referenceDistance = scatter.scatter.useCraftPosition ? (float)(quad.gcDist) : cameraDistance;
                 // Scatter out of range and active? Pause
-                if (referenceDistance > scatter.scatter.distributionParams.range * scatter.scatter.distributionParams.range + sqrQuadWidth)
-                { 
+                if (!InRange(scatter.scatter))
+                {
                     if (!scatter.cleaned)
                     {
                         scatter.Pause();
@@ -277,17 +276,28 @@ namespace Parallax
             // Update camera distance to this quad
             UpdateQuadCameraDistance(ref RuntimeOperations.vectorCameraPos);
 
-            float referenceDistance = data.scatter.useCraftPosition ? (float)(quad.gcDist) : cameraDistance;
-            if (data.CollidersEligible() && referenceDistance > data.scatter.distributionParams.range * data.scatter.distributionParams.range + sqrQuadWidth)
+            bool needsColliders = data.scatter.collideable && quad.subdivision == quad.sphereRoot.maxLevel;
+            if (!needsColliders && !InRange(data.scatter))
             {
-                // We're out of range, and colliders won't be generated
                 data.Pause();
             }
             else
             {
-                // We're in range, or colliders will be generated
                 data.Start();
             }
+        }
+        public bool InRange(Scatter scatter)
+        {
+            float range = scatter.distributionParams.range;
+            return GetReferenceSqrDistance(scatter) <= range * range + sqrQuadWidth;
+        }
+        float GetReferenceSqrDistance(Scatter scatter)
+        {
+            if (scatter.useCraftPosition)
+            {
+                return ((Vector3)quad.meshRenderer.localToWorldMatrix.GetColumn(3) - RuntimeOperations.vectorCraftPos).sqrMagnitude;
+            }
+            return cameraDistance;
         }
         /// <summary>
         /// Is the scatter eligible to be added to process on this quad?
