@@ -68,9 +68,21 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
-/Mod Source/Parallax/bin/Debug/net48
+/Mod Source/Parallax/bin/
 /Mod Source/Parallax/obj/Debug
 /AssetBundles/
+/Assets/AssetBundles*
+
+# Unity-regenerated IDE project files (Mod Source/Parallax.sln is hand-maintained)
+/*.csproj
+/*.sln
+
+# Rider
+.idea/
+
+# Compiled mod outputs, rebuilt from source
+/Mod Source/GameData/ParallaxContinued/Plugins/ParallaxContinued.dll
+/Mod Source/GameData/ParallaxContinued/Shaders/*.unity3d
 /Assets/Models/baobabtreebillboard.obj
 /Assets/Models/baobabtreebillboard.obj.meta
 /Assets/Models/baobabtrunk0.obj

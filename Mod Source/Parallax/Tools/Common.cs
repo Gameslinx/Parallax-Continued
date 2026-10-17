@@ -1048,6 +1048,10 @@ namespace Parallax
         /// Population Multiplier before being scaled by the global settings
         /// </summary>
         public int originalPopulationMultiplier;
+        /// <summary>
+        /// Extra population multiplier from Sigma Dimensions rescaling, 0 when not rescaled
+        /// </summary>
+        public int rescalePopulationMultiplier;
     }
     public struct LOD
     {

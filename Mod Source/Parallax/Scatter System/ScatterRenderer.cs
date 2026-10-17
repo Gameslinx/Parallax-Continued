@@ -252,26 +252,46 @@ namespace Parallax
         {
             if (!scatter.isShared)
             {
-                // LOD change distances remain the same regardless of range multiplier
-                // Only LOD2 is affected
                 float originalRange = scatter.distributionParams.originalRange;
                 float newRange = scatter.distributionParams.range;
 
-                float originalArea = Mathf.PI * originalRange * originalRange;
-                float newArea = Mathf.PI * newRange * newRange;
+                float densityFactor = (float)scatter.distributionParams.populationMultiplier
+                    / Math.Max(scatter.distributionParams.rescalePopulationMultiplier, 1)
+                    / Math.Max(scatter.distributionParams.originalPopulationMultiplier, 1);
 
-                float areaFactor = newArea / originalArea;
+                int[] configuredCounts =
+                {
+                    scatter.optimizationParams.maxRenderableObjectsLOD0,
+                    scatter.optimizationParams.maxRenderableObjectsLOD1,
+                    scatter.optimizationParams.maxRenderableObjectsLOD2
+                };
+                float[] bandEdges =
+                {
+                    0,
+                    scatter.distributionParams.lod1.range * newRange,
+                    scatter.distributionParams.lod2.range * newRange,
+                    float.MaxValue
+                };
 
-                float densityFactor = ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier;
+                int[] newCounts = new int[3];
+                float objectsPerArea = float.MaxValue;
+                for (int i = 0; i < 3; i++)
+                {
+                    float originalArea = LODBandArea(bandEdges[i], bandEdges[i + 1], originalRange);
+                    float newArea = LODBandArea(bandEdges[i], bandEdges[i + 1], newRange);
 
-                // Apply area factor to LOD2 and apply density factor to all LODs
-                int newLOD0Count = Mathf.CeilToInt(scatter.optimizationParams.maxRenderableObjectsLOD0 * densityFactor);
-                int newLOD1Count = Mathf.CeilToInt(scatter.optimizationParams.maxRenderableObjectsLOD1 * densityFactor);
-                int newLOD2Count = Mathf.CeilToInt(scatter.optimizationParams.maxRenderableObjectsLOD2 * areaFactor * densityFactor);
+                    if (originalArea > 0)
+                    {
+                        objectsPerArea = Mathf.Min(objectsPerArea, configuredCounts[i] / originalArea);
+                    }
 
-                outputLOD0 = new ComputeBuffer(newLOD0Count, TransformData.Size(), ComputeBufferType.Append);
-                outputLOD1 = new ComputeBuffer(newLOD1Count, TransformData.Size(), ComputeBufferType.Append);
-                outputLOD2 = new ComputeBuffer(newLOD2Count, TransformData.Size(), ComputeBufferType.Append);
+                    float estimatedCount = objectsPerArea == float.MaxValue ? configuredCounts[i] : objectsPerArea * newArea;
+                    newCounts[i] = Mathf.Max(Mathf.CeilToInt(estimatedCount * densityFactor), configuredCounts[i]);
+                }
+
+                outputLOD0 = new ComputeBuffer(newCounts[0], TransformData.Size(), ComputeBufferType.Append);
+                outputLOD1 = new ComputeBuffer(newCounts[1], TransformData.Size(), ComputeBufferType.Append);
+                outputLOD2 = new ComputeBuffer(newCounts[2], TransformData.Size(), ComputeBufferType.Append);
             }
             else
             {
@@ -290,6 +310,13 @@ namespace Parallax
             outputLOD2.SetCounterValue(0);
 
             rendererBounds = new Bounds(Vector3.zero, Vector3.one * 50000.0f);
+        }
+
+        static float LODBandArea(float innerDistance, float outerDistance, float range)
+        {
+            float outer = Mathf.Min(outerDistance, range);
+            float inner = Mathf.Min(innerDistance, range);
+            return Mathf.Max(outer * outer - inner * inner, 0) * Mathf.PI;
         }
 
         int EstimatePerLODMaxCount(int actualMaxCount, float maxRange, float lodRange)

@@ -1208,6 +1208,7 @@ namespace Parallax
             scatter.distributionParams.range *= parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier;
             scatter.distributionParams.populationMultiplier = (int)((float)scatter.distributionParams.populationMultiplier * parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier);
             if (scatter.distributionParams.populationMultiplier == 0) { scatter.distributionParams.populationMultiplier = 1; }
+            scatter.distributionParams.populationMultiplier *= Math.Max(scatter.distributionParams.rescalePopulationMultiplier, 1);
 
             // Normalise the LOD distances as a percentage of max range
             scatter.distributionParams.lod1.range /= scatter.distributionParams.range;
