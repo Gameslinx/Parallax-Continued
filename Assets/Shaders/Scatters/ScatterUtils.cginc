@@ -161,9 +161,7 @@ float4x4 TransformToPlanetNormal(float3 a, float3 b)
     float v3 = v.z;
     
     float c = dot(a, b);
-    // Near b = -a, 1 + c is the difference of two nearly equal numbers, and the rounding of c becomes most of it:
-    // the object would be stretched, and turned around b otherwise than its collider. For a normalized b,
-    // 1 + c = |v|^2 / (1 - c), where nothing cancels. CollisionManager.RotationFromUp builds the same rotation.
+
     float onePlusC = c >= 0 ? 1 + c : dot(v, v) / (1 - c);
     if (onePlusC <= 0)
     {
@@ -221,9 +219,8 @@ float4x4 GetTRSMatrix(float3 position, float3 rotationAngles, float3 scale, floa
     {
         nrm = normalize(terrainNormal);
     }
-    // Build the orientation in the quad's frame, then apply the quad's rotation. Built in world space, it would
-    // depend on the body's orientation in the scene, which changes at each scene load: every scatter would turn
-    // around its normal by the body's rotation since the previous load. CollisionManager.CreateGameObject does the same.
+    
+    // Build the orientation in the quad's frame, then apply the quad's rotation
     float3x3 quadToWorld = (float3x3)_ObjectToWorldMatrix;
     quadToWorld /= length(quadToWorld._m00_m10_m20);    // Remove the quad's (uniform) scale
     float3 localNrm = mul(transpose(quadToWorld), nrm);

@@ -501,8 +501,7 @@ namespace Parallax
                 targetNormal = Vector3.Normalize(scatterSystemQuad.quad.gameObject.transform.position - scatterSystemQuad.quad.sphereRoot.transform.position);
             }
             
-            // Orientation built in the quad's frame, like GetTRSMatrix in the compute shader: in world space, it would
-            // depend on the body's orientation in the scene, which changes at each scene load
+            // Orientation built in the quad's frame like GetTRSMatrix in the compute shader
             Vector3 localNormal = scatterSystemQuad.quad.gameObject.transform.InverseTransformDirection(targetNormal);
             Quaternion rotALocal = RotationFromUp(localNormal);
             Quaternion rotBLocal = Quaternion.AngleAxis(transform.rotation, Vector3.up);
@@ -513,18 +512,16 @@ namespace Parallax
             go.SetActive(true);
             return go;
         }
-        // The rotation that turns Vector3.up onto the normalized vector normal, the one TransformToPlanetNormal gives the
-        // scatter drawn by the compute shader. Quaternion.FromToRotation would not do: within about 1e-6 of -up, it turns
-        // around X whatever the normal, so the collider would be turned around the normal otherwise than its object.
+
+        // The rotation that rotates Vector3.up onto the normalized vector normal
         static Quaternion RotationFromUp(Vector3 normal)
         {
             Vector3 v = Vector3.Cross(Vector3.up, normal);
             float c = normal.y;
-            // Near -up, 1 + c cancels: computed as |v|^2 / (1 - c), as the compute shader does
+
             float onePlusC = c >= 0 ? 1 + c : v.sqrMagnitude / (1 - c);
             if (onePlusC <= 0)
             {
-                // Exactly -up: half a turn around X, as the compute shader does
                 return new Quaternion(1, 0, 0, 0);
             }
             // The rotation around up x normal by the angle between them
