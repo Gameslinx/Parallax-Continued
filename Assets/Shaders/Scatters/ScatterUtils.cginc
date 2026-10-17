@@ -161,6 +161,20 @@ float4x4 TransformToPlanetNormal(float3 a, float3 b)
     float v3 = v.z;
     
     float c = dot(a, b);
+    // Near b = -a, 1 + c is the difference of two nearly equal numbers, and the rounding of c becomes most of it:
+    // the object would be stretched, and turned around b otherwise than its collider. For a normalized b,
+    // 1 + c = |v|^2 / (1 - c), where nothing cancels. CollisionManager.RotationFromUp builds the same rotation.
+    float onePlusC = c >= 0 ? 1 + c : dot(v, v) / (1 - c);
+    if (onePlusC <= 0)
+    {
+        // b is exactly -a: half a turn around an axis perpendicular to a, X for a = (0, 1, 0)
+        float3 axis = normalize(cross(a, abs(a.z) < 0.9 ? float3(0, 0, 1) : float3(1, 0, 0)));
+        return float4x4(
+            float4(2 * axis.x * axis - float3(1, 0, 0), 0),
+            float4(2 * axis.y * axis - float3(0, 1, 0), 0),
+            float4(2 * axis.z * axis - float3(0, 0, 1), 0),
+            float4(0, 0, 0, 1));
+    }
     float4x4 V = float4x4(
         float4(0,       v3,     -v2,    0),
         float4(-v3,     0,      v1,     0),
@@ -176,7 +190,7 @@ float4x4 TransformToPlanetNormal(float3 a, float3 b)
         );
     
     float4x4 VSquared = mul(V, V);
-    float lastPart = (1 / (1 + c));
+    float lastPart = 1 / onePlusC;
     
     float4x4 halfMat = VSquared * lastPart;
     float4x4 full = transpose(halfMat + VPlusI);
@@ -207,9 +221,21 @@ float4x4 GetTRSMatrix(float3 position, float3 rotationAngles, float3 scale, floa
     {
         nrm = normalize(terrainNormal);
     }
+    // Build the orientation in the quad's frame, then apply the quad's rotation. Built in world space, it would
+    // depend on the body's orientation in the scene, which changes at each scene load: every scatter would turn
+    // around its normal by the body's rotation since the previous load. CollisionManager.CreateGameObject does the same.
+    float3x3 quadToWorld = (float3x3)_ObjectToWorldMatrix;
+    quadToWorld /= length(quadToWorld._m00_m10_m20);    // Remove the quad's (uniform) scale
+    float3 localNrm = mul(transpose(quadToWorld), nrm);
     float3 up = float3(0, 1, 0);
-    float4x4 mat = TransformToPlanetNormal(up, nrm);
+    float4x4 mat = TransformToPlanetNormal(up, localNrm);
     mat = mul(mat, GetRotationMatrix(rotationAngles));
+    float4x4 quadRotation = float4x4(
+        float4(quadToWorld[0], 0),
+        float4(quadToWorld[1], 0),
+        float4(quadToWorld[2], 0),
+        float4(0, 0, 0, 1));
+    mat = mul(quadRotation, mat);
     return mul(GetTranslationMatrix(position), mul(mat, GetScaleMatrix(scale)));
 }
 
