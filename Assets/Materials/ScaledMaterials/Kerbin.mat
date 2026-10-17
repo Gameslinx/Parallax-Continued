@@ -26,7 +26,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
-        m_Texture: {fileID: 2800000, guid: 7e4a6db07ab4dea4794706d3812af5ec, type: 3}
+        m_Texture: {fileID: 2800000, guid: 00575a06ad43f084fbbe33998be5f340, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMapHigh:
@@ -46,7 +46,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ColorMap:
-        m_Texture: {fileID: 2800000, guid: 43626d9d8856832489cbe80164adf7f7, type: 3}
+        m_Texture: {fileID: 2800000, guid: 1b7ed16c3b3f82d4d9426605341c26a5, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DetailAlbedoMap:
@@ -69,8 +69,12 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _HeightMap:
+    - _EmissiveMap:
         m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _HeightMap:
+        m_Texture: {fileID: 2800000, guid: 49063169623e11d49ae8247ee7a3692e, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _InfluenceMap:
@@ -109,6 +113,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _ResourceMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _Skybox:
         m_Texture: {fileID: 8900000, guid: dbd4791fb36c99f42b857172ac311e9c, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -118,10 +126,13 @@ Material:
     - _BiplanarBlendFactor: 1
     - _BumpScale: 1
     - _Cutoff: 0.5
+    - _Debug: 0
     - _DetailNormalMapScale: 1
+    - _DisableDisplacement: 0
     - _DisplacementOffset: 0
     - _DisplacementScale: 0
     - _DstBlend: 0
+    - _EmissiveIntensity: 1
     - _EnvironmentMapFactor: 1
     - _FresnelPower: 1
     - _GlossMapScale: 1

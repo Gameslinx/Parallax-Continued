@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Parallax
 {
@@ -19,6 +20,9 @@ namespace Parallax
         public static Dictionary<string, Shader> parallaxDebugShaders = new Dictionary<string, Shader>();
         public static void Initialize()
         {
+            // Log the active graphics API so bug reports show which one was in use
+            ParallaxDebug.Log("Graphics API: " + SystemInfo.graphicsDeviceType + " (" + SystemInfo.graphicsDeviceVersion + ")");
+
             ConfigNode assetBundleNode = GameDatabase.Instance.GetConfigs("ParallaxAssetBundleList")[0].config;
 
             string[] terrainShaderFilePaths = GetShaderPaths(assetBundleNode, "Terrain");
@@ -45,25 +49,30 @@ namespace Parallax
         }
         static string DeterminePlatform(string filePath)
         {
-            if (Application.platform == RuntimePlatform.LinuxPlayer || (Application.platform == RuntimePlatform.WindowsPlayer && SystemInfo.graphicsDeviceVersion.StartsWith("OpenGL")))
+            GraphicsDeviceType api = SystemInfo.graphicsDeviceType;
+            bool isGL = api == GraphicsDeviceType.OpenGLCore
+                     || api == GraphicsDeviceType.OpenGLES2
+                     || api == GraphicsDeviceType.OpenGLES3;
+
+            switch (Application.platform)
             {
-                filePath = filePath + "-linux.unity3d";
+                case RuntimePlatform.LinuxPlayer:
+                    return filePath + "-linux.unity3d";
+
+                case RuntimePlatform.WindowsPlayer:
+                    // DX11, DX12 and Vulkan variants all live in the windows bundle,
+                    // Unity selects the matching one automatically. OpenGL on Windows
+                    // is redirected to the linux bundle.
+                    return filePath + (isGL ? "-linux.unity3d" : "-windows.unity3d");
+
+                case RuntimePlatform.OSXPlayer:
+                    return filePath + "-macosx.unity3d";
+
+                default:
+                    // Fall back to linux and cry
+                    ParallaxDebug.LogCritical("Unable to determine platform (Windows, MacOSX, Linux) - Falling back to Linux");
+                    return filePath + "-linux.unity3d";
             }
-            else if (Application.platform == RuntimePlatform.WindowsPlayer)
-            {
-                filePath = filePath + "-windows.unity3d";
-            }
-            else if (Application.platform == RuntimePlatform.OSXPlayer)
-            {
-                filePath = filePath + "-macosx.unity3d";
-            }
-            else
-            {
-                // Fall back to linux and cry
-                filePath = filePath + "-linux.unity3d";
-                ParallaxDebug.LogCritical("Unable to determine platform (Windows, MacOSX, Linux) - Falling back to Linux");
-            }
-            return filePath;
         }
         // Get all shaders from asset bundle
         static void LoadAssetBundles<T>(string[] filePaths, Dictionary<string, T> dest) where T : UnityEngine.Object
@@ -89,6 +98,17 @@ namespace Parallax
                     T[] shaders = assetBundle.LoadAllAssets<T>();
                     foreach (T shader in shaders)
                     {
+                        // Flag assets with no usable variant for the current graphics API
+                        Shader s = shader as Shader;
+                        if (s != null && !s.isSupported)
+                        {
+                            ParallaxDebug.LogCritical("Shader has no usable variant on this API: " + s.name);
+                        }
+                        else if (shader is ComputeShader && !SystemInfo.supportsComputeShaders)
+                        {
+                            ParallaxDebug.LogCritical("Compute shaders unsupported on this device: " + shader.name);
+                        }
+
                         dest.Add(shader.name, shader);
                         ParallaxDebug.Log("Loaded shader: " + shader.name);
                     }

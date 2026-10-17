@@ -135,7 +135,6 @@
      <None Include="Assets\Shaders\Scaled\Raymarched Shadows\PostProcessShadows.shader" />
      <None Include="Assets\Shaders\Includes\ParallaxGlobalFunctions.cginc" />
      <None Include="Assets\Shaders\Debug\ShowDensity.shader" />
-     <None Include="Assets\Shaders\Debug\TriplanarRotationTest.shader" />
      <None Include="Assets\Shaders\Scaled\ParallaxScaled.shader" />
      <None Include="Assets\Shaders\Scaled\ScaledDisplacementUtils.cginc" />
      <None Include="Assets\Shaders\Scaled\ParallaxScaledBakedStructs.cginc" />
