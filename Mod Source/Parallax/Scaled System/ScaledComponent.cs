@@ -139,7 +139,7 @@ namespace Parallax.Scaled_System
         /// <returns></returns>
         float CalculateSubtendedAngle(Vector3 origin, Vector3 target, float targetRadius)
         {
-            return Mathf.Atan2(targetRadius, (origin - target).magnitude) * 2.0f;
+            return Mathf.Atan2(targetRadius, (origin - target).magnitude);
         }
         float CalculateScreenSizePixels(Vector3 origin, Vector3 target, float radius, float fovDegrees)
         {

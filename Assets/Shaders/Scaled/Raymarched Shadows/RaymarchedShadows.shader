@@ -203,7 +203,7 @@
                 float stepSize = rayDistance / float(_ParallaxScaledShadowStepSize);
 
                 float attenuation = 1.0f;
-                float t = 0.0001;
+                float t = 0.0f;
 
                 // Random noise offset, could use blue noise but this looks good enough, it's only visible at shadow edges and helps remove stepping
                 #if defined (BLUE_NOISE)
@@ -212,6 +212,7 @@
                     float noise = _BlueNoise.Sample(sampler_BlueNoise_point_repeat, (screenUV % 64) / 64);
                     noise = (noise + 1.618f * _FrameCount) % 1;
                     rayPos -= rayDir * noise * stepSize;
+                    t -= noise * stepSize;
 
                 #endif
 
@@ -219,15 +220,16 @@
                 for (int b = 0; b < _ParallaxScaledShadowStepSize; b++)
                 {
                     rayPos += rayDir * stepSize;
+                    t += stepSize;
 
                     // Get ray altitude and terrain height
                     float worldTerrainAltitude = GetTerrainHeightAt(rayPos, origin);
                     float worldRayAltitude = GetAltitudeAt(rayPos, origin);
 
-                    // Compute height difference between ray and terrain
-                    float h = (worldRayAltitude - worldTerrainAltitude);
+                    // Project the vertical clearance onto the plane perpendicular to the ray so h / t is the occluder's angle from the ray
+                    float upDotRay = dot(normalize(rayPos - origin), rayDir);
+                    float h = (worldRayAltitude - worldTerrainAltitude) * sqrt(saturate(1.0f - upDotRay * upDotRay));
                     attenuation = min(attenuation, h / (_LightWidth * t));
-                    t += stepSize;
 
                     // Stop when shadowed
                     if (attenuation < -1.0f)

@@ -339,7 +339,7 @@ namespace Parallax.Scaled_System
             body.shadowCasterMaterial.SetFloat("_MaxRayDistance", tangentDist);
 
             // Computed at runtime, but the default is computed from Kerbin's SMA around the Sun
-            body.shadowCasterMaterial.SetFloat("_LightWidth", 0.0384f);
+            body.shadowCasterMaterial.SetFloat("_LightWidth", 0.0192f);
 
             // Setup environment
             scaledMaterial.SetTexture("_Skybox", SkyboxControl.cubeMap);
