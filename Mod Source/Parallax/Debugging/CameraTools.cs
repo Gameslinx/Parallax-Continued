@@ -104,12 +104,12 @@ namespace Parallax.Debugging
             }
             if (movementEnabled)
             {
-                Debug.Log("Camera position: " + Camera.main.transform.position);
+                Debug.Log("Camera position: " + RuntimeOperations.MainCamera.transform.position);
                 
                 if (!componentAdded)
                 {
                     componentAdded = true;
-                    Camera.main.gameObject.AddComponent<FlyCamera>();
+                    RuntimeOperations.MainCamera.gameObject.AddComponent<FlyCamera>();
                     MainMenuEnvLogic component = GameObject.FindObjectsOfType<MainMenuEnvLogic>().FirstOrDefault();
                     component.enabled = false;
                 }
@@ -119,7 +119,7 @@ namespace Parallax.Debugging
                 if (componentAdded)
                 {
                     componentAdded = false;
-                    Destroy(Camera.main.gameObject.GetComponent<FlyCamera>());
+                    Destroy(RuntimeOperations.MainCamera.gameObject.GetComponent<FlyCamera>());
 
                     MainMenuEnvLogic component = GameObject.FindObjectsOfType<MainMenuEnvLogic>().FirstOrDefault();
                     component.enabled = true;

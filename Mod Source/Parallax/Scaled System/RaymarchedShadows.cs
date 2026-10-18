@@ -200,8 +200,7 @@ namespace Parallax.Scaled_System
                     }
 
                     shadowCommandBuffer.SetGlobalInt("_FrameCount", Time.frameCount);
-                    shadowCommandBuffer.SetGlobalMatrix("_WorldRotation", Matrix4x4.Inverse(Matrix4x4.Rotate(meshRenderer.localToWorldMatrix.rotation)));
-                    shadowCommandBuffer.DrawRenderer(meshRenderer, scaledBody.shadowCasterMaterial, 0);
+                    shadowCommandBuffer.DrawRenderer(meshRenderer, scaledBody.shadowCasterMaterial, 0, 0);
                 }
             }
         }

@@ -80,7 +80,7 @@
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
-                float3 normal : NORMAl;
+                float3 normal : NORMAL;
                 float4 tangent : TANGENT;
             };
         
@@ -194,11 +194,16 @@
                 // Shadow normal bias
                 float3 dhdx = ddx(i.worldPos);
                 float3 dhdy = ddy(i.worldPos);
-                float3 dhdz = -normalize(cross(dhdx, dhdy)) * (_MaxRadialAltitude - _MinRadialAltitude) * SHADOW_NORMAL_BIAS;
+                float3 geometricNormal = normalize(cross(dhdx, dhdy));
+
+                // The sign of ddy depends on the API's screen space convention (D3D vs OpenGL)
+                // Orient the normal away from the planet
+                geometricNormal = dot(geometricNormal, i.worldPos - origin) < 0 ? -geometricNormal : geometricNormal;
+                float3 dhdz = geometricNormal * (_MaxRadialAltitude - _MinRadialAltitude) * SHADOW_NORMAL_BIAS;
 
                 float3 rayPos = initialRayPos + dhdz;
                 float3 rayDir = normalize(_ShadowLightDirection);
-                
+
                 float rayDistance = _MaxRayDistance;
                 float stepSize = rayDistance / float(_ParallaxScaledShadowStepSize);
 
@@ -294,7 +299,7 @@
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
-                float3 normal : NORMAl;
+                float3 normal : NORMAL;
                 float4 tangent : TANGENT;
             };
         

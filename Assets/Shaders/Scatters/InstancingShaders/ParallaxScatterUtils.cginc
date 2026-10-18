@@ -10,10 +10,7 @@
 #define DECODE_INSTANCE_DATA_SHADOW(transformAndColorMatrix)                                                                             \
     transformAndColorMatrix[3] = float4(0, 0, 0, transformAndColorMatrix[3][3]);
 
-#define WIND_BLUR_KERNEL_SIZE 2
 #define PI 3.1415926
-
-#define GET_TEXTURE_WIDTH(texture) texture##_TexelSize.x;
 
 // Use worldnormal to calculate triplanar weights for wind
 float3 GetTriplanarBlendWeights(float3 worldNormal)
@@ -23,12 +20,17 @@ float3 GetTriplanarBlendWeights(float3 worldNormal)
     return blendWeights;
 }
 
-// Precision seems fine, but potentially replace with a blur kernel instead (much more expensive though)
-float3 SampleWeighted(sampler2D tex, float2 prevUV, float2 uv, float pixelSize)
+float3 SampleWindMapSmooth(float2 uv)
 {
-    float3 currenttex = tex2Dlod(_WindMap, float4(uv, 0, 0)).xyz;
-    float3 prevtex = tex2Dlod(_WindMap, float4(prevUV, 0, 0)).xyz;
-    return (currenttex + prevtex) * 0.5;
+    uv = frac(uv);
+    float2 halfTexel = _WindMap_TexelSize.xy * 0.5;
+
+    float3 s00 = tex2Dlod(_WindMap, float4(uv + float2(-halfTexel.x, -halfTexel.y), 0, 0)).xyz;
+    float3 s10 = tex2Dlod(_WindMap, float4(uv + float2( halfTexel.x, -halfTexel.y), 0, 0)).xyz;
+    float3 s01 = tex2Dlod(_WindMap, float4(uv + float2(-halfTexel.x,  halfTexel.y), 0, 0)).xyz;
+    float3 s11 = tex2Dlod(_WindMap, float4(uv + float2( halfTexel.x,  halfTexel.y), 0, 0)).xyz;
+
+    return (s00 + s10 + s01 + s11) * 0.25;
 }
 
 // Get the wind offsets (r = x, g = y) and the wind speed modifier (b = speed)
@@ -37,12 +39,12 @@ float3 GetWindMap(float3 worldPos, float3 blendWeights)
 {
     // Offset sample coords over time to give moving speed
     float2 uvOffset = frac(_Time.x * _WindSpeed);    //mult _Time.x by repetition factor
-    float2 prevUVOffset = frac((_Time.x - unity_DeltaTime.x) * _WindSpeed);
-    
-    float pixelSize = GET_TEXTURE_WIDTH(_WindMap);
-    float3 texYZ = tex2Dlod(_WindMap, float4(worldPos.yz * _WindScale + uvOffset, 0, 0)).xyz;
-    float3 texZX = tex2Dlod(_WindMap, float4(worldPos.zx * _WindScale + uvOffset, 0, 0)).xyz;
-    float3 texXY = tex2Dlod(_WindMap, float4(worldPos.xy * _WindScale + uvOffset, 0, 0)).xyz;
+
+    worldPos += _TerrainShaderOffset;
+
+    float3 texYZ = SampleWindMapSmooth(worldPos.yz * _WindScale + uvOffset);
+    float3 texZX = SampleWindMapSmooth(worldPos.zx * _WindScale + uvOffset);
+    float3 texXY = SampleWindMapSmooth(worldPos.xy * _WindScale + uvOffset);
     
     // Blend textures
     float3 tex = texYZ * blendWeights.x + texZX * blendWeights.y + texXY * blendWeights.z;

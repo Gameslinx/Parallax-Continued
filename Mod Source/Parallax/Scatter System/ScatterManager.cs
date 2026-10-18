@@ -27,10 +27,13 @@ namespace Parallax
         // The current biome map
         public static Texture2D currentBiomeMap;
 
+        int lastEvaluatedFrame = -1;
+
         void Awake()
         {
             Instance = this;
             GameObject.DontDestroyOnLoad(this);
+            Camera.onPreCull += OnCameraPreCull;
             PQSStartPatch.onPQSStart += DominantBodyLoaded;
             PQSStartPatch.onPQSUnload += DominantBodyUnloaded;
             PQSStartPatch.onPQSRestart += DominantBodyRestarted;
@@ -125,10 +128,18 @@ namespace Parallax
             DominantBodyUnloaded(bodyName, isRestart: true);
             DominantBodyLoaded(bodyName, isRestart: true);
         }
-        // After any world origin shifts
-        // Rendering is kicked off from here
-        void LateUpdate()
+        void OnCameraPreCull(Camera cam)
         {
+            if (lastEvaluatedFrame == Time.frameCount)
+                return;
+
+            FlightCamera flightCamera = FlightCamera.fetch;
+            if (flightCamera == null || Array.IndexOf(flightCamera.cameras, cam) < 0)
+                return;
+
+            lastEvaluatedFrame = Time.frameCount;
+            RuntimeOperations.UpdateCameraData();
+
             // Clear the buffers
             foreach (ScatterRenderer renderer in activeScatterRenderers)
             {
@@ -174,6 +185,7 @@ namespace Parallax
         /// </summary>
         void OnDestroy()
         {
+            Camera.onPreCull -= OnCameraPreCull;
             PQSStartPatch.onPQSStart -= DominantBodyLoaded;
             PQSStartPatch.onPQSUnload -= DominantBodyUnloaded;
             PQSStartPatch.onPQSRestart -= DominantBodyRestarted;

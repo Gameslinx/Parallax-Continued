@@ -62,11 +62,10 @@ float GetDisplacementLerpFactorScaled(float heightLerp, float displacement1, flo
 #define CALCULATE_ADVANCED_BLENDING_FACTORS_SCALED(landMask, displacement)
 #endif
 
-float4x4 _WorldRotation;
 float2 DirectionToEquirectangularUV(float3 direction)
 {
-    // Normalize the direction to ensure it's a unit vector
-    direction = normalize(mul(_WorldRotation, float4(direction, 0)).xyz);
+    // Rotate into object space with the same transform the mesh was drawn with
+    direction = normalize(mul((float3x3)unity_WorldToObject, direction));
 
     // Compute the azimuthal angle (longitude) in the range [-PI, PI]
     float phi = atan2(direction.z, direction.x);
@@ -79,6 +78,7 @@ float2 DirectionToEquirectangularUV(float3 direction)
     float v = theta / 3.14159265359; // [0, 1] range
 
     // In KSP, for whatever reason, it's this stupid transformation
-    return float2(1 - u - 0.25, 1 - v);
+    // Wrap manually because inline sampler states are ignored on OpenGL
+    return float2(frac(0.75 - u), 1 - v);
     //return float2(u - 0.25, 1 - v);
 }

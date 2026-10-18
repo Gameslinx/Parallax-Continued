@@ -42,7 +42,26 @@ namespace Parallax
         /// </summary>
         public static Vector3 currentPlanetOrigin = Vector3.zero;
         public static float currentPlanetOpacity = 0.0f;
-        Plane[] planes;
+        static Plane[] planes = new Plane[6];
+
+        static Camera mainCamera;
+        static int mainCameraFrame = -1;
+
+        /// <summary>
+        /// Camera.main
+        /// </summary>
+        public static Camera MainCamera
+        {
+            get
+            {
+                if (mainCameraFrame != Time.frameCount)
+                {
+                    mainCamera = Camera.main;
+                    mainCameraFrame = Time.frameCount;
+                }
+                return mainCamera;
+            }
+        }
         public void Start()
         {
             // Fixup reflection probe (TODO: Delete when Deferred improves reflection probe implementation / alternative reflection method
@@ -143,6 +162,11 @@ namespace Parallax
                 currentPlanetOrigin = Vector3.zero;
             }
 
+            UpdateCameraData();
+        }
+
+        public static void UpdateCameraData()
+        {
             // Get the camera position and frustum planes
             Camera cam = FlightCamera.fetch?.mainCamera;
             if (cam != null)
@@ -169,10 +193,10 @@ namespace Parallax
             }
         }
 
-        void SetCameraFrustumPlanes(Camera cam)
+        static void SetCameraFrustumPlanes(Camera cam)
         {
             // Calculate camera frustum planes for frustum culling
-            planes = GeometryUtility.CalculateFrustumPlanes(cam);
+            GeometryUtility.CalculateFrustumPlanes(cam, planes);
             for (int i = 0; i < planes.Length; i++)
             {
                 // Convert to ParallaxPlane
@@ -185,7 +209,6 @@ namespace Parallax
                 planes[5].distance = farCam != null ? farCam.farClipPlane : 25000;
             }
 
-            floatCameraFrustumPlanes = new float[planes.Length * 4];
             for (int i = 0; i < planes.Length; ++i)
             {
                 floatCameraFrustumPlanes[i * 4 + 0] = planes[i].normal.x;

@@ -115,7 +115,7 @@ namespace Parallax.Scaled_System
 
             planetLight = GameObject.Find("PlanetLight").GetComponent<Light>();
             fillLight = GameObject.Find("FillLight").GetComponent<Light>();
-            mainCamera = Camera.main;
+            mainCamera = RuntimeOperations.MainCamera;
 
             MainMenu main = FindObjectOfType<MainMenu>();
             MainMenuEnvLogic logic = main.envLogic;
@@ -369,9 +369,9 @@ namespace Parallax.Scaled_System
             shadowCommandBuffer.ClearRenderTarget(true, true, Color.white);
 
             // Only render what we can see and is loaded
-            shadowCommandBuffer.SetGlobalMatrix("_WorldRotation", Matrix4x4.Inverse(Matrix4x4.Rotate(meshRenderer.localToWorldMatrix.rotation)));
             mainMenuBody.shadowCasterMaterial.SetVector("_ShadowLightDirection", -fillLight.transform.forward);
-            shadowCommandBuffer.DrawRenderer(meshRenderer, mainMenuBody.shadowCasterMaterial, 0);
+
+            shadowCommandBuffer.DrawRenderer(meshRenderer, mainMenuBody.shadowCasterMaterial, 0, 0);
 
             // Set planet opacity
             shadowCommandBuffer.SetGlobalFloat("_ScaledPlanetOpacity", 1.0f);
