@@ -26,6 +26,9 @@ namespace Parallax
         public NativeArray<float> lastDistances;
         public JobHandle initDistancesHandle;
 
+        // Captured in the same frame as the vessel positions so a floating origin shift before dispatch can't mix reference frames
+        public float4x4 localToWorldMatrix;
+
         // Pointer to Scatter in collideableScatters
         public int collideableScattersIndex;
         public int dataCount;
@@ -202,11 +205,13 @@ namespace Parallax
             while (outgoingData.TryDequeue(out ScatterColliderData data))
             {
                 // Validate the data is still in the list before removing
-                if (data.disposed || data.id < 0 || data.id >= collisionData.Length)
+                if (data.disposed || collisionData[data.id] != data)
                 {
                     data.DisposeNativeArrays();
                     continue;
                 }
+
+                ReleaseColliders(data);
 
                 // Mirror the removal from fastlist in our own data here
                 // Remove job info
@@ -214,6 +219,35 @@ namespace Parallax
                 collisionData.Remove(data);
 
                 data.DisposeNativeArrays();
+            }
+        }
+
+        // Return the active colliders belonging to this data to the pool
+        // A collider is active when its last distance is negative
+        static void ReleaseColliders(ScatterColliderData data)
+        {
+            Dictionary<PositionDataQuadID, GameObject> scatterObjects = activeObjects[data.collideableScattersIndex];
+            if (scatterObjects.Count == 0)
+            {
+                return;
+            }
+
+            NativeArray<float> lastDistances = data.lastDistances;
+            NativeArray<PositionData> positions = data.quadLocalData;
+            for (int i = 0; i < data.dataCount; i++)
+            {
+                if (lastDistances[i] >= 0)
+                {
+                    continue;
+                }
+
+                PositionDataQuadID key = new PositionDataQuadID(positions[i], data.id);
+                if (scatterObjects.TryGetValue(key, out GameObject go))
+                {
+                    go.SetActive(false);
+                    scatterObjects.Remove(key);
+                    ConfigLoader.colliderPool.Add(go);
+                }
             }
         }
         // Fetch craft bounds and positions
@@ -256,6 +290,7 @@ namespace Parallax
             foreach (ScatterColliderData data in collisionData)
             {
                 quadPositions.Add((Vector3)data.scatterSystemQuad.quad.PrecisePosition);
+                data.localToWorldMatrix = data.scatterSystemQuad.quad.meshRenderer.localToWorldMatrix;
             }
             numQuads = collisionData.Length;
         }
@@ -402,9 +437,9 @@ namespace Parallax
                 vesselBounds = CollisionManager.sqrVesselBounds,
                 vesselCount = CollisionManager.numVesselsLoaded,
 
-                quadPosition = data.scatterSystemQuad.quad.gameObject.transform.position,
+                quadPosition = data.localToWorldMatrix.c3.xyz,
                 sqrQuadBound = data.scatterSystemQuad.sqrQuadWidth,
-                localToWorldMatrix = data.scatterSystemQuad.quad.meshRenderer.localToWorldMatrix,
+                localToWorldMatrix = data.localToWorldMatrix,
                 quadID = data.id,
 
                 scatterSqrMeshBound = scatter.sqrMeshBound,
@@ -437,6 +472,10 @@ namespace Parallax
                     for (int c = 0; c < itemsInLocalStream; c++)
                     {
                         PositionDataQuadID transformData = collidersToAddReader.Read<PositionDataQuadID>();
+                        if (activeObjects[i].ContainsKey(transformData))
+                        {
+                            continue;
+                        }
                         GameObject go = CreateGameObject(collideableScatters[i], transformData);
                         activeObjects[i].Add(transformData, go);
                     }
@@ -464,7 +503,10 @@ namespace Parallax
                     for (int c = 0; c < itemsInLocalStream; c++)
                     {
                         PositionDataQuadID transformData = collidersToRemoveReader.Read<PositionDataQuadID>();
-                        GameObject go = activeObjects[i][transformData];
+                        if (!activeObjects[i].TryGetValue(transformData, out GameObject go))
+                        {
+                            continue;
+                        }
 
                         // Remove collider
                         go.SetActive(false);

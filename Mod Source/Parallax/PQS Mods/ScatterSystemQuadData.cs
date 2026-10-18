@@ -201,8 +201,10 @@ namespace Parallax
         /// </summary>
         public void EvaluateQuad()
         {
-            foreach (ScatterData scatter in quadScatters)
+            for (int i = quadScatters.Count - 1; i >= 0; i--)
             {
+                ScatterData scatter = quadScatters[i];
+
                 // Scatter out of range and active? Pause
                 if (!InRange(scatter.scatter))
                 {
