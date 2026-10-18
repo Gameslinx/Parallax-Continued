@@ -99,12 +99,21 @@ namespace Parallax.Scaled_System
             }
             else
             {
-                ScaledCamera.Instance.cam.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, shadowCommandBuffer);
+                ScaledCamera.Instance.cam.AddCommandBuffer(CameraEvent.AfterDepthTexture, shadowCommandBuffer);
             }
 
             SetupRenderTextures();
             SetupMaterials();
             SetupLightCommandBuffer(compositorMaterial);
+
+            Camera.onPreCull += OnCameraPreCull;
+        }
+        void OnCameraPreCull(Camera cam)
+        {
+            if (ScaledCamera.Instance != null && cam == ScaledCamera.Instance.cam)
+            {
+                RenderShadows();
+            }
         }
         static IEnumerable<Light> GetStarLights()
         {
@@ -209,8 +218,6 @@ namespace Parallax.Scaled_System
         bool debug = false;
         void Update()
         {
-            RenderShadows();
-
             DebugShadowComponent();
         }
         void DebugShadowComponent()
@@ -248,6 +255,8 @@ namespace Parallax.Scaled_System
         {
             ParallaxDebug.Log("Raymarched shadows shutting down");
 
+            Camera.onPreCull -= OnCameraPreCull;
+
             debug = false;
             DebugShadowComponent();
 
@@ -257,7 +266,7 @@ namespace Parallax.Scaled_System
             }
             else
             {
-                ScaledCamera.Instance.cam.RemoveCommandBuffer(CameraEvent.BeforeForwardOpaque, shadowCommandBuffer);
+                ScaledCamera.Instance.cam.RemoveCommandBuffer(CameraEvent.AfterDepthTexture, shadowCommandBuffer);
             }
             
             foreach (Light light in starLights)

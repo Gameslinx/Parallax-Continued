@@ -195,7 +195,7 @@ namespace Parallax.Scaled_System
             }
             else
             {
-                mainCamera.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, shadowCommandBuffer);
+                mainCamera.AddCommandBuffer(CameraEvent.AfterDepthTexture, shadowCommandBuffer);
             }
 
             // Set up RT descs
@@ -498,7 +498,7 @@ namespace Parallax.Scaled_System
             }
             else if (mainCamera != null)
             {
-                mainCamera.RemoveCommandBuffer(CameraEvent.BeforeForwardOpaque, shadowCommandBuffer);
+                mainCamera.RemoveCommandBuffer(CameraEvent.AfterDepthTexture, shadowCommandBuffer);
             }
 
             if (fillLight != null)

@@ -57,13 +57,21 @@ namespace Parallax.Scaled_System
                 ParallaxDebug.Log("Shadows will be cast from " + parentStar.name);
             }
 
+            Camera.onPreCull += OnCameraPreCull;
+
             // Kick off immediately
             Update();
         }
         void Update()
         {
             UpdateVisibility();
-            UpdateShadows();
+        }
+        void OnCameraPreCull(Camera cam)
+        {
+            if (ScaledCamera.Instance != null && cam == ScaledCamera.Instance.cam)
+            {
+                UpdateShadows();
+            }
         }
         void UpdateVisibility()
         {
@@ -148,6 +156,10 @@ namespace Parallax.Scaled_System
         {
             ParallaxDebug.Log("Disabled " + celestialBody.bodyName);
             scaledBody?.Unload();
+        }
+        void OnDestroy()
+        {
+            Camera.onPreCull -= OnCameraPreCull;
         }
     }
 }
