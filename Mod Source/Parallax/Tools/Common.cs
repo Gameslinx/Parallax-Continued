@@ -212,6 +212,10 @@ namespace Parallax
         {
             this.planetName = planetName;
         }
+        private bool HasFadeTextures()
+        {
+            return terrainShaderProperties.shaderTextures.ContainsKey("_MainTexFade") && terrainShaderProperties.shaderTextures.ContainsKey("_BumpMapFade");
+        }
         public ConfigNode ToConfigNode()
         {
             ConfigNode node = new ConfigNode("Body");
@@ -252,6 +256,10 @@ namespace Parallax
         {
             Material baseMaterial = new Material(AssetBundleLoader.parallaxTerrainShaders["Custom/Parallax"]);
             baseMaterial.EnableKeyword("INFLUENCE_MAPPING");
+            if (HasFadeTextures())
+            {
+                baseMaterial.EnableKeyword("PARALLAX_FADE_TEXTURES");
+            }
 
             foreach (KeyValuePair<string, float> floatValue in terrainShaderProperties.shaderFloats)
             {
@@ -543,7 +551,11 @@ namespace Parallax
         /// </summary>
         public void ReadTerrainShaderProperties()
         {
-            scaledMaterialParams.shaderProperties.Append(terrainBody.terrainShaderProperties);
+            ShaderProperties terrainProperties = terrainBody.terrainShaderProperties.Clone() as ShaderProperties;
+            terrainProperties.shaderTextures.Remove("_MainTexFade");
+            terrainProperties.shaderTextures.Remove("_BumpMapFade");
+            terrainProperties.shaderFloats.Remove("_FadeTextureStartLevel");
+            scaledMaterialParams.shaderProperties.Append(terrainProperties);
         }
         public void LoadInitial(string shader)
         {

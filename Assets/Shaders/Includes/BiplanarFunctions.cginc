@@ -110,6 +110,74 @@ float4 SampleBiplanarTexture(sampler2D tex, PixelBiplanarParams params, float3 w
     return (x * w.x + y * w.y) / (w.x + w.y);
 }
 
+float4 SampleBiplanarTextureWithFade(sampler2D tex, sampler2D fadeTex, PixelBiplanarParams params, float3 worldPos0, float3 worldPos1, float3 worldNormal, float blend, float floorLogDistance)
+{
+    float4 x0;
+    float4 y0;
+    float4 x1;
+    float4 y1;
+
+    if (floorLogDistance - 1 >= _FadeTextureStartLevel)
+    {
+        x0 = tex2Dgrad(fadeTex, TEX2D_GRAD_COORDS_LEVEL0(params.ma, params, worldPos0));
+        y0 = tex2Dgrad(fadeTex, TEX2D_GRAD_COORDS_LEVEL0(params.me, params, worldPos0));
+    }
+    else
+    {
+        x0 = tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL0(params.ma, params, worldPos0));
+        y0 = tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL0(params.me, params, worldPos0));
+    }
+
+    if (floorLogDistance >= _FadeTextureStartLevel)
+    {
+        x1 = tex2Dgrad(fadeTex, TEX2D_GRAD_COORDS_LEVEL1(params.ma, params, worldPos1));
+        y1 = tex2Dgrad(fadeTex, TEX2D_GRAD_COORDS_LEVEL1(params.me, params, worldPos1));
+    }
+    else
+    {
+        x1 = tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL1(params.ma, params, worldPos1));
+        y1 = tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL1(params.me, params, worldPos1));
+    }
+
+    float4 x = lerp(x0, x1, blend);
+    float4 y = lerp(y0, y1, blend);
+
+    float2 w = float2(params.absWorldNormal[params.ma.x], params.absWorldNormal[params.me.x]);
+    w = saturate(w * 2.365744f - 1.365744f);
+    w = pow(w, params.blend * 0.125f);
+
+    return (x * w.x + y * w.y) / (w.x + w.y);
+}
+
+float4 SampleBiplanarTextureWithZeroFade(sampler2D tex, PixelBiplanarParams params, float3 worldPos0, float3 worldPos1, float3 worldNormal, float blend, float floorLogDistance)
+{
+    float4 x0 = 0;
+    float4 y0 = 0;
+    float4 x1 = 0;
+    float4 y1 = 0;
+
+    if (floorLogDistance - 1 < _FadeTextureStartLevel)
+    {
+        x0 = tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL0(params.ma, params, worldPos0));
+        y0 = tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL0(params.me, params, worldPos0));
+    }
+
+    if (floorLogDistance < _FadeTextureStartLevel)
+    {
+        x1 = tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL1(params.ma, params, worldPos1));
+        y1 = tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL1(params.me, params, worldPos1));
+    }
+
+    float4 x = lerp(x0, x1, blend);
+    float4 y = lerp(y0, y1, blend);
+
+    float2 w = float2(params.absWorldNormal[params.ma.x], params.absWorldNormal[params.me.x]);
+    w = saturate(w * 2.365744f - 1.365744f);
+    w = pow(w, params.blend * 0.125f);
+
+    return (x * w.x + y * w.y) / (w.x + w.y);
+}
+
 float4 SampleBiplanarTextureLOD(sampler2D tex, VertexBiplanarParams params, float3 worldPos0, float3 worldPos1, float3 worldNormal, float blend)
 {
     // Project and fetch
@@ -130,6 +198,35 @@ float4 SampleBiplanarTextureLOD(sampler2D tex, VertexBiplanarParams params, floa
     w = pow(w, params.blend * 0.125f);
     
     // Blend
+    return (x * w.x + y * w.y) / (w.x + w.y);
+}
+
+float4 SampleBiplanarTextureLODWithZeroFade(sampler2D tex, VertexBiplanarParams params, float3 worldPos0, float3 worldPos1, float3 worldNormal, float blend, float floorLogDistance)
+{
+    float4 x0 = 0;
+    float4 y0 = 0;
+    float4 x1 = 0;
+    float4 y1 = 0;
+
+    if (floorLogDistance - 1 < _FadeTextureStartLevel)
+    {
+        x0 = tex2Dlod(tex, TEX2D_LOD_COORDS(params.ma, worldPos0, 0));
+        y0 = tex2Dlod(tex, TEX2D_LOD_COORDS(params.me, worldPos0, 0));
+    }
+
+    if (floorLogDistance < _FadeTextureStartLevel)
+    {
+        x1 = tex2Dlod(tex, TEX2D_LOD_COORDS(params.ma, worldPos1, 0));
+        y1 = tex2Dlod(tex, TEX2D_LOD_COORDS(params.me, worldPos1, 0));
+    }
+
+    float4 x = lerp(x0, x1, blend);
+    float4 y = lerp(y0, y1, blend);
+
+    float2 w = float2(params.absWorldNormal[params.ma.x], params.absWorldNormal[params.me.x]);
+    w = saturate(w * 2.365744f - 1.365744f);
+    w = pow(w, params.blend * 0.125f);
+
     return (x * w.x + y * w.y) / (w.x + w.y);
 }
 
@@ -184,5 +281,60 @@ NORMAL_FLOAT SampleBiplanarNormal(sampler2D tex, PixelBiplanarParams params, flo
     
     NORMAL_FLOAT result = (x * w.x + y * w.y) / (w.x + w.y);
     
+    return result;
+}
+
+NORMAL_FLOAT SampleBiplanarNormalWithFade(sampler2D tex, sampler2D fadeTex, PixelBiplanarParams params, float3 worldPos0, float3 worldPos1, float3 worldNormal, float blend, float floorLogDistance)
+{
+    float4 texLevel0x;
+    float4 texLevel0y;
+    float4 texLevel1x;
+    float4 texLevel1y;
+
+    if (floorLogDistance - 1 >= _FadeTextureStartLevel)
+    {
+        texLevel0x = tex2Dgrad(fadeTex, TEX2D_GRAD_COORDS_LEVEL0(params.ma, params, worldPos0));
+        texLevel0y = tex2Dgrad(fadeTex, TEX2D_GRAD_COORDS_LEVEL0(params.me, params, worldPos0));
+    }
+    else
+    {
+        texLevel0x = tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL0(params.ma, params, worldPos0));
+        texLevel0y = tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL0(params.me, params, worldPos0));
+    }
+
+    if (floorLogDistance >= _FadeTextureStartLevel)
+    {
+        texLevel1x = tex2Dgrad(fadeTex, TEX2D_GRAD_COORDS_LEVEL1(params.ma, params, worldPos1));
+        texLevel1y = tex2Dgrad(fadeTex, TEX2D_GRAD_COORDS_LEVEL1(params.me, params, worldPos1));
+    }
+    else
+    {
+        texLevel1x = tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL1(params.ma, params, worldPos1));
+        texLevel1y = tex2Dgrad(tex, TEX2D_GRAD_COORDS_LEVEL1(params.me, params, worldPos1));
+    }
+
+    NORMAL_FLOAT x0 = ParallaxUnpackNormalEmission(texLevel0x);
+    NORMAL_FLOAT y0 = ParallaxUnpackNormalEmission(texLevel0y);
+    NORMAL_FLOAT x1 = ParallaxUnpackNormalEmission(texLevel1x);
+    NORMAL_FLOAT y1 = ParallaxUnpackNormalEmission(texLevel1y);
+
+    NORMAL_FLOAT x = lerp(x0, x1, blend);
+    NORMAL_FLOAT y = lerp(y0, y1, blend);
+
+    x.xyz *= _BumpScale;
+    y.xyz *= _BumpScale;
+
+    x.xyz = normalize(float3(x.y + worldNormal[params.ma.z], x.x + worldNormal[params.ma.y], worldNormal[params.ma.x]));
+    y.xyz = normalize(float3(y.y + worldNormal[params.me.z], y.x + worldNormal[params.me.y], worldNormal[params.me.x]));
+
+    x.xyz = float3(x[params.ma.z], x[params.ma.y], x[params.ma.x]);
+    y.xyz = float3(y[params.me.z], y[params.me.y], y[params.me.x]);
+
+    float2 w = float2(params.absWorldNormal[params.ma.x], params.absWorldNormal[params.me.x]);
+    w = saturate(w * 2.365744f - 1.365744f);
+    w = pow(w, params.blend * 0.125f);
+
+    NORMAL_FLOAT result = (x * w.x + y * w.y) / (w.x + w.y);
+
     return result;
 }

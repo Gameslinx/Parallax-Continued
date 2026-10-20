@@ -490,6 +490,52 @@ namespace Parallax
                 ConfigUtils.TryParse(body.planetName, propertyName, configValue, typeof(int), out object result);
                 body.terrainShaderProperties.shaderFloats[propertyName] = (int)result;
             }
+
+            ParseOptionalTerrainFadeProperties(body, bodyNode);
+        }
+
+        private static void ParseOptionalTerrainFadeProperties(ParallaxTerrainBody body, ConfigNode bodyNode)
+        {
+            string mainTexFade = bodyNode.GetValue("_MainTexFade");
+            string bumpMapFade = bodyNode.GetValue("_BumpMapFade");
+
+            if (mainTexFade == null && bumpMapFade == null)
+            {
+                return;
+            }
+
+            if (mainTexFade == null || bumpMapFade == null)
+            {
+                Debug.LogWarning("[Parallax] Terrain fade textures on " + body.planetName + " require both _MainTexFade and _BumpMapFade. Disabling fade textures for this body.");
+                return;
+            }
+
+            bool mainTexExists = TextureLoader.TextureExists(mainTexFade);
+            bool bumpMapExists = TextureLoader.TextureExists(bumpMapFade);
+
+            if (!mainTexExists)
+            {
+                ParallaxDebug.LogCritical("This texture file doesn't exist: " + mainTexFade + " for planet: " + body.planetName);
+            }
+            if (!bumpMapExists)
+            {
+                ParallaxDebug.LogCritical("This texture file doesn't exist: " + bumpMapFade + " for planet: " + body.planetName);
+            }
+            if (!mainTexExists || !bumpMapExists)
+            {
+                Debug.LogWarning("[Parallax] Disabling terrain fade textures for " + body.planetName + " because one or more fade textures could not be found.");
+                return;
+            }
+
+            body.terrainShaderProperties.shaderTextures["_MainTexFade"] = mainTexFade;
+            body.terrainShaderProperties.shaderTextures["_BumpMapFade"] = bumpMapFade;
+
+            string fadeStartLevel = bodyNode.GetValue("_FadeTextureStartLevel");
+            if (fadeStartLevel != null)
+            {
+                ConfigUtils.TryParse(body.planetName, "_FadeTextureStartLevel", fadeStartLevel, typeof(float), out object result);
+                body.terrainShaderProperties.shaderFloats["_FadeTextureStartLevel"] = (float)result;
+            }
         }
 
         // ConfigNode is "ParallaxScaledProperties"
