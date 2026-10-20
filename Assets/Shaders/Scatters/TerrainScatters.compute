@@ -72,6 +72,12 @@ void Distribute (uint3 id : SV_DispatchThreadID)
     uint index2 = triangles[id.x * 3 + 1];
     uint index3 = triangles[id.x * 3 + 2];
     
+    // Skip degenerate triangles on the quad mesh
+    if (index1 == index2 || index2 == index3 || index1 == index3)
+    {
+        return;
+    }
+    
     // Get triangle vertices
     float3 v1 = vertices[index1];
     float3 v2 = vertices[index2];
