@@ -72,8 +72,8 @@ namespace Parallax
                             }
                         }
 
-                        scatter.biomeMask[0] = unchecked((int)(uint)biomeMask);
-                        scatter.biomeMask[1] = unchecked((int)(uint)(biomeMask >> 32));
+                        scatter.biomeMask[0] = (int)(uint)biomeMask;
+                        scatter.biomeMask[1] = (int)(uint)(biomeMask >> 32);
                     }
                 }
             }
