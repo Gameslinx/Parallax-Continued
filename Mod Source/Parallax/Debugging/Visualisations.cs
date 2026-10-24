@@ -191,9 +191,11 @@ namespace Parallax
         public class QuadBiomeDisplay
         {
             public static List<GameObject> objectDisplays = new List<GameObject>();
+            public static Texture2D biomeMap;
 
             public static void ShowQuadBiomes()
             {
+                biomeMap = FlightGlobals.currentMainBody.BiomeMap.CompileToTexture();
                 foreach (KeyValuePair<PQ, ScatterSystemQuadData> quadData in ScatterComponent.scatterQuadData)
                 {
                     PQ quad = quadData.Key;
@@ -215,6 +217,8 @@ namespace Parallax
                 {
                     UnityEngine.Object.Destroy(go);
                 }
+                if (biomeMap != null)
+                    UnityEngine.Object.Destroy(biomeMap);
             }
         }
 

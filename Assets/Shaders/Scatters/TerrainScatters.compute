@@ -35,9 +35,7 @@ StructuredBuffer<float3> uvs;
 // Normalized directions from planet center to quad vertex
 StructuredBuffer<float3> directionsFromCenter;
 
-// Biome map - RGBA (although alpha is unused, I can't convert to RGB)
-Texture2D<float4> biomeMap;
-Texture2D<float4> scatterBiomes;
+Texture2D<float> biomeIndexMap;
 
 // Local blockmap - Removes scatters locally, only if defined
 // Valid quads calculated on CPU, blockmap sampled per tri and interpolated
@@ -48,9 +46,32 @@ Texture2D<float4> blockMap;
 
 // The naming is important here
 SamplerState linearClampSampler;
-SamplerState pointClampSampler;
 
 AppendStructuredBuffer<PositionData> transforms;
+
+float BiomeTexelEligibility(int2 texel, int2 size)
+{
+    texel.x = ((texel.x % size.x) + size.x) % size.x;
+    texel.y = clamp(texel.y, 0, size.y - 1);
+
+    uint biomeIndex = (uint)round(biomeIndexMap.Load(int3(texel, 0)) * 255.0f);
+    uint maskBits = biomeIndex < 32 ? _BiomeMask.x : _BiomeMask.y;
+    return biomeIndex < 64 ? (float)((maskBits >> (biomeIndex & 31)) & 1) : 1.0f;
+}
+
+float BiomeEligibility(float2 uv, int2 size)
+{
+    float2 texelPos = uv * size - 0.5f;
+    int2 texel = (int2)floor(texelPos);
+    float2 blend = texelPos - texel;
+
+    float e00 = BiomeTexelEligibility(texel, size);
+    float e10 = BiomeTexelEligibility(texel + int2(1, 0), size);
+    float e01 = BiomeTexelEligibility(texel + int2(0, 1), size);
+    float e11 = BiomeTexelEligibility(texel + int2(1, 1), size);
+
+    return lerp(lerp(e00, e10, blend.x), lerp(e01, e11, blend.x), blend.y);
+}
 
 //
 //  Distribution Compute Shader
@@ -98,25 +119,14 @@ void Distribute (uint3 id : SV_DispatchThreadID)
     // Get face center UV
     float3 centerUV = (uv1 + uv2 + uv3) * 0.333f;
     float vertexAllowScatter = centerUV.z;
-    
-    // Get the biome colour
-    float3 biome = biomeMap.SampleLevel(pointClampSampler, centerUV.xy, 0).rgb;
 
-    // Does this biome colour match any of the biomes this scatter can appear in?
-    int biomesEligible = 0;
-    for (int b = 0; b < _NumberOfBiomes; b++)
-    {
-        // + 0.5 to move sample position to the center of the pixel
-        float3 biomeColor = scatterBiomes.SampleLevel(pointClampSampler, float2(0.5f, ((float)b + 0.5f) / (float) _NumberOfBiomes), 0).rgb;
-        biomesEligible += BiomeEligible(biome, biomeColor);
-    }
-    
-    // Skip this triangle if this scatter isn't eligible on it
-    if (biomesEligible == 0)
-    {
-        return;
-    }
-    
+    uv2.x += round(uv1.x - uv2.x);
+    uv3.x += round(uv1.x - uv3.x);
+
+    uint biomeMapWidth, biomeMapHeight;
+    biomeIndexMap.GetDimensions(biomeMapWidth, biomeMapHeight);
+    int2 biomeMapSize = int2(biomeMapWidth, biomeMapHeight);
+
     // Don't place scatters on ineligible gradients, such as mountains
     float slope = CalculateSlope(averageNormal);
     if (slope < 0.025)
@@ -157,6 +167,13 @@ void Distribute (uint3 id : SV_DispatchThreadID)
         // X must be sqrtd to achieve a uniform distribution
         float randomX = sqrt(random1);
         float randomY = random2;
+
+        float2 localUV = RandomUV(uv1.xy, uv2.xy, uv3.xy, randomX, randomY);
+        if (BiomeEligibility(localUV, biomeMapSize) < 0.5f)
+        {
+            continue;
+        }
+
         float3 localPos = RandomPoint(v1, v2, v3, randomX, randomY);
         float3 localCenterDir = RandomPoint(dfc1, dfc2, dfc3, randomX, randomY);
         float3 localNormal = RandomPoint(dfc1, dfc2, dfc3, randomX, randomY);

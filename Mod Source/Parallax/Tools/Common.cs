@@ -1156,8 +1156,7 @@ namespace Parallax
         public MaterialParams materialParams;
         public BiomeBlacklistParams biomeBlacklistParams;
 
-        public Texture2D biomeControlMap;
-        public int biomeCount = 0;
+        public int[] biomeMask = new int[2];
 
         public bool isShared = false;
 

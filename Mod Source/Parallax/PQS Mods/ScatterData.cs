@@ -88,7 +88,7 @@ namespace Parallax
             // Required values
             scatterShader.SetFloat(ParallaxScatterShaderProperties.planetRadiusID, parent.planetRadius);
             scatterShader.SetInt(ParallaxScatterShaderProperties.maxCountID, maxCount);
-            scatterShader.SetInt(ParallaxScatterShaderProperties.numberOfBiomesID, scatter.biomeCount);
+            scatterShader.SetInts(ParallaxScatterShaderProperties.biomeMaskID, scatter.biomeMask);
 
             scatterShader.SetVector(ParallaxScatterShaderProperties.planetNormalID, parent.planetNormal);
             scatterShader.SetVector(ParallaxScatterShaderProperties.localPlanetNormalID, parent.localPlanetNormal);
@@ -111,8 +111,7 @@ namespace Parallax
             scatterShader.SetBuffer(distributeKernel, ParallaxScatterShaderProperties.parentUVsBufferID, parent.sourceUVsBuffer);
             scatterShader.SetBuffer(distributeKernel, ParallaxScatterShaderProperties.parentDirsBufferID, parent.sourceDirsFromCenterBuffer);
             
-            scatterShader.SetTexture(distributeKernel, ParallaxScatterShaderProperties.biomeMapTextureID, ScatterManager.currentBiomeMap);
-            scatterShader.SetTexture(distributeKernel, ParallaxScatterShaderProperties.scatterBiomesTextureID, scatter.biomeControlMap);
+            scatterShader.SetTexture(distributeKernel, ParallaxScatterShaderProperties.biomeIndexMapTextureID, ScatterManager.biomeIndexMap);
 
             SetDistributionVars();
         }

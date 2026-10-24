@@ -49,8 +49,7 @@ namespace Parallax.Debugging
             mesh.uv = realUV;
 
             material = GetComponent<MeshRenderer>().sharedMaterial;
-            Texture2D biomeMap = ScatterManager.currentBiomeMap;
-            material.SetTexture("_MainTex", biomeMap);
+            material.SetTexture("_MainTex", Visualisations.QuadBiomeDisplay.biomeMap);
         }
     }
 }

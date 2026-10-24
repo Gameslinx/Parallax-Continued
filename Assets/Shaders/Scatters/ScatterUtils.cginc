@@ -4,7 +4,6 @@
 //
 
 #define DEG2RAD 0.01745329251f
-#define ALLOWED_COLOR_RANGE 0.2f
 
 #if defined (OUTPUT_TERRAIN_COLOR)
     #define ENCODE_INSTANCING_DATA(transformationMatrix)    transformationMatrix[3] = float4(avgColor, 1);
@@ -79,12 +78,6 @@ float RandomFloat(float f1, float f2, float f3, float r1, float r2)
 {
     // r1 must be a sqrt random number
     return ((1 - r1) * f1) + ((r1 * (1 - r2)) * f2) + ((r2 * r1) * f3);
-}
-
-bool BiomeEligible(float3 biomeColor, float3 scatterColor)
-{
-    float deviation = distance(biomeColor, scatterColor);
-    return 1 * (deviation < ALLOWED_COLOR_RANGE);
 }
 
 // Calculate the slope of the mesh

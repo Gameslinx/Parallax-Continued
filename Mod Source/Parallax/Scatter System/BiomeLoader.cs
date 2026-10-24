@@ -53,35 +53,27 @@ namespace Parallax
                     ParallaxScatterBody scatterBody = ConfigLoader.parallaxScatterBodies[bodyName];
                     CBAttributeMapSO.MapAttribute[] biomeMapAttributes = FlightGlobals.GetBodyByName(bodyName).BiomeMap.Attributes;
 
+                    if (biomeMapAttributes.Length > 64)
+                    {
+                        ParallaxDebug.LogError("Biome Loader: " + bodyName + " has " + biomeMapAttributes.Length + " biomes, but scatters only support blacklisting the first 64");
+                    }
+
                     // Process all scatters on this scatter body
                     foreach (Scatter scatter in scatterBody.fastScatters)
                     {
-                        BiomeBlacklistParams blacklist = scatter.biomeBlacklistParams;
-                        List<string> blacklistedBiomes = blacklist.blacklistedBiomes;
+                        List<string> blacklistedBiomes = scatter.biomeBlacklistParams.blacklistedBiomes;
+                        ulong biomeMask = 0;
 
-                        int numberOfEligibleBiomes = biomeMapAttributes.Length - blacklistedBiomes.Count;
-
-                        Texture2D biomeControltexture = new Texture2D(1, numberOfEligibleBiomes, TextureFormat.RGBA32, false);
-                        int pixelIndex = 0;
-
-                        foreach (CBAttributeMapSO.MapAttribute attribute in biomeMapAttributes)
+                        for (int i = 0; i < Mathf.Min(biomeMapAttributes.Length, 64); i++)
                         {
-                            Color biomeColor = attribute.mapColor;
-                            string biomeName = attribute.name;
-
-                            // This biome is eligible
-                            if (!blacklistedBiomes.Contains(biomeName))
+                            if (!blacklistedBiomes.Contains(biomeMapAttributes[i].name))
                             {
-                                biomeControltexture.SetPixel(0, pixelIndex, biomeColor);
-                                pixelIndex++;
+                                biomeMask |= 1UL << i;
                             }
                         }
 
-                        Debug.Log("Scatter " + scatter.scatterName + " has " + numberOfEligibleBiomes + " biomes");
-                        // We read this again in ScatterSystemQuadData.cs
-                        biomeControltexture.Apply(false, false);
-                        scatter.biomeControlMap = biomeControltexture;
-                        scatter.biomeCount = numberOfEligibleBiomes;
+                        scatter.biomeMask[0] = unchecked((int)(uint)biomeMask);
+                        scatter.biomeMask[1] = unchecked((int)(uint)(biomeMask >> 32));
                     }
                 }
             }

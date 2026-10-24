@@ -42,8 +42,7 @@ float _SpawnChance;
 // The maximum amount the normals can deviate on a triangle
 float _MaxNormalDeviance;
 
-// The colours of the biomes which this scatter can appear in
-int _NumberOfBiomes;
+uint2 _BiomeMask;
 
 //
 //  Noise params

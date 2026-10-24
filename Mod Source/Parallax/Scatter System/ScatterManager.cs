@@ -1,4 +1,5 @@
-﻿using Parallax.Harmony_Patches;
+﻿using Kopernicus.Components;
+using Parallax.Harmony_Patches;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -24,8 +25,7 @@ namespace Parallax
         // Stored only active renderer components that need rendering
         public List<ScatterRenderer> activeScatterRenderers = new List<ScatterRenderer>();
 
-        // The current biome map
-        public static Texture2D currentBiomeMap;
+        public static Texture2D biomeIndexMap;
 
         int lastEvaluatedFrame = -1;
 
@@ -79,10 +79,7 @@ namespace Parallax
 
                 if (!isRestart)
                 {
-                    if (currentBiomeMap != null)
-                        UnityEngine.Object.Destroy(currentBiomeMap);
-
-                    currentBiomeMap = FlightGlobals.GetBodyByName(bodyName).BiomeMap.CompileToTexture();
+                    UpdateBiomeIndexMap(FlightGlobals.GetBodyByName(bodyName).BiomeMap);
                 }
 
                 foreach (ScatterRenderer renderer in scatterRenderers)
@@ -119,9 +116,62 @@ namespace Parallax
                 if (!isRestart)
                 {
                     body.UnloadTextures();
-                    UnityEngine.Object.Destroy(currentBiomeMap);
                 }
             }
+        }
+        void UpdateBiomeIndexMap(CBAttributeMapSO biomeMap)
+        {
+            int width = biomeMap.Width;
+            int height = biomeMap.Height;
+
+            if (biomeIndexMap == null || biomeIndexMap.width != width || biomeIndexMap.height != height)
+            {
+                if (biomeIndexMap != null)
+                    UnityEngine.Object.Destroy(biomeIndexMap);
+
+                biomeIndexMap = new Texture2D(width, height, TextureFormat.R8, false, true);
+                biomeIndexMap.filterMode = FilterMode.Point;
+                biomeIndexMap.wrapMode = TextureWrapMode.Clamp;
+            }
+
+            biomeIndexMap.LoadRawTextureData(GetBiomeIndices(biomeMap));
+            biomeIndexMap.Apply(false, false);
+        }
+        static byte[] GetBiomeIndices(CBAttributeMapSO biomeMap)
+        {
+            int width = biomeMap.Width;
+            int height = biomeMap.Height;
+
+            if (biomeMap is KopernicusCBAttributeMapSO && biomeMap._data.Length == width * height)
+            {
+                return biomeMap._data;
+            }
+
+            ParallaxDebug.Log("[Scatter Manager] Biome map " + biomeMap.MapName + " is not a Kopernicus biome map, matching biome colours per pixel");
+
+            CBAttributeMapSO.MapAttribute[] attributes = biomeMap.Attributes;
+            byte[] indices = new byte[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    Color pixel = biomeMap.GetPixelColor(x, y);
+                    int nearestIndex = 0;
+                    float nearestDistance = float.MaxValue;
+                    for (int i = 0; i < attributes.Length; i++)
+                    {
+                        Color biomeColor = attributes[i].mapColor;
+                        float distance = new Vector3(pixel.r - biomeColor.r, pixel.g - biomeColor.g, pixel.b - biomeColor.b).sqrMagnitude;
+                        if (distance < nearestDistance)
+                        {
+                            nearestDistance = distance;
+                            nearestIndex = i;
+                        }
+                    }
+                    indices[x + y * width] = (byte)nearestIndex;
+                }
+            }
+            return indices;
         }
         void DominantBodyRestarted(string bodyName)
         {
@@ -208,6 +258,9 @@ namespace Parallax
             {
                 renderer.ReleaseBuffers();
             }
+
+            if (biomeIndexMap != null)
+                UnityEngine.Object.Destroy(biomeIndexMap);
 
             ParallaxDebug.Log("Quads with color buffer: " +  quadsWithColorBuffer);
         }
