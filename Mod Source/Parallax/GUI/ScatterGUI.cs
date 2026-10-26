@@ -17,13 +17,6 @@ namespace Parallax
                 window.height = windowDefault.height;
             }
 
-            if (ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.collisionLevel > -1)
-            {
-                GUILayout.Label("Scatter editing is disabled while colliders are enabled");
-                GUILayout.Label("Set collisionLevel to -1 in ParallaxGlobalSettings.cfg");
-                return;
-            }
-
             GUIStyle labelSkin = HighLogic.Skin.label;
             labelSkin.alignment = TextAnchor.MiddleCenter;
 

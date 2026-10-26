@@ -53,7 +53,6 @@ namespace Parallax
 
         public static GUIEditorMode editorMode = GUIEditorMode.Terrain;
         private static List<GUIEditorMode> possibleEditorModes = new List<GUIEditorMode>();
-        private static int currentEditorModeIndex = 0;
 
         private static TextureExporterOptions exportOptions;
 
@@ -98,7 +97,17 @@ namespace Parallax
             }
             else
             {
+                possibleEditorModes.Clear();
+                currentBodyHasScatters = false;
+                currentBodyHasTerrain = false;
+                currentBodyHasScaled = false;
+                currentScaledBody = null;
                 editorMode = GUIEditorMode.Scaled;
+
+                if (PlanetariumCamera.fetch != null && PlanetariumCamera.fetch.target != null)
+                {
+                    OnScaledBodyChanged(PlanetariumCamera.fetch.target);
+                }
             }
         }
         void OnDisable()
@@ -133,20 +142,26 @@ namespace Parallax
                 currentBodyHasTerrain = false;
             }
 
-            if (ConfigLoader.parallaxScaledBodies.ContainsKey(bodyName))
+            if (ConfigLoader.parallaxScaledBodies.TryGetValue(bodyName, out ParallaxScaledBody scaledBody))
             {
                 currentBodyHasScaled = true;
+                currentScaledBody = scaledBody;
                 possibleEditorModes.Add(GUIEditorMode.Scaled);
             }
             else
             {
                 currentBodyHasScaled = false;
             }
+
+            if (possibleEditorModes.Count > 0 && !possibleEditorModes.Contains(editorMode))
+            {
+                editorMode = possibleEditorModes[0];
+            }
         }
         // Test if this body has parallax scaled
         void OnScaledBodyChanged(MapObject body)
         {
-            if (body.celestialBody == null)
+            if (body == null || body.celestialBody == null)
             {
                 // Probably focusing on a vessel. Or at least, not a planet
                 return;
@@ -190,8 +205,7 @@ namespace Parallax
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Previous Edit Mode", HighLogic.Skin.button))
             {
-                editorMode = WrapEditorMode(currentEditorModeIndex - 1);
-                Debug.Log("Editor mode changed: " + editorMode.ToString());
+                CycleEditorMode(-1);
             }
             //GUILayout.Space(350);
             GUILayout.FlexibleSpace();
@@ -199,16 +213,15 @@ namespace Parallax
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("Next Edit Mode", HighLogic.Skin.button))
             {
-                editorMode = WrapEditorMode(currentEditorModeIndex + 1);
-                Debug.Log("Editor mode changed: " + editorMode.ToString());
+                CycleEditorMode(1);
             }
             GUILayout.EndHorizontal();
 
-            if (editorMode == GUIEditorMode.Terrain)
+            if (editorMode == GUIEditorMode.Terrain && currentBodyHasTerrain)
             {
                 TerrainMenu();
             }
-            else if (editorMode == GUIEditorMode.Scatter)
+            else if (editorMode == GUIEditorMode.Scatter && currentBodyHasScatters)
             {
                 ScatterMenu();
             }
@@ -235,22 +248,22 @@ namespace Parallax
             // Must be last or buttons wont work
             UnityEngine.GUI.DragWindow();
         }
-        static GUIEditorMode WrapEditorMode(int value)
+        static void CycleEditorMode(int direction)
         {
-            int max = possibleEditorModes.Count;
-            int min = 0;
-            if (value > max - 1)
+            int count = possibleEditorModes.Count;
+            if (count == 0)
             {
-                currentEditorModeIndex = (value - max);
-                return possibleEditorModes[currentEditorModeIndex];
+                return;
             }
-            if (value < min)
+
+            int index = possibleEditorModes.IndexOf(editorMode);
+            if (index < 0)
             {
-                currentEditorModeIndex = (max - 1);
-                return possibleEditorModes[currentEditorModeIndex];
+                index = direction > 0 ? -1 : 0;
             }
-            currentEditorModeIndex = value;
-            return possibleEditorModes[currentEditorModeIndex];
+
+            editorMode = possibleEditorModes[(index + direction + count) % count];
+            Debug.Log("Editor mode changed: " + editorMode.ToString());
         }
         static GUIEditorMode GetEditorMode(bool terrain, bool scatters, bool scaled)
         {
