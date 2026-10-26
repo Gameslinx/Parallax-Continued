@@ -17,11 +17,10 @@ namespace Parallax
         public Material quadMaterial;
         public ParallaxTerrainBody body;
 
-        GameObject newQuad;
-        JobifiedSubdivision subdivisionComponent;
+        JobifiedSubdivision subdivision;
 
         MeshRenderer quadMeshRenderer;
-        Mesh mesh;
+        Mesh subdividedMesh;
 
         public PQ quad;
         public int subdivisionLevel;
@@ -33,9 +32,6 @@ namespace Parallax
         float blendLowMidEnd;
         float blendMidHighStart;
         float blendMidHighEnd;
-
-        bool alreadyInitialized = false;
-        bool materialCreated = false;
 
         bool probeEventAdded = false;
         public TerrainShaderQuadData(PQ quad, int subdivisionLevel, float subdivisionRadius, bool isMaxLevel)
@@ -57,7 +53,7 @@ namespace Parallax
             blendMidHighEnd = body.terrainShaderProperties.shaderFloats["_MidHighBlendEnd"];
 
             quadMaterial = DetermineMaterial();
-            
+
             if (body.emissive)
             {
                 quadMaterial.EnableKeyword("EMISSION");
@@ -72,21 +68,15 @@ namespace Parallax
             }
 
             quadMeshRenderer = quad.gameObject.GetComponent<MeshRenderer>();
+            ApplyMaterial();
 
             if (isMaxLevel)
             {
-                // Sadly a requirement or quad meshes become corrupt
-                mesh = new Mesh();
-                
                 quadWidth = (float)((2f * Mathf.PI * quad.sphereRoot.radius / 4f) / (Mathf.Pow(2f, quad.sphereRoot.maxLevel)));
                 quadWidth *= quadWidth;
 
                 EventHandler.OnQuadRangeCheck += RangeCheck;
                 RangeCheck();
-            }
-            else
-            {
-                SwapMaterial(false);
             }
 
             // Quads can build before the flight scene is ready. Quads built after will call this fine, but quads built before need to rely on the event
@@ -106,31 +96,10 @@ namespace Parallax
         // Quad normals changed, we need to reinitialize the mesh
         public void OnQuadNormalUpdate()
         {
-            if (isMaxLevel)
+            if (subdivision != null)
             {
-                if (alreadyInitialized)
-                {
-                    OutOfRange();
-                }
-                //mesh.normals = quad.GetComponent<MeshFilter>().sharedMesh.normals;
-                //mesh.co
+                subdivision.RefreshSourceData();
             }
-        }
-        /// <summary>
-        /// Get the quad mesh again, usually after it's modified, but maybe you want to just call it for fun
-        /// </summary>
-        public bool UpdateMesh()
-        {
-            // The normals will update again, wait
-            if (quad.isQueuedForNormalUpdate)
-            {
-                return false;
-            }
-
-            // I'd rather not do this but accessing quad mesh properties in any way outside of instantiation completely fucks the quads
-            // Removing this will improve quad build times a fair bit
-            mesh = UnityEngine.Object.Instantiate(quad.mesh);
-            return true;
         }
         public float GetSqrQuadCameraDistance(in Vector3 quadPosition, in Vector3 cameraPosition)
         {
@@ -139,64 +108,34 @@ namespace Parallax
         public void RangeCheck()
         {
             dist = GetSqrQuadCameraDistance(quad.PrecisePosition, RuntimeOperations.vectorCameraPos);
-            // We're within range
-            if (dist < quadWidth)
+            // We're within range, but the normals will update again so wait
+            if (dist < quadWidth && subdivision == null && !quad.isQueuedForNormalUpdate)
             {
-                if (!alreadyInitialized)
-                {
-                    if (UpdateMesh())
-                    {
-                        CreateFakeQuad();
-                        subdivisionComponent = newQuad.AddComponent<JobifiedSubdivision>();
-                        subdivisionComponent.maxSubdivisionLevel = subdivisionLevel;
-                        subdivisionComponent.subdivisionRange = subdivisionRadius;
-                        subdivisionComponent.mesh = newQuad.GetComponent<MeshFilter>().sharedMesh;
-
-                        materialCreated = false;
-                    }
-                }
+                StartSubdivision();
             }
-            // Out of range, and need to clean up the fake quad
-            if (dist > quadWidth && alreadyInitialized)
+            // Out of range, and need to clean up the subdivision
+            if (dist > quadWidth && subdivision != null)
             {
-                // This calls cleanup of jobified subdivision, completing all pending jobs
                 // Consider preventing jobs from being started when the quad is GOING out of range, so they complete before then
-                //newQuad.SetActive(false);
-                OutOfRange();
-            }
-            if (dist > quadWidth && !materialCreated)
-            {
-                SwapMaterial(false);
-                materialCreated = true;
+                StopSubdivision();
             }
         }
-        // We can't edit the meshrenderer or meshfilter on the quad, or everything will disintigrate spectacularly
-        // So we need to make a fake visual quad and hide the real one
-
-        // Move this to an object pool
-        public void CreateFakeQuad()
+        // PQS keeps writing to quad.mesh, which the collider and scatters also use, so the subdivided mesh is a separate mesh that only the quad's mesh filter renders
+        void StartSubdivision()
         {
-            newQuad = new GameObject(quad.name);
+            if (subdividedMesh == null)
+            {
+                subdividedMesh = new Mesh();
+            }
 
-            newQuad.transform.position = quad.gameObject.transform.position;
-            newQuad.transform.rotation = quad.gameObject.transform.rotation;
-            newQuad.transform.localScale = quad.gameObject.transform.localScale;
-
-            newQuad.transform.parent = quad.gameObject.transform;
-            newQuad.layer = quad.gameObject.layer;
-            newQuad.tag = quad.gameObject.tag;
-
-            MeshFilter fakeQuadMeshFilter = newQuad.AddComponent<MeshFilter>();
-            MeshRenderer fakeQuadMeshRenderer = newQuad.AddComponent<MeshRenderer>();
-
-            fakeQuadMeshFilter.sharedMesh = mesh;
-            fakeQuadMeshRenderer.sharedMaterial = quadMaterial;
-
-            newQuad.SetActive(true);
-
-            SwapMaterial(true);
-
-            alreadyInitialized = true;
+            subdivision = new JobifiedSubdivision(quad, subdividedMesh, subdivisionLevel, subdivisionRadius);
+            quad.meshFilter.sharedMesh = subdividedMesh;
+        }
+        void StopSubdivision()
+        {
+            subdivision.Cleanup();
+            subdivision = null;
+            quad.meshFilter.sharedMesh = quad.mesh;
         }
         public Material DetermineMaterial()
         {
@@ -255,23 +194,10 @@ namespace Parallax
             body.parallaxMaterials.parallaxFull.EnableKeyword("PARALLAX_FULL");
             return body.parallaxMaterials.parallaxFull;
         }
-        public void SwapMaterial(bool inSubdivisionRange)
+        public void ApplyMaterial()
         {
-            if (inSubdivisionRange)
-            {
-                quadMeshRenderer.material = ConfigLoader.transparentMaterial;
-            }
-            else
-            {
-                quadMeshRenderer.sharedMaterial = quadMaterial;
-                quadMeshRenderer.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.BlendProbesAndSkybox;
-            }
-        }
-        public void OutOfRange()
-        {
-            UnityEngine.Object.Destroy(newQuad);
             quadMeshRenderer.sharedMaterial = quadMaterial;
-            alreadyInitialized = false;
+            quadMeshRenderer.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.BlendProbesAndSkybox;
         }
         public void SetReflectionProbeAnchor(Transform probeTransform)
         {
@@ -285,10 +211,10 @@ namespace Parallax
         {
             subdivisionLevel = newLevel;
             subdivisionRadius = newRadius;
-            if (alreadyInitialized)
+            if (subdivision != null)
             {
-                subdivisionComponent.maxSubdivisionLevel = subdivisionLevel;
-                subdivisionComponent.subdivisionRange = newRadius;
+                subdivision.maxSubdivisionLevel = subdivisionLevel;
+                subdivision.subdivisionRange = newRadius;
             }
         }
         public void Cleanup()
@@ -296,14 +222,15 @@ namespace Parallax
             if (isMaxLevel)
             {
                 EventHandler.OnQuadRangeCheck -= RangeCheck;
-                UnityEngine.Object.Destroy(newQuad);
-                UnityEngine.Object.Destroy(mesh);
-                alreadyInitialized = false;
-            }
-            if (subdivisionComponent != null)
-            {
-                subdivisionComponent.Cleanup();
-                subdivisionComponent = null;
+                if (subdivision != null)
+                {
+                    StopSubdivision();
+                }
+                if (subdividedMesh != null)
+                {
+                    UnityEngine.Object.Destroy(subdividedMesh);
+                    subdividedMesh = null;
+                }
             }
             if (probeEventAdded)
             {

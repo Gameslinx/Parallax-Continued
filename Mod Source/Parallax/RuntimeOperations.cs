@@ -163,6 +163,7 @@ namespace Parallax
             }
 
             UpdateCameraData();
+            JobifiedSubdivision.UpdateAll();
         }
 
         public static void UpdateCameraData()

@@ -132,7 +132,7 @@ namespace Parallax
                     meshRenderer.sharedMaterial.SetInt("_Inverse", scatter.noiseParams.inverted ? 1 : 0);
 
                     // Set gameObject mesh data
-                    Mesh mesh = UnityEngine.Object.Instantiate(quad.gameObject.GetComponent<MeshFilter>().sharedMesh);
+                    Mesh mesh = UnityEngine.Object.Instantiate(quad.mesh);
                     Vector3[] vertices = mesh.vertices;
                     Color[] directions = new Color[vertices.Length];
 
@@ -169,7 +169,7 @@ namespace Parallax
                     PQ quad = quadData.Key;
                     GameObject go = CreateQuadGameObject(quad, out MeshRenderer meshRenderer, out MeshFilter meshFilter);
 
-                    Mesh mesh = UnityEngine.Object.Instantiate(quad.gameObject.GetComponent<MeshFilter>().sharedMesh);
+                    Mesh mesh = UnityEngine.Object.Instantiate(quad.mesh);
                     meshFilter.mesh = mesh;
                     meshRenderer.sharedMaterial = Instantiate(ConfigLoader.wireframeMaterial);
                     QuadRangeComponent qrc = go.AddComponent<QuadRangeComponent>();
@@ -201,7 +201,7 @@ namespace Parallax
                     PQ quad = quadData.Key;
                     GameObject go = CreateQuadGameObject(quad, out MeshRenderer meshRenderer, out MeshFilter meshFilter);
 
-                    Mesh mesh = UnityEngine.Object.Instantiate(quad.gameObject.GetComponent<MeshFilter>().sharedMesh);
+                    Mesh mesh = UnityEngine.Object.Instantiate(quad.mesh);
                     meshFilter.mesh = mesh;
                     meshRenderer.sharedMaterial = new Material(AssetBundleLoader.parallaxDebugShaders["Custom/ShowBiomeMap"]);
                     QuadBiomeComponent qrc = go.AddComponent<QuadBiomeComponent>();
@@ -232,7 +232,7 @@ namespace Parallax
                     PQ quad = quadData.Key;
                     GameObject go = CreateQuadGameObject(quad, out MeshRenderer meshRenderer, out MeshFilter meshFilter);
 
-                    Mesh mesh = UnityEngine.Object.Instantiate(quad.gameObject.GetComponent<MeshFilter>().sharedMesh);
+                    Mesh mesh = UnityEngine.Object.Instantiate(quad.mesh);
                     meshFilter.mesh = mesh;
                     meshRenderer.sharedMaterial = new Material(Shader.Find("Standard"));
 
@@ -262,7 +262,7 @@ namespace Parallax
                     PQ quad = quadData.Key;
                     GameObject go = CreateQuadGameObject(quad, out MeshRenderer meshRenderer, out MeshFilter meshFilter);
 
-                    Mesh mesh = UnityEngine.Object.Instantiate(quad.gameObject.GetComponent<MeshFilter>().sharedMesh);
+                    Mesh mesh = UnityEngine.Object.Instantiate(quad.mesh);
                     meshFilter.mesh = mesh;
                     Vector3[] uv = PQSMod_Parallax.quadPlanetUVs[quad];
                     Vector2[] realUV = new Vector2[uv.Length];

@@ -64,7 +64,7 @@ namespace Parallax
         {
             // We can't really guard against this from happening, so we'll return a unique identifier of 0 and let the jobs clash
 
-            if (uniqueQuadIdentifiers.Count - 1 == 0)
+            if (uniqueQuadIdentifiers.Count == 0)
             {
                 ParallaxDebug.LogError("Exception: The unique quad identifier queue is empty - subdivision jobs cannot continue. If you see this in your log file, too many quads are trying to subdivide! (Max 1024)");
                 return 0;

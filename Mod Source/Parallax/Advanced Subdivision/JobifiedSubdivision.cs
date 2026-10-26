@@ -16,9 +16,11 @@ namespace Parallax
     // So that I only need to schedule one job instead of having it spread out over 4 frames that would be greatly appreciated                  //
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // Added as a component to the new terrain gameobject created in TerrainShaderQuadData
-    public class JobifiedSubdivision : MonoBehaviour
+    // Created by TerrainShaderQuadData and updated each frame from RuntimeOperations
+    public class JobifiedSubdivision
     {
+        public static readonly List<JobifiedSubdivision> activeSubdivisions = new List<JobifiedSubdivision>();
+
         // Unique identifier index for interlocked counter
         int uniqueIdentifier = -1;
 
@@ -35,11 +37,11 @@ namespace Parallax
         JobHandle removeVertexPairsJobHandle;
 
         // Precomputed data
-        NativeArray<SubdividableTriangle> meshTriangles;        // Do not dispose until OnDisable
-        NativeArray<float3> vertices;                           // Do not dispose until OnDisable
-        NativeArray<float3> normals;                            // Do not dispose until OnDisable
-        NativeArray<float4> colors;                             // Do not dispose until OnDisable
-        NativeArray<int> triangles;                             // Do not dispose until OnDisable
+        NativeArray<SubdividableTriangle> meshTriangles;        // Do not dispose until Cleanup
+        NativeArray<float3> vertices;                           // Do not dispose until Cleanup
+        NativeArray<float3> normals;                            // Do not dispose until Cleanup
+        NativeArray<float4> colors;                             // Do not dispose until Cleanup
+        NativeArray<int> triangles;                             // Do not dispose until Cleanup
 
         // Subdivision data
         NativeStream tris;                                      // Dispose after triangle readback
@@ -47,7 +49,7 @@ namespace Parallax
         NativeStream.Reader trisReader;                         // Is disposed with tris
 
         // Temp array for camera frustum planes
-        NativeArray<ParallaxPlane> frustumPlanes;               // Disposed on disable
+        NativeArray<ParallaxPlane> frustumPlanes;               // Disposed on cleanup
 
         // Mesh generation data
         NativeArray<float3> newVerts;                           // Dispose after building mesh
@@ -63,7 +65,9 @@ namespace Parallax
         // Triangle readback data
         NativeArray<int> outputTriIndices;                      // Dispose after building mesh
 
-        public Mesh mesh;
+        PQ quad;
+        Mesh mesh;
+        Bounds quadBounds;
 
         int streamForeachCount = 0;
 
@@ -71,14 +75,27 @@ namespace Parallax
         public float subdivisionRange = 50.0f;
         public bool hasIdentifier = false;
 
-        public void Start()
+        public JobifiedSubdivision(PQ quad, Mesh mesh, int maxSubdivisionLevel, float subdivisionRange)
         {
-            mesh = GetComponent<MeshFilter>().sharedMesh;
+            this.quad = quad;
+            this.mesh = mesh;
+            this.maxSubdivisionLevel = maxSubdivisionLevel;
+            this.subdivisionRange = subdivisionRange;
+
             mesh.MarkDynamic();
-            this.gameObject.GetComponent<MeshFilter>().sharedMesh = mesh;
 
             GetUniqueIdentifier();
             Initialize();
+            ResetMesh();
+
+            activeSubdivisions.Add(this);
+        }
+        public static void UpdateAll()
+        {
+            for (int i = 0; i < activeSubdivisions.Count; i++)
+            {
+                activeSubdivisions[i].Update();
+            }
         }
         void GetUniqueIdentifier()
         {
@@ -87,23 +104,48 @@ namespace Parallax
         }
         void Initialize()
         {
-            vertices = new NativeArray<Vector3>(mesh.vertices, Allocator.Persistent).Reinterpret<float3>();
-            normals = new NativeArray<Vector3>(mesh.normals, Allocator.Persistent).Reinterpret<float3>();
-            colors = new NativeArray<Color>(mesh.colors, Allocator.Persistent).Reinterpret<float4>();
+            InitializeSourceData();
 
-            Color[] colorArray = mesh.colors;
+            storedVertTris = new NativeHashMap<float3, int>(3500, Allocator.Persistent);
+            frustumPlanes = new NativeArray<ParallaxPlane>(6, Allocator.Persistent);
+        }
+        void InitializeSourceData()
+        {
+            Mesh quadMesh = quad.mesh;
+            quadBounds = quadMesh.bounds;
+
+            vertices = new NativeArray<Vector3>(quadMesh.vertices, Allocator.Persistent).Reinterpret<float3>();
+            normals = new NativeArray<Vector3>(quadMesh.normals, Allocator.Persistent).Reinterpret<float3>();
+
+            Color[] colorArray = quadMesh.colors;
+            colors = new NativeArray<Color>(colorArray, Allocator.Persistent).Reinterpret<float4>();
             for(int i = 0; i < colors.Length; i++)
             {
                 colors[i] = new float4(colorArray[i].r, colorArray[i].g, colorArray[i].b, colorArray[i].a);
             }
 
-            triangles = new NativeArray<int>(mesh.triangles, Allocator.Persistent);
-
-            storedVertTris = new NativeHashMap<float3, int>(3500, Allocator.Persistent);
+            triangles = new NativeArray<int>(quadMesh.triangles, Allocator.Persistent);
 
             CreateTriangles();
+        }
+        void DisposeSourceData()
+        {
+            if (vertices.IsCreated) { vertices.Dispose(); }
+            if (normals.IsCreated) { normals.Dispose(); }
+            if (colors.IsCreated) { colors.Dispose(); }
+            if (triangles.IsCreated) { triangles.Dispose(); }
+            if (meshTriangles.IsCreated) { meshTriangles.Dispose(); }
+        }
+        public void RefreshSourceData()
+        {
+            CompleteAllJobs();
+            DisposeInFlightData();
+            DisposeSourceData();
+            InitializeSourceData();
 
-            frustumPlanes = new NativeArray<ParallaxPlane>(6, Allocator.Persistent);
+            isProcessingSubdivision = false;
+            isGeneratingMesh = false;
+            firstRun = true;
         }
         void CreateTriangles()
         {
@@ -189,7 +231,7 @@ namespace Parallax
                 maxSubdivisionLevel = this.maxSubdivisionLevel,
                 sqrSubdivisionRange = this.subdivisionRange,
                 cameraFrustumPlanes = frustumPlanes,
-                objectToWorldMatrix = transform.localToWorldMatrix,
+                objectToWorldMatrix = quad.transform.localToWorldMatrix,
 
                 target = target
             };
@@ -278,7 +320,7 @@ namespace Parallax
 
             mesh.SetNormals(newNormals);
             mesh.SetColors(newColors);
-            this.GetComponent<MeshFilter>().sharedMesh = mesh;
+            mesh.bounds = quadBounds;
         }
         void FreePostMeshBuildResources()
         {
@@ -306,43 +348,43 @@ namespace Parallax
 
             mesh.SetNormals(normals);
             mesh.SetColors(colors);
-            this.GetComponent<MeshFilter>().sharedMesh = mesh;
+            mesh.bounds = quadBounds;
         }
-        public void Cleanup()
+        void CompleteAllJobs()
         {
             constructMeshJobHandle.Complete();
             subdivideJobHandle.Complete();
             triangleDataReadJobHandle.Complete();
             removeVertexPairsJobHandle.Complete();
-
-            ResetMesh();
-
-            if (vertices.IsCreated) { vertices.Dispose(); }
-            if (normals.IsCreated) { normals.Dispose(); }
-            if (colors.IsCreated) { colors.Dispose(); }
-            if (triangles.IsCreated) { triangles.Dispose(); }
-
+        }
+        void DisposeInFlightData()
+        {
             if (newVerts.IsCreated) { newVerts.Dispose(); }
             if (newNormals.IsCreated) { newNormals.Dispose(); }
             if (newColors.IsCreated) { newColors.Dispose(); }
             if (outputTriIndices.IsCreated) { outputTriIndices.Dispose(); }
 
             if (newTriangles.IsCreated) { newTriangles.Dispose(); }
-            if (meshTriangles.IsCreated) { meshTriangles.Dispose(); }
+            if (tris.IsCreated) { tris.Dispose(); }
+        }
+        public void Cleanup()
+        {
+            if (!hasIdentifier)
+            {
+                return;
+            }
+
+            CompleteAllJobs();
+            DisposeInFlightData();
+            DisposeSourceData();
 
             if (storedVertTris.IsCreated) { storedVertTris.Dispose(); }
-            if (tris.IsCreated) { tris.Dispose(); }
-
             if (frustumPlanes.IsCreated) { frustumPlanes.Dispose(); }
 
-            if (hasIdentifier)
-            {
-                InterlockedCounters.Return(uniqueIdentifier);
-            }
-        }
-        void OnDisable()
-        {
-            Cleanup();
+            InterlockedCounters.Return(uniqueIdentifier);
+            hasIdentifier = false;
+
+            activeSubdivisions.Remove(this);
         }
     }
 }
