@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Collections;
@@ -14,66 +13,6 @@ using Unity.Burst.CompilerServices;
 
 namespace Parallax
 {
-    /////////////////////
-    //    UTILITIES    //
-    /////////////////////
-
-    // Interlocked add does not work as expected inside a job since an instance of the job struct is made for each thread, it must be referenced from outside
-
-    //////////////////////////////
-    //                          //
-    //  EXTREMELY IMPORTANT!!!  //
-    //                          //
-    //////////////////////////////
-
-    // These MUST be reset when a job is NOT executing and accessing it!
-    // Used to output an arbitrary amount of data stored in a NativeStream to an array for setting mesh data, which only takes in a native array
-
-    public static class InterlockedCounters
-    {
-        // Create a queue of unique identifiers (0 to 1023)
-        // And use the identifier to access a unique counter for a specific quad
-        // To prevent collisions between multiple quads performing the subdivide jobs (specifically the readback job)
-        public static int[] triangleReadbackCounters = new int[1024];
-        public static Queue<int> uniqueQuadIdentifiers = new Queue<int>();
-        static InterlockedCounters()
-        {
-            ResetAllInterlockedCounters();
-        }
-        static void ResetAllInterlockedCounters()
-        {
-            uniqueQuadIdentifiers.Clear();
-            for (int i = 0; i < 1024; i++)
-            {
-                // MUST start the counter at -3, because triangles are read back in threes
-                // and add 3 to the counter at the start of each iteration, bringing it to 0 initially
-                triangleReadbackCounters[i] = -3;
-                uniqueQuadIdentifiers.Enqueue(i);
-            }
-        }
-        public static void ResetCounter(int uniqueIdentifier)
-        {
-            triangleReadbackCounters[uniqueIdentifier] = -3;
-        }
-        public static void Return(int counter)
-        {
-            triangleReadbackCounters[counter] = -3;
-            uniqueQuadIdentifiers.Enqueue(counter);
-        }
-        public static int Request()
-        {
-            // We can't really guard against this from happening, so we'll return a unique identifier of 0 and let the jobs clash
-
-            if (uniqueQuadIdentifiers.Count == 0)
-            {
-                ParallaxDebug.LogError("Exception: The unique quad identifier queue is empty - subdivision jobs cannot continue. If you see this in your log file, too many quads are trying to subdivide! (Max 1024)");
-                return 0;
-            }
-            int identifier = uniqueQuadIdentifiers.Dequeue();
-            return identifier;
-        }
-    }
-
     ////////////////
     //    JOBS    //
     ////////////////
@@ -84,65 +23,50 @@ namespace Parallax
     public struct SubdivideMeshJob : IJobParallelFor
     {
         [ReadOnly] public NativeArray<SubdividableTriangle> meshTriangles;
-        [ReadOnly] public NativeArray<float3> originalVerts;
-        [ReadOnly] public NativeArray<float3> originalNormals;
-        [ReadOnly] public NativeArray<float4> originalColors;
 
         // Subdividable TRIS
         [WriteOnly] public NativeStream.Writer tris;
 
         [ReadOnly] public float3 target;
-        [ReadOnly] public float sqrSubdivisionRange;
+        [ReadOnly] public float sqrFrustumCullBypassRange;
         [ReadOnly] public int maxSubdivisionLevel;
+        [ReadOnly] public NativeArray<float> sqrLevelThresholds;
 
         [ReadOnly] public NativeArray<ParallaxPlane> cameraFrustumPlanes;
-        [ReadOnly] public float4x4 objectToWorldMatrix;
 
         // Executes per triangle in the original mesh
         public void Execute(int index)
         {
             tris.BeginForEachIndex(index);
 
-            int numInside = 0;
-
             // Fetch triangle
             SubdividableTriangle meshTriangle = meshTriangles[index];
 
-            // Fetch world space points for frustum culling
-            float4 worldSpaceV1 = math.mul(objectToWorldMatrix, new float4(meshTriangle.v1, 1));
-            float4 worldSpaceV2 = math.mul(objectToWorldMatrix, new float4(meshTriangle.v2, 1));
-            float4 worldSpaceV3 = math.mul(objectToWorldMatrix, new float4(meshTriangle.v3, 1));
-            float centerDist = SqrDistance(target, (worldSpaceV1.xyz + worldSpaceV2.xyz + worldSpaceV3.xyz) * 0.333f);
-
-            // Make sure all points are within the frustum
-            for (int i = 0; i < 6; i++)
+            bool isVisible = math.distancesq(target, (meshTriangle.v1 + meshTriangle.v2 + meshTriangle.v3) * 0.333f) < sqrFrustumCullBypassRange;
+            if (!isVisible)
             {
-                ParallaxPlane plane = cameraFrustumPlanes[i];
-                // 75 is arbitrary - merely, if the triangle center dist is less than 75m 
-                if (centerDist < 75 || plane.GetSide(worldSpaceV1.xyz) || plane.GetSide(worldSpaceV2.xyz) || plane.GetSide(worldSpaceV3.xyz))
+                isVisible = true;
+                for (int i = 0; i < 6; i++)
                 {
-                    numInside++;
+                    ParallaxPlane plane = cameraFrustumPlanes[i];
+                    if (!(plane.GetSide(meshTriangle.v1) || plane.GetSide(meshTriangle.v2) || plane.GetSide(meshTriangle.v3)))
+                    {
+                        isVisible = false;
+                        break;
+                    }
                 }
             }
 
-            if (numInside == 6)
+            if (isVisible)
             {
                 // With reducing distance from center, level starts at maxSubdivisionLevel and goes down
-                meshTriangle.Subdivide(ref tris, 0, target, maxSubdivisionLevel, sqrSubdivisionRange, objectToWorldMatrix);
+                meshTriangle.Subdivide(ref tris, 0, target, maxSubdivisionLevel, sqrLevelThresholds);
             }
             else
             {
                 tris.Write(meshTriangle);
             }
             tris.EndForEachIndex();
-
-        }
-        float SqrDistance(in float3 d1, in float3 d2)
-        {
-            float dx = d2.x - d1.x;
-            float dy = d2.y - d1.y;
-            float dz = d2.z - d1.z;
-            return Mathf.Sqrt(dx * dx + dy * dy + dz * dz);
         }
     }
 
@@ -154,39 +78,63 @@ namespace Parallax
     public struct RemoveVertexPairsJob : IJob
     {
         [ReadOnly] public NativeStream.Reader triReader;
-        [WriteOnly] public NativeHashMap<float3, int> vertices;
+        public NativeHashMap<float3, int> vertices;
+        [WriteOnly] public NativeArray<int> triOffsets;
         [ReadOnly] public int foreachCount;
-        public int count;
+
+        public NativeList<float3> newVerts;
+        public NativeList<float3> newNormals;
+        public NativeList<float4> newColors;
+        public NativeList<int> newTris;
+        public NativeList<ushort> newShortTris;
 
         // This version of Burst contains an error that will throw exceptions 50% of the time
         // The code is not wrong, but we want to hide the exception from the log because it's big and not indicative of an actual failure
         // Error is always on Line 200
         public void Execute()
         {
+            vertices.Clear();
+            newVerts.Clear();
+            newNormals.Clear();
+            newColors.Clear();
+
             SubdividableTriangle val;
-            // Read the value of the count right now
+            int triCount = 0;
             for (int index = 0; index < foreachCount; index++)
             {
                 int itemsInLocalStream = triReader.BeginForEachIndex(index);
+                triOffsets[index] = triCount;
+                triCount += itemsInLocalStream;
 
                 for (int i = 0; i < itemsInLocalStream; i++)
                 {
                     val = triReader.Read<SubdividableTriangle>();
-                    if (vertices.TryAdd(val.v1 * 0.001f, count))
-                    {
-                        count++;
-                    }
-                    if (vertices.TryAdd(val.v2 * 0.001f, count))
-                    {
-                        count++;
-                    }
-                    if (vertices.TryAdd(val.v3 * 0.001f, count))
-                    {
-                        count++;
-                    }
+                    TryAddVertex(val.v1, val.n1, val.c1);
+                    TryAddVertex(val.v2, val.n2, val.c2);
+                    TryAddVertex(val.v3, val.n3, val.c3);
                 }
 
                 triReader.EndForEachIndex();
+            }
+
+            if (newVerts.Length <= 65536)
+            {
+                newShortTris.ResizeUninitialized(triCount * 3);
+                newTris.Clear();
+            }
+            else
+            {
+                newTris.ResizeUninitialized(triCount * 3);
+                newShortTris.Clear();
+            }
+        }
+        void TryAddVertex(in float3 vertex, in float3 normal, in float4 color)
+        {
+            if (vertices.TryAdd(vertex, newVerts.Length))
+            {
+                newVerts.Add(vertex);
+                newNormals.Add(normal);
+                newColors.Add(color);
             }
         }
     }
@@ -196,122 +144,44 @@ namespace Parallax
         // Stores our subdivided triangles
         [ReadOnly] public NativeStream.Reader triArray;
 
-        // See comment in code body for reason
-        [NativeDisableContainerSafetyRestriction]
-        [WriteOnly] public NativeArray<float3> newVerts;
-        [NativeDisableContainerSafetyRestriction]
-        [WriteOnly] public NativeArray<float3> newNormals;
-        [NativeDisableContainerSafetyRestriction]
-        [WriteOnly] public NativeArray<float4> newColors;
+        [NativeDisableParallelForRestriction]
+        [WriteOnly] public NativeArray<int> newTris;
+        [NativeDisableParallelForRestriction]
+        [WriteOnly] public NativeArray<ushort> newShortTris;
 
-        [WriteOnly] public NativeStream.Writer newTris;
-
+        [ReadOnly] public NativeArray<int> triOffsets;
         [ReadOnly] public NativeHashMap<float3, int> storedVertTris;
 
-        // Stores the triangle index, shared across threads and incremented using Interlocked
-        public int interlockedCount;
-        public int count;
         public void Execute(int index)
         {
             int itemsInLocalStream = triArray.BeginForEachIndex(index);
-            newTris.BeginForEachIndex(index);
+            int triIndex = triOffsets[index] * 3;
+            bool useShortIndices = newShortTris.Length > 0;
 
             for (int i = 0; i < itemsInLocalStream; i++)
             {
                 SubdividableTriangle tri = triArray.Read<SubdividableTriangle>();
 
-                int index1 = storedVertTris[tri.v1 * 0.001f];
-                int index2 = storedVertTris[tri.v2 * 0.001f];
-                int index3 = storedVertTris[tri.v3 * 0.001f];
+                int index1 = storedVertTris[tri.v1];
+                int index2 = storedVertTris[tri.v2];
+                int index3 = storedVertTris[tri.v3];
 
-                // Yes, this is technically a race condition since other threads will also be writing here
-                // But because they'll be writing the same vertex, this is fine. But we need to disable safety checks for it
-                newVerts[index1] = tri.v1;
-                newVerts[index2] = tri.v2;
-                newVerts[index3] = tri.v3;
-
-                newNormals[index1] = tri.n1;
-                newNormals[index2] = tri.n2;
-                newNormals[index3] = tri.n3;
-
-                newColors[index1] = tri.c1;
-                newColors[index2] = tri.c2;
-                newColors[index3] = tri.c3;
-
-                newTris.Write(index1);
-                newTris.Write(index2);
-                newTris.Write(index3);
+                if (useShortIndices)
+                {
+                    newShortTris[triIndex] = (ushort)index1;
+                    newShortTris[triIndex + 1] = (ushort)index2;
+                    newShortTris[triIndex + 2] = (ushort)index3;
+                }
+                else
+                {
+                    newTris[triIndex] = index1;
+                    newTris[triIndex + 1] = index2;
+                    newTris[triIndex + 2] = index3;
+                }
+                triIndex += 3;
             }
 
-            newTris.EndForEachIndex();
             triArray.EndForEachIndex();
-        }
-    }
-
-    [BurstCompile]
-    public struct ReadMeshTriangleDataJob : IJobParallelFor
-    {
-        [ReadOnly]
-        public NativeStream.Reader newTris;
-        [WriteOnly]
-        [NativeDisableParallelForRestriction]
-        public NativeArray<int> outputTris;
-        [NativeDisableParallelForRestriction]
-        public NativeArray<int> triangleReadbackCounters;
-        public int uniqueIndex;
-
-        public unsafe void Execute(int index)
-        {
-            if (uniqueIndex > this.triangleReadbackCounters.Length)
-            {
-                Debug.LogError($"[Parallax] Job unique index {uniqueIndex} was out of bounds for triangle readback counters");
-                return;
-            }
-
-            int itemsInLocalStream = newTris.BeginForEachIndex(index);
-            // We need to get references to the elements of this native array.
-            // NativeArray doesn't allow that by default so we use raw pointers.
-            int* triangleReadbackCounters = (int*)this.triangleReadbackCounters.GetUnsafePtr();
-
-            // We must read back triangles in threes
-            for (int i = 0; i < itemsInLocalStream; i += 3)
-            {
-                // Compute output array index
-                int zone = Interlocked.Add(ref triangleReadbackCounters[uniqueIndex], 3);
-                outputTris[zone] = newTris.Read<int>();
-                outputTris[zone + 1] = newTris.Read<int>();
-                outputTris[zone + 2] = newTris.Read<int>();
-            }
-
-            newTris.EndForEachIndex();
-        }
-
-        public unsafe JobHandle Schedule(int arrayLength, int batchCount, JobHandle dependsOn = default)
-        {
-            var addr = UnsafeUtility.PinGCArrayAndGetDataAddress(
-                InterlockedCounters.triangleReadbackCounters,
-                out var gchandle
-            );
-            triangleReadbackCounters = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<int>(
-                addr,
-                InterlockedCounters.triangleReadbackCounters.Length,
-                Allocator.Invalid
-            );
-            var handle = IJobParallelForExtensions.Schedule(this, arrayLength, batchCount, dependsOn);
-            var job = new FreeGCHandleJob { gchandle = gchandle };
-            job.Schedule(handle);
-
-            return handle;
-        }
-    }
-
-    struct FreeGCHandleJob : IJob
-    {
-        public ulong gchandle;
-
-        public void Execute()
-        {
-            UnsafeUtility.ReleaseGCObject(gchandle);
         }
     }
 }

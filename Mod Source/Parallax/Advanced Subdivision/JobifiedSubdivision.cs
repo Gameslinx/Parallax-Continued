@@ -10,31 +10,24 @@ using UnityEngine;
 
 namespace Parallax
 {
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Hello everyone of GitHub                                                                                                                 //
-    // If someone could figure out how to chain the jobs together using dependencies instead of relying on their completion in an Update() loop //
-    // So that I only need to schedule one job instead of having it spread out over 4 frames that would be greatly appreciated                  //
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
     // Created by TerrainShaderQuadData and updated each frame from RuntimeOperations
     public class JobifiedSubdivision
     {
         public static readonly List<JobifiedSubdivision> activeSubdivisions = new List<JobifiedSubdivision>();
 
-        // Unique identifier index for interlocked counter
-        int uniqueIdentifier = -1;
+        const float frustumCullBypassRange = 75.0f;
+        const float sqrRedispatchDistance = 0.25f * 0.25f;
+        const float redispatchPlaneAngleCos = 0.99985f;
+        const MeshUpdateFlags meshUpdateFlags = MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontRecalculateBounds;
 
-        // Jobs
-        SubdivideMeshJob subdivideJob;
-        ConstructMeshJob meshJob;
-        ReadMeshTriangleDataJob triangleDataReadJob;
-        RemoveVertexPairsJob removeVertexPairsJob;
+        static readonly VertexAttributeDescriptor[] vertexLayout = new VertexAttributeDescriptor[]
+        {
+            new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3, 0),
+            new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3, 1),
+            new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.Float32, 4, 2)
+        };
 
-        // Job handles
-        JobHandle subdivideJobHandle;
-        JobHandle constructMeshJobHandle;
-        JobHandle triangleDataReadJobHandle;
-        JobHandle removeVertexPairsJobHandle;
+        JobHandle subdivisionJobHandle;
 
         // Precomputed data
         NativeArray<SubdividableTriangle> meshTriangles;        // Do not dispose until Cleanup
@@ -42,28 +35,26 @@ namespace Parallax
         NativeArray<float3> normals;                            // Do not dispose until Cleanup
         NativeArray<float4> colors;                             // Do not dispose until Cleanup
         NativeArray<int> triangles;                             // Do not dispose until Cleanup
-
-        // Subdivision data
-        NativeStream tris;                                      // Dispose after triangle readback
-        NativeStream.Writer trisWriter;                         // Is disposed with tris
-        NativeStream.Reader trisReader;                         // Is disposed with tris
+        NativeArray<int> triOffsets;                            // Do not dispose until Cleanup
 
         // Temp array for camera frustum planes
         NativeArray<ParallaxPlane> frustumPlanes;               // Disposed on cleanup
+        NativeArray<float> sqrLevelThresholds;                  // Disposed on cleanup
 
         // Mesh generation data
-        NativeArray<float3> newVerts;                           // Dispose after building mesh
-        NativeArray<float3> newNormals;                         // Dispose after building mesh
-        NativeArray<float4> newColors;                          // Dispose after building mesh
+        NativeList<float3> newVerts;                            // Disposed on cleanup
+        NativeList<float3> newNormals;                          // Disposed on cleanup
+        NativeList<float4> newColors;                           // Disposed on cleanup
+        NativeList<int> newTriangles;                           // Disposed on cleanup
+        NativeList<ushort> newShortTriangles;                   // Disposed on cleanup
 
-        NativeStream newTriangles;                              // Dispose after building mesh
-        NativeStream.Writer newTrianglesWriter;                 // Disposed with newTriangles
-        NativeStream.Reader newTrianglesReader;                 // Disposed with newTriangles
+        NativeHashMap<float3, int> storedVertTris;              // Disposed on cleanup
 
-        NativeHashMap<float3, int> storedVertTris;              // Dispose after triangle readback
-
-        // Triangle readback data
-        NativeArray<int> outputTriIndices;                      // Dispose after building mesh
+        readonly ParallaxPlane[] localFrustumPlanes = new ParallaxPlane[6];
+        readonly float3[] lastLocalPlaneNormals = new float3[6];
+        float3 lastLocalTarget;
+        int lastMaxSubdivisionLevel;
+        float lastSubdivisionRange;
 
         PQ quad;
         Mesh mesh;
@@ -71,9 +62,13 @@ namespace Parallax
 
         int streamForeachCount = 0;
 
+        int vertexCapacity = 0;
+        int indexCapacity = 0;
+        IndexFormat indexFormat = IndexFormat.UInt32;
+
         public int maxSubdivisionLevel = 7;
         public float subdivisionRange = 50.0f;
-        public bool hasIdentifier = false;
+        bool isActive = false;
 
         public JobifiedSubdivision(PQ quad, Mesh mesh, int maxSubdivisionLevel, float subdivisionRange)
         {
@@ -84,7 +79,6 @@ namespace Parallax
 
             mesh.MarkDynamic();
 
-            GetUniqueIdentifier();
             Initialize();
             ResetMesh();
 
@@ -96,11 +90,7 @@ namespace Parallax
             {
                 activeSubdivisions[i].Update();
             }
-        }
-        void GetUniqueIdentifier()
-        {
-            uniqueIdentifier = InterlockedCounters.Request();
-            hasIdentifier = true;
+            JobHandle.ScheduleBatchedJobs();
         }
         void Initialize()
         {
@@ -108,6 +98,14 @@ namespace Parallax
 
             storedVertTris = new NativeHashMap<float3, int>(3500, Allocator.Persistent);
             frustumPlanes = new NativeArray<ParallaxPlane>(6, Allocator.Persistent);
+
+            newVerts = new NativeList<float3>(Allocator.Persistent);
+            newNormals = new NativeList<float3>(Allocator.Persistent);
+            newColors = new NativeList<float4>(Allocator.Persistent);
+            newTriangles = new NativeList<int>(Allocator.Persistent);
+            newShortTriangles = new NativeList<ushort>(Allocator.Persistent);
+
+            isActive = true;
         }
         void InitializeSourceData()
         {
@@ -127,6 +125,8 @@ namespace Parallax
             triangles = new NativeArray<int>(quadMesh.triangles, Allocator.Persistent);
 
             CreateTriangles();
+
+            triOffsets = new NativeArray<int>(streamForeachCount, Allocator.Persistent);
         }
         void DisposeSourceData()
         {
@@ -135,17 +135,16 @@ namespace Parallax
             if (colors.IsCreated) { colors.Dispose(); }
             if (triangles.IsCreated) { triangles.Dispose(); }
             if (meshTriangles.IsCreated) { meshTriangles.Dispose(); }
+            if (triOffsets.IsCreated) { triOffsets.Dispose(); }
         }
         public void RefreshSourceData()
         {
             CompleteAllJobs();
-            DisposeInFlightData();
             DisposeSourceData();
             InitializeSourceData();
 
-            isProcessingSubdivision = false;
-            isGeneratingMesh = false;
-            firstRun = true;
+            isSubdividing = false;
+            forceDispatch = true;
         }
         void CreateTriangles()
         {
@@ -161,7 +160,7 @@ namespace Parallax
                 float3 v1 = vertices[index1];
                 float3 v2 = vertices[index2];
                 float3 v3 = vertices[index3];
-                 
+
                 float3 n1 = normals[index1];
                 float3 n2 = normals[index2];
                 float3 n3 = normals[index3];
@@ -175,214 +174,221 @@ namespace Parallax
             }
         }
 
-        bool isProcessingSubdivision = false;
-        bool isGeneratingMesh = false;
-        bool firstRun = true;
+        bool isSubdividing = false;
+        bool forceDispatch = true;
         void Update()
         {
-            //if (!FlightGlobals.ready) { return; }
-            // We're done, or running for the first time, so start everything off from step 1
-            if (firstRun || (!isProcessingSubdivision && !isGeneratingMesh))
+            if (isSubdividing)
             {
-                DispatchSubdivision();
-                DispatchVertexPairRemoval();
-                isProcessingSubdivision = true;
-                firstRun = false;
-            }
-            if (isProcessingSubdivision && removeVertexPairsJobHandle.IsCompleted && subdivideJobHandle.IsCompleted)
-            {
-                CompleteVertexPairRemoval();
-                isProcessingSubdivision = false;
+                if (!subdivisionJobHandle.IsCompleted)
+                {
+                    return;
+                }
 
-                DispatchMeshGeneration();
-                DispatchTriangleReadback(trisReader.ComputeItemCount() * 3);
-
-                isGeneratingMesh = true;
-            }
-            if (isGeneratingMesh && triangleDataReadJobHandle.IsCompleted && constructMeshJobHandle.IsCompleted)
-            {
-                CompleteTriangleReadback();
-
-                isGeneratingMesh = false;
+                subdivisionJobHandle.Complete();
+                isSubdividing = false;
 
                 BuildMesh();
-                FreePostMeshBuildResources();
-                FreePostReadbackResources();
+            }
+
+            float4x4 localToWorld = quad.transform.localToWorldMatrix;
+            float scale = math.length(localToWorld.c0.xyz);
+            float3 localTarget = math.transform(quad.transform.worldToLocalMatrix, RuntimeOperations.cameraPos);
+            UpdateLocalFrustumPlanes(localToWorld);
+
+            if (RequiresDispatch(localTarget, scale))
+            {
+                DispatchSubdivision(localTarget, scale);
             }
         }
-        public void DispatchSubdivision()
+        void UpdateLocalFrustumPlanes(in float4x4 localToWorld)
         {
-            float3 target = RuntimeOperations.cameraPos;
+            float4x4 transposedLocalToWorld = math.transpose(localToWorld);
+            for (int i = 0; i < 6; i++)
+            {
+                ParallaxPlane plane = RuntimeOperations.cameraFrustumPlanes[i];
+                float4 localPlane = math.mul(transposedLocalToWorld, new float4(plane.normal, plane.distance));
+                localFrustumPlanes[i] = new ParallaxPlane(localPlane.xyz, localPlane.w);
+            }
+        }
+        bool RequiresDispatch(in float3 localTarget, float scale)
+        {
+            if (forceDispatch || maxSubdivisionLevel != lastMaxSubdivisionLevel || subdivisionRange != lastSubdivisionRange)
+            {
+                return true;
+            }
+            if (math.distancesq(localTarget, lastLocalTarget) * scale * scale > sqrRedispatchDistance)
+            {
+                return true;
+            }
+            for (int i = 0; i < 6; i++)
+            {
+                if (math.dot(math.normalizesafe(localFrustumPlanes[i].normal), lastLocalPlaneNormals[i]) < redispatchPlaneAngleCos)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        void UpdateLevelThresholds(float scale)
+        {
+            int thresholdCount = math.max(maxSubdivisionLevel, 1);
+            if (sqrLevelThresholds.Length != thresholdCount)
+            {
+                if (sqrLevelThresholds.IsCreated) { sqrLevelThresholds.Dispose(); }
+                sqrLevelThresholds = new NativeArray<float>(thresholdCount, Allocator.Persistent);
+            }
 
-            // Get the camera frustum planes
-            frustumPlanes.CopyFrom(RuntimeOperations.cameraFrustumPlanes);
-            tris = new NativeStream(this.streamForeachCount, Allocator.Persistent);
-            trisWriter = tris.AsWriter();
-            trisReader = tris.AsReader();
-            subdivideJob = new SubdivideMeshJob()
+            for (int i = 0; i < maxSubdivisionLevel; i++)
+            {
+                float exponent = math.pow(1.0f - (float)(i + 1) / maxSubdivisionLevel, 0.625f);
+                float threshold = (math.pow(subdivisionRange, exponent) - 0.708f) / scale;
+                sqrLevelThresholds[i] = threshold > 0 ? threshold * threshold : -1.0f;
+            }
+        }
+        void DispatchSubdivision(in float3 localTarget, float scale)
+        {
+            forceDispatch = false;
+            lastLocalTarget = localTarget;
+            lastMaxSubdivisionLevel = maxSubdivisionLevel;
+            lastSubdivisionRange = subdivisionRange;
+            for (int i = 0; i < 6; i++)
+            {
+                lastLocalPlaneNormals[i] = math.normalizesafe(localFrustumPlanes[i].normal);
+            }
+
+            frustumPlanes.CopyFrom(localFrustumPlanes);
+            UpdateLevelThresholds(scale);
+
+            float localFrustumCullBypassRange = frustumCullBypassRange / scale;
+
+            NativeStream tris = new NativeStream(streamForeachCount, Allocator.Persistent);
+
+            SubdivideMeshJob subdivideJob = new SubdivideMeshJob()
             {
                 meshTriangles = meshTriangles,
-                originalVerts = vertices,
-                originalNormals = normals,
-                originalColors = colors,
+                tris = tris.AsWriter(),
 
-                tris = trisWriter,
-
-                maxSubdivisionLevel = this.maxSubdivisionLevel,
-                sqrSubdivisionRange = this.subdivisionRange,
-                cameraFrustumPlanes = frustumPlanes,
-                objectToWorldMatrix = quad.transform.localToWorldMatrix,
-
-                target = target
+                target = localTarget,
+                sqrFrustumCullBypassRange = localFrustumCullBypassRange * localFrustumCullBypassRange,
+                maxSubdivisionLevel = maxSubdivisionLevel,
+                sqrLevelThresholds = sqrLevelThresholds,
+                cameraFrustumPlanes = frustumPlanes
             };
 
-            subdivideJobHandle = subdivideJob.Schedule(meshTriangles.Length, 4);
-        }
-        public void CompleteSubdivision()
-        {
-            subdivideJobHandle.Complete();
-        }
-
-        void DispatchVertexPairRemoval()
-        {
-            storedVertTris.Clear();
-
-            removeVertexPairsJob = new RemoveVertexPairsJob()
+            RemoveVertexPairsJob removeVertexPairsJob = new RemoveVertexPairsJob()
             {
-                triReader = trisReader,
+                triReader = tris.AsReader(),
                 vertices = storedVertTris,
-                count = 0,
-                foreachCount = this.streamForeachCount
+                triOffsets = triOffsets,
+                foreachCount = streamForeachCount,
+
+                newVerts = newVerts,
+                newNormals = newNormals,
+                newColors = newColors,
+                newTris = newTriangles,
+                newShortTris = newShortTriangles
             };
-            removeVertexPairsJobHandle = removeVertexPairsJob.Schedule(subdivideJobHandle);
-        }
-        void CompleteVertexPairRemoval()
-        {
-            removeVertexPairsJobHandle.Complete();
-        }
 
-        // numTris = number of triangles in total we will be processing
-        // we need one stream for EACH triangle to maintain order of addition in threes
-        void DispatchMeshGeneration()
-        {
-            newVerts = new NativeArray<float3>(storedVertTris.Length, Allocator.Persistent);
-            newNormals = new NativeArray<float3>(storedVertTris.Length, Allocator.Persistent);
-            newColors = new NativeArray<float4>(storedVertTris.Length, Allocator.Persistent);
-
-            newTriangles = new NativeStream(meshTriangles.Length, Allocator.Persistent);
-            newTrianglesWriter = newTriangles.AsWriter();
-            newTrianglesReader = newTriangles.AsReader();
-
-            meshJob = new ConstructMeshJob()
+            ConstructMeshJob meshJob = new ConstructMeshJob()
             {
-                interlockedCount = -1,
-                triArray = trisReader,
+                triArray = tris.AsReader(),
 
-                newVerts = this.newVerts,
-                newNormals = this.newNormals,
-                newColors = this.newColors,
-                newTris = this.newTrianglesWriter,
+                newTris = newTriangles.AsDeferredJobArray(),
+                newShortTris = newShortTriangles.AsDeferredJobArray(),
 
-                storedVertTris = this.storedVertTris,
-                count = this.streamForeachCount
+                triOffsets = triOffsets,
+                storedVertTris = storedVertTris
             };
 
-            constructMeshJobHandle = meshJob.Schedule(this.streamForeachCount, 4);
-        }
-        void DispatchTriangleReadback(int count)
-        {
-            InterlockedCounters.ResetCounter(uniqueIdentifier);
-            outputTriIndices = new NativeArray<int>(count, Allocator.Persistent);
+            JobHandle subdivideJobHandle = subdivideJob.Schedule(streamForeachCount, 4);
+            JobHandle removeVertexPairsJobHandle = removeVertexPairsJob.Schedule(subdivideJobHandle);
+            JobHandle meshJobHandle = meshJob.Schedule(streamForeachCount, 4, removeVertexPairsJobHandle);
+            subdivisionJobHandle = tris.Dispose(meshJobHandle);
 
-            triangleDataReadJob = new ReadMeshTriangleDataJob()
-            {
-                newTris = this.newTrianglesReader,
-                outputTris = this.outputTriIndices,
-                uniqueIndex = uniqueIdentifier
-            };
-            triangleDataReadJobHandle = triangleDataReadJob.Schedule(this.streamForeachCount, 4, constructMeshJobHandle);
-        }
-        void CompleteTriangleReadback()
-        {
-            triangleDataReadJobHandle.Complete();
+            isSubdividing = true;
         }
         void BuildMesh()
         {
-            mesh.Clear();
+            NativeArray<float3> verts = newVerts.AsArray();
+            SetVertexData(verts, newNormals.AsArray(), newColors.AsArray());
+            if (newShortTriangles.Length > 0)
+            {
+                SetIndexData(newShortTriangles.AsArray(), IndexFormat.UInt16, verts.Length);
+            }
+            else
+            {
+                SetIndexData(newTriangles.AsArray(), IndexFormat.UInt32, verts.Length);
+            }
 
-            mesh.SetVertexBufferParams(newVerts.Length, new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32));
-            mesh.SetVertexBufferData(newVerts, 0, 0, newVerts.Length);
-
-            mesh.SetIndexBufferParams(outputTriIndices.Length, IndexFormat.UInt32);
-            mesh.SetIndexBufferData(outputTriIndices, 0, 0, outputTriIndices.Length);
-
-            mesh.SetSubMesh(0, new SubMeshDescriptor(0, outputTriIndices.Length));
-
-            mesh.SetNormals(newNormals);
-            mesh.SetColors(newColors);
             mesh.bounds = quadBounds;
-        }
-        void FreePostMeshBuildResources()
-        {
-            newVerts.Dispose();
-            newNormals.Dispose();
-            newColors.Dispose();
-            outputTriIndices.Dispose();
-            tris.Dispose();
-        }
-        void FreePostReadbackResources()
-        {
-            newTriangles.Dispose();
         }
         void ResetMesh()
         {
             mesh.Clear();
+            vertexCapacity = 0;
+            indexCapacity = 0;
 
-            mesh.SetVertexBufferParams(vertices.Length, new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32));
-            mesh.SetVertexBufferData(vertices, 0, 0, vertices.Length);
+            SetVertexData(vertices, normals, colors);
+            SetIndexData(triangles, IndexFormat.UInt32, vertices.Length);
 
-            mesh.SetIndexBufferParams(triangles.Length, IndexFormat.UInt32);
-            mesh.SetIndexBufferData(triangles, 0, 0, triangles.Length);
-
-            mesh.SetSubMesh(0, new SubMeshDescriptor(0, triangles.Length));
-
-            mesh.SetNormals(normals);
-            mesh.SetColors(colors);
             mesh.bounds = quadBounds;
+        }
+        void SetVertexData(in NativeArray<float3> verts, in NativeArray<float3> vertNormals, in NativeArray<float4> vertColors)
+        {
+            if (verts.Length > vertexCapacity)
+            {
+                vertexCapacity = math.ceilpow2(verts.Length);
+                mesh.SetVertexBufferParams(vertexCapacity, vertexLayout);
+            }
+            mesh.SetVertexBufferData(verts, 0, 0, verts.Length, 0, meshUpdateFlags);
+            mesh.SetVertexBufferData(vertNormals, 0, 0, vertNormals.Length, 1, meshUpdateFlags);
+            mesh.SetVertexBufferData(vertColors, 0, 0, vertColors.Length, 2, meshUpdateFlags);
+        }
+        void SetIndexData<T>(in NativeArray<T> indices, IndexFormat format, int vertexCount) where T : struct
+        {
+            if (indices.Length > indexCapacity || format != indexFormat)
+            {
+                mesh.SetSubMesh(0, new SubMeshDescriptor(0, 0), meshUpdateFlags);
+                indexCapacity = math.max(indexCapacity, math.ceilpow2(indices.Length));
+                indexFormat = format;
+                mesh.SetIndexBufferParams(indexCapacity, format);
+            }
+            mesh.SetIndexBufferData(indices, 0, 0, indices.Length, meshUpdateFlags);
+
+            SubMeshDescriptor subMesh = new SubMeshDescriptor(0, indices.Length)
+            {
+                firstVertex = 0,
+                vertexCount = vertexCount,
+                bounds = quadBounds
+            };
+            mesh.SetSubMesh(0, subMesh, meshUpdateFlags);
         }
         void CompleteAllJobs()
         {
-            constructMeshJobHandle.Complete();
-            subdivideJobHandle.Complete();
-            triangleDataReadJobHandle.Complete();
-            removeVertexPairsJobHandle.Complete();
-        }
-        void DisposeInFlightData()
-        {
-            if (newVerts.IsCreated) { newVerts.Dispose(); }
-            if (newNormals.IsCreated) { newNormals.Dispose(); }
-            if (newColors.IsCreated) { newColors.Dispose(); }
-            if (outputTriIndices.IsCreated) { outputTriIndices.Dispose(); }
-
-            if (newTriangles.IsCreated) { newTriangles.Dispose(); }
-            if (tris.IsCreated) { tris.Dispose(); }
+            subdivisionJobHandle.Complete();
         }
         public void Cleanup()
         {
-            if (!hasIdentifier)
+            if (!isActive)
             {
                 return;
             }
 
             CompleteAllJobs();
-            DisposeInFlightData();
             DisposeSourceData();
 
             if (storedVertTris.IsCreated) { storedVertTris.Dispose(); }
             if (frustumPlanes.IsCreated) { frustumPlanes.Dispose(); }
+            if (sqrLevelThresholds.IsCreated) { sqrLevelThresholds.Dispose(); }
 
-            InterlockedCounters.Return(uniqueIdentifier);
-            hasIdentifier = false;
+            if (newVerts.IsCreated) { newVerts.Dispose(); }
+            if (newNormals.IsCreated) { newNormals.Dispose(); }
+            if (newColors.IsCreated) { newColors.Dispose(); }
+            if (newTriangles.IsCreated) { newTriangles.Dispose(); }
+            if (newShortTriangles.IsCreated) { newShortTriangles.Dispose(); }
+
+            isActive = false;
 
             activeSubdivisions.Remove(this);
         }

@@ -20,18 +20,18 @@ namespace Parallax
             this.n1 = n1; this.n2 = n2; this.n3 = n3;
             this.c1 = c1; this.c2 = c2; this.c3 = c3;
         }
-        public void Subdivide(ref NativeStream.Writer tris, in int level, in float3 target, in int maxSubdivisionLevel, in float subdivisionRange, in float4x4 objectToWorld)
+        public void Subdivide(ref NativeStream.Writer tris, in int level, in float3 target, in int maxSubdivisionLevel, in NativeArray<float> sqrLevelThresholds)
         {
-            if (level == maxSubdivisionLevel) { return; }
-
-            float3 worldPosV1 = math.mul(objectToWorld, new float4(v1, 1)).xyz;
-            float3 worldPosV2 = math.mul(objectToWorld, new float4(v2, 1)).xyz;
-            float3 worldPosV3 = math.mul(objectToWorld, new float4(v3, 1)).xyz;
+            if (level == maxSubdivisionLevel)
+            {
+                tris.Write(this);
+                return;
+            }
 
             // Get which verts are actually in range
-            int subdivisionLevelv1 = (int)math.lerp(maxSubdivisionLevel, 0, CalculateDistance(worldPosV1, target, subdivisionRange));
-            int subdivisionLevelv2 = (int)math.lerp(maxSubdivisionLevel, 0, CalculateDistance(worldPosV2, target, subdivisionRange));
-            int subdivisionLevelv3 = (int)math.lerp(maxSubdivisionLevel, 0, CalculateDistance(worldPosV3, target, subdivisionRange));
+            int subdivisionLevelv1 = GetSubdivisionLevel(v1, target, maxSubdivisionLevel, sqrLevelThresholds);
+            int subdivisionLevelv2 = GetSubdivisionLevel(v2, target, maxSubdivisionLevel, sqrLevelThresholds);
+            int subdivisionLevelv3 = GetSubdivisionLevel(v3, target, maxSubdivisionLevel, sqrLevelThresholds);
 
             //
             //  Mathematically this subdivision scheme works because there will never be a fully subdivided triangle with an edge that borders a triangle
@@ -110,7 +110,7 @@ namespace Parallax
             float4 tc3 = c3;
 
             SubdividableTriangle t = new SubdividableTriangle(tv1, tv2, tv3, tn1, tn2, tn3, tc1, tc2, tc3);
-            t.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, subdivisionRange, objectToWorld);
+            t.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, sqrLevelThresholds);
 
             // Lower left
             float3 blv1 = v1;
@@ -126,7 +126,7 @@ namespace Parallax
             float4 blc3 = GetColorBetween(c1, c3);
 
             SubdividableTriangle bl = new SubdividableTriangle(blv1, blv2, blv3, bln1, bln2, bln3, blc1, blc2, blc3);
-            bl.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, subdivisionRange, objectToWorld);
+            bl.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, sqrLevelThresholds);
 
             // Lower right
             float3 brv1 = GetVertexBetween(v1, v2);
@@ -142,7 +142,7 @@ namespace Parallax
             float4 brc3 = GetColorBetween(c3, c2);
 
             SubdividableTriangle br = new SubdividableTriangle(brv1, brv2, brv3, brn1, brn2, brn3, brc1, brc2, brc3);
-            br.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, subdivisionRange, objectToWorld);
+            br.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, sqrLevelThresholds);
 
             // Center tri
             float3 cv1 = GetVertexBetween(v1, v2);
@@ -158,23 +158,17 @@ namespace Parallax
             float4 cc3 = GetColorBetween(c3, c1);
 
             SubdividableTriangle c = new SubdividableTriangle(cv1, cv2, cv3, cn1, cn2, cn3, cc1, cc2, cc3);
-            c.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, subdivisionRange, objectToWorld);
-
-            if (level == subdivisionLevelv1 && level == subdivisionLevelv2 && level == subdivisionLevelv3)
-            {
-                tris.Write(t);
-                tris.Write(bl);
-                tris.Write(br);
-                tris.Write(c);
-            }
+            c.Subdivide(ref tris, level + 1, target, maxSubdivisionLevel, sqrLevelThresholds);
         }
-        float CalculateDistance(in float3 pos, in float3 target, in float maxRange)
+        int GetSubdivisionLevel(in float3 pos, in float3 target, in int maxSubdivisionLevel, in NativeArray<float> sqrLevelThresholds)
         {
-            float log2SqrMaxRange = math.log2(maxRange * maxRange);
-            // Must add sqrt(0.5) = 0.708 to prevent the division at the end from dropping below 0 to -infinity (distance must be above 0)
-            float dist = math.distance(pos, target) + 0.708f;
-            float log2SqrDist = math.log2(dist * dist);
-            return math.pow(math.saturate(log2SqrDist / log2SqrMaxRange), 1.6f);
+            float sqrDist = math.distancesq(pos, target);
+            int subdivisionLevel = 0;
+            while (subdivisionLevel < maxSubdivisionLevel && sqrDist <= sqrLevelThresholds[subdivisionLevel])
+            {
+                subdivisionLevel++;
+            }
+            return subdivisionLevel;
         }
         bool AreTwoVertsOutOfRange(in int thisLevel, in int level1, in int level2, in int level3)
         {
@@ -238,8 +232,8 @@ namespace Parallax
     // Used in frustum culling
     public struct ParallaxPlane
     {
-        float3 normal;
-        float distance;
+        public float3 normal;
+        public float distance;
         public ParallaxPlane(float3 normal, float distance)
         {
             this.normal = normal;
@@ -251,7 +245,7 @@ namespace Parallax
             return new ParallaxPlane(plane.normal, plane.distance);
         }
         // Is this position on the positive side of the plane
-        public bool GetSide(in Vector3 pos)
+        public bool GetSide(in float3 pos)
         {
             return math.dot(pos, normal) + distance > 0;
         }
