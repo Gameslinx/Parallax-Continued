@@ -33,6 +33,12 @@ Shader "Custom/Parallax"
         _BumpMapSteep("Steep Bump Map", 2D) = "bump" {}
 
         [Space(10)]
+        [Header(Fade Textures)]
+        [Space(10)]
+        _MainTexFade("Fade Texture", 2D) = "white" {}
+        _BumpMapFade("Fade Bump Map", 2D) = "bump" {}
+
+        [Space(10)]
         _InfluenceMap("Influence Map", 2D) = "white" {}
         _DisplacementMap("Displacement Map", 2D) = "black" {}
         _OcclusionMap("Occlusion Map", 2D) = "white" {}
@@ -44,6 +50,7 @@ Shader "Custom/Parallax"
         _DisplacementScale("Displacement Scale", Range(0, 0.3)) = 0
         _DisplacementOffset("Displacement Offset", Range(-1, 1)) = 0
         _BiplanarBlendFactor("Biplanar Blend Factor", Range(0.01, 8)) = 1
+        _FadeTextureStartLevel("Fade Texture Start Level", Float) = 1
 
         [Space(10)]
         [Header(Texture Blending Parameters)]
@@ -97,6 +104,7 @@ Shader "Custom/Parallax"
             #pragma multi_compile_local _          INFLUENCE_MAPPING
             #pragma multi_compile_local _          ADVANCED_BLENDING
             #pragma multi_compile_local _          EMISSION
+            #pragma multi_compile_local _          PARALLAX_FADE_TEXTURES
             #pragma multi_compile_fog
             //#pragma skip_variants POINT_COOKIE LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON LIGHTMAP_SHADOW_MIXING VERTEXLIGHT_ON
 
@@ -194,7 +202,7 @@ Shader "Custom/Parallax"
                 GET_VERTEX_BIPLANAR_PARAMS(params, worldUVs, o.worldNormal);
 
                 // Do advanced blending
-                float4 displacementTex = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, o.worldNormal, texLevelBlend);
+                float4 displacementTex = SAMPLE_ZERO_FADE_TEXTURE_LOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, o.worldNormal, texLevelBlend);
                 CALCULATE_ADVANCED_BLENDING_FACTORS(landMask, displacementTex)
 
                 // Defines 'displacedWorldPos'
@@ -231,7 +239,7 @@ Shader "Custom/Parallax"
                 DECLARE_INFLUENCE_TEXTURE
                 DECLARE_INFLUENCE_VALUES
 
-                float4 globalDisplacement = SampleBiplanarTexture(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+                float4 globalDisplacement = SAMPLE_ZERO_FADE_TEXTURE(_DisplacementMap);
 
                 //
                 // Localised altitude based textures
@@ -295,6 +303,7 @@ Shader "Custom/Parallax"
             CGPROGRAM
         
             #pragma multi_compile_local PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
+            #pragma multi_compile_local _          PARALLAX_FADE_TEXTURES
             #pragma multi_compile_fog
             #pragma multi_compile_shadowcaster
 
@@ -380,7 +389,7 @@ Shader "Custom/Parallax"
                 GET_VERTEX_BIPLANAR_PARAMS(params, worldUVs, v.worldNormal);
                 
                 // Do advanced blending
-                float4 displacementTex = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, v.worldNormal, texLevelBlend);
+                float4 displacementTex = SAMPLE_ZERO_FADE_TEXTURE_LOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, v.worldNormal, texLevelBlend);
                 CALCULATE_ADVANCED_BLENDING_FACTORS(landMask, displacementTex)
 
                 // Defines 'displacedWorldPos'
@@ -417,6 +426,7 @@ Shader "Custom/Parallax"
         
             #pragma multi_compile_local           PARALLAX_SINGLE_LOW PARALLAX_SINGLE_MID PARALLAX_SINGLE_HIGH PARALLAX_DOUBLE_LOWMID PARALLAX_DOUBLE_MIDHIGH PARALLAX_FULL
             #pragma multi_compile_local _         INFLUENCE_MAPPING
+            #pragma multi_compile_local _         PARALLAX_FADE_TEXTURES
             #pragma multi_compile_fog
             #pragma multi_compile_fwdadd_fullshadows
         
@@ -515,7 +525,7 @@ Shader "Custom/Parallax"
                 GET_VERTEX_BIPLANAR_PARAMS(params, worldUVs, v.worldNormal);
 
                 // Do advanced blending
-                float4 displacementTex = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, v.worldNormal, texLevelBlend);
+                float4 displacementTex = SAMPLE_ZERO_FADE_TEXTURE_LOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, v.worldNormal, texLevelBlend);
                 CALCULATE_ADVANCED_BLENDING_FACTORS(landMask, displacementTex)
         
                 // Defines 'displacedWorldPos' 
@@ -553,7 +563,7 @@ Shader "Custom/Parallax"
                 DECLARE_INFLUENCE_TEXTURE
                 DECLARE_INFLUENCE_VALUES
 
-                float4 globalDisplacement = SampleBiplanarTexture(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+                float4 globalDisplacement = SAMPLE_ZERO_FADE_TEXTURE(_DisplacementMap);
 
                 //
                 // Localised altitude based textures
@@ -637,6 +647,7 @@ Shader "Custom/Parallax"
             #pragma multi_compile_local _          EMISSION
             #pragma multi_compile_local _          ADVANCED_BLENDING
             #pragma multi_compile_local _          AMBIENT_OCCLUSION
+            #pragma multi_compile_local _          PARALLAX_FADE_TEXTURES
             #pragma multi_compile_fog
             #pragma multi_compile _ UNITY_HDR_ON
 
@@ -733,7 +744,7 @@ Shader "Custom/Parallax"
                 GET_VERTEX_BIPLANAR_PARAMS(params, worldUVs, o.worldNormal);
 
                 // Do advanced blending
-                float4 displacementTex = SampleBiplanarTextureLOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, o.worldNormal, texLevelBlend);
+                float4 displacementTex = SAMPLE_ZERO_FADE_TEXTURE_LOD(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, o.worldNormal, texLevelBlend);
                 CALCULATE_ADVANCED_BLENDING_FACTORS(landMask, displacementTex)
 
                 // Defines 'displacedWorldPos'
@@ -770,7 +781,7 @@ Shader "Custom/Parallax"
                 DECLARE_INFLUENCE_TEXTURE
                 DECLARE_INFLUENCE_VALUES
 
-                float4 globalDisplacement = SampleBiplanarTexture(_DisplacementMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+                float4 globalDisplacement = SAMPLE_ZERO_FADE_TEXTURE(_DisplacementMap);
 
                 //
                 // Localised altitude based textures
