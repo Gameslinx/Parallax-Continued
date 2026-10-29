@@ -263,37 +263,45 @@ namespace Parallax
 
                 return;
             }
-            ConfigNode terrainSettingsNode = config.config.GetNode("TerrainShaderSettings");
-            parallaxGlobalSettings.terrainGlobalSettings.maxTessellation = float.Parse(terrainSettingsNode.GetValue("maxTessellation"));
-            parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength = float.Parse(terrainSettingsNode.GetValue("tessellationEdgeLength"));
-            parallaxGlobalSettings.terrainGlobalSettings.maxTessellationRange = float.Parse(terrainSettingsNode.GetValue("maxTessellationRange"));
-            parallaxGlobalSettings.terrainGlobalSettings.advancedTextureBlending = bool.Parse(terrainSettingsNode.GetValue("useAdvancedTextureBlending"));
-            parallaxGlobalSettings.terrainGlobalSettings.ambientOcclusion = bool.Parse(terrainSettingsNode.GetValue("useAmbientOcclusion"));
+            bool allSettingsPresent = true;
 
-            ConfigNode scatterSettingsNode = config.config.GetNode("ScatterSystemSettings");
-            parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier = float.Parse(scatterSettingsNode.GetValue("densityMultiplier"));
-            parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier = float.Parse(scatterSettingsNode.GetValue("rangeMultiplier"));
-            parallaxGlobalSettings.scatterGlobalSettings.fadeOutStartRange = float.Parse(scatterSettingsNode.GetValue("fadeOutStartRange"));
-            parallaxGlobalSettings.scatterGlobalSettings.collisionLevel = int.Parse(scatterSettingsNode.GetValue("collisionLevel"));
-            parallaxGlobalSettings.scatterGlobalSettings.colliderLookaheadTime = float.Parse(scatterSettingsNode.GetValue("colliderLookaheadTime"));
+            ConfigNode terrainSettingsNode = config.config.GetNode("TerrainShaderSettings") ?? new ConfigNode();
+            allSettingsPresent &= terrainSettingsNode.TryGetValue("maxTessellation", ref parallaxGlobalSettings.terrainGlobalSettings.maxTessellation);
+            allSettingsPresent &= terrainSettingsNode.TryGetValue("tessellationEdgeLength", ref parallaxGlobalSettings.terrainGlobalSettings.tessellationEdgeLength);
+            allSettingsPresent &= terrainSettingsNode.TryGetValue("maxTessellationRange", ref parallaxGlobalSettings.terrainGlobalSettings.maxTessellationRange);
+            allSettingsPresent &= terrainSettingsNode.TryGetValue("useAdvancedTextureBlending", ref parallaxGlobalSettings.terrainGlobalSettings.advancedTextureBlending);
+            allSettingsPresent &= terrainSettingsNode.TryGetValue("useAmbientOcclusion", ref parallaxGlobalSettings.terrainGlobalSettings.ambientOcclusion);
 
-            ConfigNode lightingSettingsNode = config.config.GetNode("LightingSettings");
-            parallaxGlobalSettings.lightingGlobalSettings.lightShadows = bool.Parse(lightingSettingsNode.GetValue("lightShadows"));
-            parallaxGlobalSettings.lightingGlobalSettings.lightShadowsQuality = (LightShadowResolution)Enum.Parse(typeof(LightShadowResolution), lightingSettingsNode.GetValue("lightShadowQuality"));
+            ConfigNode scatterSettingsNode = config.config.GetNode("ScatterSystemSettings") ?? new ConfigNode();
+            allSettingsPresent &= scatterSettingsNode.TryGetValue("densityMultiplier", ref parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier);
+            allSettingsPresent &= scatterSettingsNode.TryGetValue("rangeMultiplier", ref parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier);
+            allSettingsPresent &= scatterSettingsNode.TryGetValue("fadeOutStartRange", ref parallaxGlobalSettings.scatterGlobalSettings.fadeOutStartRange);
+            allSettingsPresent &= scatterSettingsNode.TryGetValue("collisionLevel", ref parallaxGlobalSettings.scatterGlobalSettings.collisionLevel);
+            allSettingsPresent &= scatterSettingsNode.TryGetValue("colliderLookaheadTime", ref parallaxGlobalSettings.scatterGlobalSettings.colliderLookaheadTime);
 
-            ConfigNode scaledSettingsNode = config.config.GetNode("ScaledSystemSettings");
-            parallaxGlobalSettings.scaledGlobalSettings.scaledSpaceShadows = bool.Parse(scaledSettingsNode.GetValue("scaledSpaceShadows"));
-            parallaxGlobalSettings.scaledGlobalSettings.smoothScaledSpaceShadows = bool.Parse(scaledSettingsNode.GetValue("smoothScaledSpaceShadows"));
-            parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowStepCount = int.Parse(scaledSettingsNode.GetValue("scaledRaymarchedShadowStepCount"));
-            scaledSettingsNode.TryGetValue("scaledRaymarchedShadowMaxStars", ref parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowMaxStars);
-            parallaxGlobalSettings.scaledGlobalSettings.loadTexturesImmediately = bool.Parse(scaledSettingsNode.GetValue("loadTexturesImmediately"));
+            ConfigNode lightingSettingsNode = config.config.GetNode("LightingSettings") ?? new ConfigNode();
+            allSettingsPresent &= lightingSettingsNode.TryGetValue("lightShadows", ref parallaxGlobalSettings.lightingGlobalSettings.lightShadows);
+            allSettingsPresent &= lightingSettingsNode.TryGetEnum("lightShadowQuality", ref parallaxGlobalSettings.lightingGlobalSettings.lightShadowsQuality, parallaxGlobalSettings.lightingGlobalSettings.lightShadowsQuality);
 
-            ConfigNode debugSettingsNode = config.config.GetNode("DebugSettings");
-            parallaxGlobalSettings.debugGlobalSettings.wireframeTerrain = bool.Parse(debugSettingsNode.GetValue("wireframeTerrain"));
-            parallaxGlobalSettings.debugGlobalSettings.suppressCriticalMessages = bool.Parse(debugSettingsNode.GetValue("suppressCriticalMessages"));
+            ConfigNode scaledSettingsNode = config.config.GetNode("ScaledSystemSettings") ?? new ConfigNode();
+            allSettingsPresent &= scaledSettingsNode.TryGetValue("scaledSpaceShadows", ref parallaxGlobalSettings.scaledGlobalSettings.scaledSpaceShadows);
+            allSettingsPresent &= scaledSettingsNode.TryGetValue("smoothScaledSpaceShadows", ref parallaxGlobalSettings.scaledGlobalSettings.smoothScaledSpaceShadows);
+            allSettingsPresent &= scaledSettingsNode.TryGetValue("scaledRaymarchedShadowStepCount", ref parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowStepCount);
+            allSettingsPresent &= scaledSettingsNode.TryGetValue("scaledRaymarchedShadowMaxStars", ref parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowMaxStars);
+            allSettingsPresent &= scaledSettingsNode.TryGetValue("loadTexturesImmediately", ref parallaxGlobalSettings.scaledGlobalSettings.loadTexturesImmediately);
 
-            ConfigNode objectPoolsNode = config.config.GetNode("ObjectPoolSettings");
-            parallaxGlobalSettings.objectPoolSettings.cachedColliderCount = int.Parse(objectPoolsNode.GetValue("cachedColliderCount"));
+            ConfigNode debugSettingsNode = config.config.GetNode("DebugSettings") ?? new ConfigNode();
+            allSettingsPresent &= debugSettingsNode.TryGetValue("wireframeTerrain", ref parallaxGlobalSettings.debugGlobalSettings.wireframeTerrain);
+            allSettingsPresent &= debugSettingsNode.TryGetValue("suppressCriticalMessages", ref parallaxGlobalSettings.debugGlobalSettings.suppressCriticalMessages);
+
+            ConfigNode objectPoolsNode = config.config.GetNode("ObjectPoolSettings") ?? new ConfigNode();
+            allSettingsPresent &= objectPoolsNode.TryGetValue("cachedColliderCount", ref parallaxGlobalSettings.objectPoolSettings.cachedColliderCount);
+
+            if (!allSettingsPresent)
+            {
+                ParallaxDebug.Log("Global settings config is missing values, saving with defaults added");
+                parallaxGlobalSettings.SaveSettings();
+            }
 
             parallaxGlobalSettings.LogAll();
         }
