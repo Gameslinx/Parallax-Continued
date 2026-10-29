@@ -190,10 +190,14 @@ namespace Parallax
             lastEvaluatedFrame = Time.frameCount;
             RuntimeOperations.UpdateCameraData();
 
-            // Clear the buffers
+            // Clear the buffers and set the evaluate params shared by every quad
             foreach (ScatterRenderer renderer in activeScatterRenderers)
             {
                 renderer.PreRender();
+                if (!renderer.scatter.isShared)
+                {
+                    ScatterData.SetEvaluateFrameParams(renderer.scatter, renderer);
+                }
             }
 
             // Update quad-camera distances

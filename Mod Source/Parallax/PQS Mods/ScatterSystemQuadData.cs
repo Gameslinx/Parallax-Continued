@@ -23,6 +23,7 @@ namespace Parallax
         public float subdivisionRadius;
         public float sqrQuadWidth;
         public float cameraDistance;
+        public Matrix4x4 localToWorld;
         public bool ignoreRendererVisibility;
 
         // Direction from planet to quad in world and local space
@@ -190,10 +191,11 @@ namespace Parallax
 
             return Mathf.Max(width1, width2) * 0.5f;
         }
-        // Get the square distance from the quad to the camera
+        // Get the square distance from the quad to the camera, and cache the quad transform for this frame's evaluate
         public void UpdateQuadCameraDistance(ref Vector3 cameraPos)
         {
-            cameraDistance = ((Vector3)quad.meshRenderer.localToWorldMatrix.GetColumn(3) - cameraPos).sqrMagnitude;
+            localToWorld = quad.meshRenderer.localToWorldMatrix;
+            cameraDistance = ((Vector3)localToWorld.GetColumn(3) - cameraPos).sqrMagnitude;
         }
         bool alreadyReinitializedThisFrame = false;
         /// <summary>
@@ -201,6 +203,8 @@ namespace Parallax
         /// </summary>
         public void EvaluateQuad()
         {
+            runtimePlanetNormal = Vector3.Normalize(quad.PrecisePosition - quad.sphereRoot.PrecisePosition);
+
             for (int i = quadScatters.Count - 1; i >= 0; i--)
             {
                 ScatterData scatter = quadScatters[i];
@@ -297,7 +301,7 @@ namespace Parallax
         {
             if (scatter.useCraftPosition)
             {
-                return ((Vector3)quad.meshRenderer.localToWorldMatrix.GetColumn(3) - RuntimeOperations.vectorCraftPos).sqrMagnitude;
+                return ((Vector3)localToWorld.GetColumn(3) - RuntimeOperations.vectorCraftPos).sqrMagnitude;
             }
             return cameraDistance;
         }

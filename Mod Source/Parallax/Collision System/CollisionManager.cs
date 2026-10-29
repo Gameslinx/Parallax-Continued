@@ -301,7 +301,7 @@ namespace Parallax
         static JobHandle findQuadsHandle = new JobHandle();
 
         bool allComplete = false;
-        void Update()
+        public void Update()
         {
             if (!initialized)
             {
@@ -354,7 +354,7 @@ namespace Parallax
             }
             
             // Check for all collider job handles completing
-            if (colliderJobHandles.All(x => x.IsCompleted) && inColliderJob)
+            if (inColliderJob && AllColliderJobsCompleted())
             {
                 // When all collider handles are done, get the data back
                 // We cannot shorten this loop from 2O(n) to O(n) because sometimes the final completion(s) will run over to the next frame, and the data will be stagnant
@@ -379,6 +379,17 @@ namespace Parallax
             }
         }
 
+        static bool AllColliderJobsCompleted()
+        {
+            for (int i = 0; i < colliderJobHandles.Count; i++)
+            {
+                if (!colliderJobHandles[i].IsCompleted)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
         // Init the streams for the collider job
         static void SetupColliderJob(int numStreams)
         {
