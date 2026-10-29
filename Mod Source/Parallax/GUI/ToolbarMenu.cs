@@ -43,6 +43,7 @@ namespace Parallax
         static string scaledSpaceShadowsTooltip = "Toggles raymarched planet shadows from orbit. Low GPU performance impact";
         static string smoothScaledSpaceShadowsTooltip = "Toggles smooth planet shadows. No performance impact. Disable or increase the shadow step count if you see shadow flickering";
         static string scaledRaymarchedShadowStepCountTooltip = "Controls how many raymarch steps to use for the orbital shadows. Higher is higher quality. Moderate GPU performance impact";
+        static string scaledRaymarchedShadowMaxStarsTooltip = "Controls how many stars can cast scaledspace shadows at once, prioritising the brightest star near each planet. Only affects systems with multiple stars. Moderate GPU performance impact per star, no impact if there are no additional stars bright enough to affect a planet.";
         static string loadTexturesImmediatelyTooltip = "Toggles loading planet orbit textures immediately or spreads it out over a few frames. No performance impact";
 
         bool showGUI = false;
@@ -177,6 +178,7 @@ namespace Parallax
             ParamCreator.CreateParam("Scaled Planet Self Shadows",              ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledSpaceShadows, GUIHelperFunctions.BoolField, scaledShadowCallback, scaledSpaceShadowsTooltip);
             ParamCreator.CreateParam("Smooth Scaled Planet Shadows",            ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.smoothScaledSpaceShadows, GUIHelperFunctions.BoolField, scaledShadowMaterialCallback, smoothScaledSpaceShadowsTooltip);
             ParamCreator.CreateParam("Raymarched Scaled Shadows Step Count",    ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowStepCount, GUIHelperFunctions.IntField, scaledShadowMaterialCallback, scaledRaymarchedShadowStepCountTooltip);
+            ParamCreator.CreateParam("Raymarched Scaled Shadows Max Stars",     ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowMaxStars, GUIHelperFunctions.IntField, scaledShadowMaterialCallback, scaledRaymarchedShadowMaxStarsTooltip);
             ParamCreator.CreateParam("Load Scaled Textures Immediately",        ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.loadTexturesImmediately, GUIHelperFunctions.BoolField, scaledTextureCallback, loadTexturesImmediatelyTooltip);
 
             // Prevent some stupid settings
@@ -184,6 +186,7 @@ namespace Parallax
             {
                 ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowStepCount = 256;
             }
+            ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowMaxStars = Mathf.Clamp(ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowMaxStars, 1, RaymarchedShadowsRenderer.MaxShadowStars);
 
             GUILayout.Space(15);
             // Save button

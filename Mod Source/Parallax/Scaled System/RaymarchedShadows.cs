@@ -17,12 +17,26 @@ namespace Parallax.Scaled_System
         /// </summary>
         public static RaymarchedShadowsRenderer Instance;
 
+        public const int MaxShadowStars = 4;
+
         // Meshes to draw
         public Mesh scaledMesh;
 
+        class ShadowStar
+        {
+            public Light light;
+            public CelestialBody body;
+            public CommandBuffer compositeCommandBuffer;
+            public float importance;
+        }
+
         // Kopernicus gives every star its own scaled light
-        List<Light> starLights = new List<Light>();
-        Material compositorMaterial;
+        List<ShadowStar> stars = new List<ShadowStar>();
+        List<ShadowStar> rankedStars = new List<ShadowStar>();
+        static readonly Comparison<ShadowStar> compareImportance = (a, b) => b.importance.CompareTo(a.importance);
+
+        Material[] compositorMaterials = new Material[MaxShadowStars];
+        Vector4[] shadowLights = new Vector4[MaxShadowStars];
 
         // Stores shadow attenuation, 0 or 1
         RenderTexture shadowAttenuationRT;
@@ -34,11 +48,11 @@ namespace Parallax.Scaled_System
         RenderTexture shadowObjectDepthRT;
 
         CommandBuffer shadowCommandBuffer;
-        CommandBuffer lightCommandBuffer;
 
         Texture2D blueNoiseTexture;
 
         public List<ParallaxScaledBody> scaledBodies = new List<ParallaxScaledBody>();
+        public List<CelestialBody> celestialBodies = new List<CelestialBody>();
         public List<MeshRenderer> meshRenderers = new List<MeshRenderer>();
         void Awake()
         {
@@ -68,18 +82,22 @@ namespace Parallax.Scaled_System
             foreach (KeyValuePair<string, ParallaxScaledBody> pair in ConfigLoader.parallaxScaledBodies)
             {
                 pair.Value.shadowCasterMaterial.SetTexture("_BlueNoise", blueNoiseTexture);
+                CelestialBody body = FlightGlobals.GetBodyByName(pair.Value.planetName);
                 scaledBodies.Add(pair.Value);
-                meshRenderers.Add(FlightGlobals.GetBodyByName(pair.Value.planetName).scaledBody.GetComponent<MeshRenderer>());
+                celestialBodies.Add(body);
+                meshRenderers.Add(body.scaledBody.GetComponent<MeshRenderer>());
             }
 
             // Ensure the screenspace mask is generated
-            starLights.AddRange(GetStarLights());
-            foreach (Light light in starLights)
+            stars.AddRange(GetStars());
+            foreach (ShadowStar star in stars)
             {
-                light.shadows = LightShadows.Soft;
-                light.shadowStrength = 1;
-                light.lightShadowCasterMode = LightShadowCasterMode.Everything;
-                light.shadowResolution = LightShadowResolution.VeryHigh;
+                star.light.shadows = LightShadows.Soft;
+                star.light.shadowStrength = 1;
+                star.light.lightShadowCasterMode = LightShadowCasterMode.Everything;
+                star.light.shadowResolution = LightShadowResolution.VeryHigh;
+                star.compositeCommandBuffer = new CommandBuffer { name = "Composite Shadows" };
+                star.light.AddCommandBuffer(LightEvent.AfterScreenspaceMask, star.compositeCommandBuffer);
             }
 
             // Get the scaled mesh and material for rendering
@@ -91,7 +109,6 @@ namespace Parallax.Scaled_System
 
             // First time buffer init
             shadowCommandBuffer = new CommandBuffer { name = "Render Custom Shadows" };
-            lightCommandBuffer = new CommandBuffer { name = "Composite Shadows" };
 
             if (ScaledCamera.Instance.cam.renderingPath == RenderingPath.DeferredShading)
             {
@@ -104,7 +121,6 @@ namespace Parallax.Scaled_System
 
             SetupRenderTextures();
             SetupMaterials();
-            SetupLightCommandBuffer(compositorMaterial);
 
             Camera.onPreCull += OnCameraPreCull;
         }
@@ -115,15 +131,15 @@ namespace Parallax.Scaled_System
                 RenderShadows();
             }
         }
-        static IEnumerable<Light> GetStarLights()
+        static IEnumerable<ShadowStar> GetStars()
         {
             if (Kopernicus.Components.KopernicusStar.Stars == null)
             {
-                return new Light[] { Sun.Instance.scaledSunLight };
+                return new ShadowStar[] { new ShadowStar { light = Sun.Instance.scaledSunLight, body = Sun.Instance.sun } };
             }
             return Kopernicus.Components.KopernicusStar.Stars
-                .Where(star => star != null && star.scaledSunLight != null)
-                .Select(star => star.scaledSunLight);
+                .Where(star => star != null && star.scaledSunLight != null && star.sun != null)
+                .Select(star => new ShadowStar { light = star.scaledSunLight, body = star.sun });
         }
         public void Enable()
         {
@@ -132,7 +148,7 @@ namespace Parallax.Scaled_System
         }
         void SetupRenderTextures()
         {
-            RenderTextureDescriptor attenuationDesc = new RenderTextureDescriptor(Screen.width, Screen.height, RenderTextureFormat.R8, 16);
+            RenderTextureDescriptor attenuationDesc = new RenderTextureDescriptor(Screen.width, Screen.height, RenderTextureFormat.ARGB32, 16);
             attenuationDesc.useMipMap = true;
             attenuationDesc.autoGenerateMips = true;
 
@@ -153,16 +169,75 @@ namespace Parallax.Scaled_System
         }
         void SetupMaterials()
         {
-            compositorMaterial = new Material(AssetBundleLoader.parallaxScaledShaders["Custom/PostProcessShadows"]);
+            for (int i = 0; i < MaxShadowStars; i++)
+            {
+                Material compositorMaterial = new Material(AssetBundleLoader.parallaxScaledShaders["Custom/PostProcessShadows"]);
 
-            compositorMaterial.SetTexture("_MainTex", shadowAttenuationRT);
-            compositorMaterial.SetTexture("_ShadowDistances", shadowDistanceRT);
-            compositorMaterial.SetTexture("_ShadowDepth", shadowObjectDepthRT);
+                compositorMaterial.SetTexture("_MainTex", shadowAttenuationRT);
+                compositorMaterial.SetTexture("_ShadowDistances", shadowDistanceRT);
+                compositorMaterial.SetTexture("_ShadowDepth", shadowObjectDepthRT);
 
-            //foreach ()
+                Vector4 channelMask = Vector4.zero;
+                channelMask[i] = 1;
+                compositorMaterial.SetVector("_ShadowChannelMask", channelMask);
+
+                compositorMaterials[i] = compositorMaterial;
+            }
+        }
+        void RankStars()
+        {
+            rankedStars.Clear();
+            foreach (ShadowStar star in stars)
+            {
+                star.compositeCommandBuffer.Clear();
+                if (star.light == null || !star.light.isActiveAndEnabled)
+                {
+                    continue;
+                }
+
+                star.importance = star.light.intensity * star.light.color.grayscale;
+                if (star.importance > 0)
+                {
+                    rankedStars.Add(star);
+                }
+            }
+
+            rankedStars.Sort(compareImportance);
+
+            int maxStars = Mathf.Clamp(ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowMaxStars, 1, MaxShadowStars);
+            if (rankedStars.Count > maxStars)
+            {
+                rankedStars.RemoveRange(maxStars, rankedStars.Count - maxStars);
+            }
+
+            for (int i = 0; i < rankedStars.Count; i++)
+            {
+                rankedStars[i].compositeCommandBuffer.Blit(shadowAttenuationRT, BuiltinRenderTextureType.CurrentActive, compositorMaterials[i]);
+            }
+        }
+        void SetShadowLights(CelestialBody body, Material shadowCasterMaterial)
+        {
+            for (int i = 0; i < rankedStars.Count; i++)
+            {
+                CelestialBody star = rankedStars[i].body;
+                if (star == body)
+                {
+                    shadowLights[i] = Vector4.zero;
+                    continue;
+                }
+
+                Vector3 lightDirection = (star.scaledBody.transform.position - body.scaledBody.transform.position).normalized;
+                float penumbraAngle = Mathf.Atan2((float)star.Radius, (body.transform.position - star.transform.position).magnitude);
+                shadowLights[i] = new Vector4(lightDirection.x, lightDirection.y, lightDirection.z, penumbraAngle);
+            }
+
+            shadowCasterMaterial.SetVectorArray("_ShadowLights", shadowLights);
+            shadowCasterMaterial.SetInt("_ShadowLightCount", rankedStars.Count);
         }
         public void RenderShadows()
         {
+            RankStars();
+
             shadowCommandBuffer.Clear();
 
             // Setup RTs
@@ -180,7 +255,7 @@ namespace Parallax.Scaled_System
                 {
                     continue;
                 }
-                
+
                 // Prevent "donut" object rendering around small bodies from causing intense shadow flickering - stop rendering the attenuation mesh
                 // Only set opacity on the current planet, or it'll set all scaled planet opacities to 0 if on pqs
                 if (FlightGlobals.currentMainBody != null && RuntimeOperations.currentPlanetOpacity <= 0 && FlightGlobals.currentMainBody.name == scaledBody.planetName)
@@ -199,18 +274,11 @@ namespace Parallax.Scaled_System
                         shadowCommandBuffer.SetGlobalFloat("_ScaledPlanetOpacity", 1.0f);
                     }
 
+                    SetShadowLights(celestialBodies[i], scaledBody.shadowCasterMaterial);
+
                     shadowCommandBuffer.SetGlobalInt("_FrameCount", Time.frameCount);
                     shadowCommandBuffer.DrawRenderer(meshRenderer, scaledBody.shadowCasterMaterial, 0, 0);
                 }
-            }
-        }
-
-        void SetupLightCommandBuffer(Material blitMaterial)
-        {
-            lightCommandBuffer.Blit(shadowAttenuationRT, BuiltinRenderTextureType.CurrentActive, blitMaterial);
-            foreach (Light light in starLights)
-            {
-                light.AddCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
             }
         }
 
@@ -267,20 +335,22 @@ namespace Parallax.Scaled_System
             {
                 ScaledCamera.Instance.cam.RemoveCommandBuffer(CameraEvent.AfterDepthTexture, shadowCommandBuffer);
             }
-            
-            foreach (Light light in starLights)
-            {
-                if (light != null)
-                {
-                    light.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, lightCommandBuffer);
-                }
-            }
-            starLights.Clear();
 
-            lightCommandBuffer.Dispose();
+            foreach (ShadowStar star in stars)
+            {
+                if (star.light != null)
+                {
+                    star.light.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, star.compositeCommandBuffer);
+                }
+                star.compositeCommandBuffer.Dispose();
+            }
+            stars.Clear();
+            rankedStars.Clear();
+
             shadowCommandBuffer.Dispose();
 
             scaledBodies.Clear();
+            celestialBodies.Clear();
             meshRenderers.Clear();
 
             shadowAttenuationRT.Release();
@@ -288,7 +358,10 @@ namespace Parallax.Scaled_System
             shadowObjectDepthRT.Release();
 
             UnityEngine.Object.Destroy(scaledMesh);
-            UnityEngine.Object.Destroy(compositorMaterial);
+            for (int i = 0; i < MaxShadowStars; i++)
+            {
+                UnityEngine.Object.Destroy(compositorMaterials[i]);
+            }
         }
     }
 

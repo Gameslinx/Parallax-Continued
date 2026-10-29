@@ -456,7 +456,7 @@ Shader "Custom/Parallax"
                 o.worldPos = mul(unity_ObjectToWorld, v.vertex);
                 o.worldNormal = normalize(mul(unity_ObjectToWorld, v.normal).xyz);
                 o.viewDir = _WorldSpaceCameraPos - o.worldPos;
-                o.lightDir = _WorldSpaceLightPos0 - o.worldPos;
+                o.lightDir = UnityWorldSpaceLightDir(o.worldPos);
                 o.color = v.color;
                 o.vertex = v.vertex;
                 o.landMask = GetLandMask(o.worldPos, o.worldNormal);
@@ -598,10 +598,9 @@ Shader "Custom/Parallax"
                 fixed4 finalDiffuse = lerp(altitudeDiffuse, steepDiffuse, landMask.b);
                 float3 finalNormal = lerp(altitudeNormal, steepNormal, landMask.b); 
 
-                float atten = LIGHT_ATTENUATION(i);
                 float3 result = CalculateLighting(finalDiffuse, finalNormal, viewDir, GET_SHADOW, lightDir);
 
-                return float4(result, atten * (1 - _PlanetOpacity));
+                return float4(result, 1 - _PlanetOpacity);
             }
             ENDCG
         }

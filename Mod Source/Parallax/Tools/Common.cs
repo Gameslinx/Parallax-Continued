@@ -77,6 +77,7 @@ namespace Parallax
             scaledSettingsNode.AddValue("scaledSpaceShadows", scaledGlobalSettings.scaledSpaceShadows);
             scaledSettingsNode.AddValue("smoothScaledSpaceShadows", scaledGlobalSettings.smoothScaledSpaceShadows);
             scaledSettingsNode.AddValue("scaledRaymarchedShadowStepCount", scaledGlobalSettings.scaledRaymarchedShadowStepCount);
+            scaledSettingsNode.AddValue("scaledRaymarchedShadowMaxStars", scaledGlobalSettings.scaledRaymarchedShadowMaxStars);
             scaledSettingsNode.AddValue("loadTexturesImmediately", scaledGlobalSettings.loadTexturesImmediately);
 
             debugSettingsNode.AddValue("wireframeTerrain", debugGlobalSettings.wireframeTerrain);
@@ -149,6 +150,7 @@ namespace Parallax
         public bool scaledSpaceShadows;
         public bool smoothScaledSpaceShadows;
         public int scaledRaymarchedShadowStepCount;
+        public int scaledRaymarchedShadowMaxStars;
         public bool loadTexturesImmediately;
 
         private static readonly ScaledGlobalSettings defaultSetting = new ScaledGlobalSettings()
@@ -156,6 +158,7 @@ namespace Parallax
             scaledSpaceShadows = true,
             smoothScaledSpaceShadows = true,
             scaledRaymarchedShadowStepCount = 48,
+            scaledRaymarchedShadowMaxStars = 2,
             loadTexturesImmediately = false
         };
 
@@ -665,9 +668,6 @@ namespace Parallax
             float tangentDist = _MeshRadius / Mathf.Tan(theta);
 
             shadowCasterMaterial.SetFloat("_MaxRayDistance", tangentDist);
-
-            // Computed at runtime, but the default is computed from Kerbin's SMA around the Sun
-            shadowCasterMaterial.SetFloat("_LightWidth", 0.0192f);
 
             // Setup environment
             scaledMaterial.SetTexture("_Skybox", SkyboxControl.cubeMap);

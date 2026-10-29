@@ -300,7 +300,7 @@
                 o.worldPos = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1)).xyz;
                 o.worldNormal = mul(unity_ObjectToWorld, float4(v.normal, 0)).xyz;
                 o.viewDir = _WorldSpaceCameraPos - o.worldPos;
-                o.lightDir = _WorldSpaceLightPos0 - o.worldPos;
+                o.lightDir = UnityWorldSpaceLightDir(o.worldPos);
                 o.localPos = v.vertex.xyz;
 
                 TRANSFER_VERTEX_TO_FRAGMENT(o);
@@ -341,10 +341,9 @@
                 fixed4 finalDiffuse = lerp(lowDiffuse, tarmacColor, blendMask);
                 NORMAL_FLOAT finalNormal = lerp(lowNormal, tarmacNormal, blendMask);
 
-                float atten = LIGHT_ATTENUATION(i);
                 float3 result = CalculateLighting(finalDiffuse, finalNormal, viewDir, GET_SHADOW, lightDir);
 
-                return float4(result, atten * (1 - _PlanetOpacity));
+                return float4(result, 1 - _PlanetOpacity);
             }
             ENDCG
         }

@@ -20,7 +20,6 @@ namespace Parallax.Scaled_System
         // Set immediately from component initialisation
         public ParallaxScaledBody scaledBody;
         public CelestialBody celestialBody;
-        public CelestialBody parentStar;
 
         // Size in screen pixels to load or unload based on the current camera FOV
         public static float loadScreenSizePixels = 3.0f;
@@ -36,42 +35,12 @@ namespace Parallax.Scaled_System
 
         void Start()
         {
-            // Locate the parent star for shadows
-            ParallaxDebug.Log("Searching for parent star");
-            CelestialBody parentBody = celestialBody.referenceBody;
-            while (parentBody != null && !parentBody.isStar && parentBody != parentBody.referenceBody)
-            {
-                // Step up
-                parentBody = parentBody.referenceBody;
-            }
-
-            if (parentBody != null)
-            {
-                parentStar = parentBody;
-                Debug.Log("Located parent star: " + parentStar.name);
-            }
-            else
-            {
-                parentStar = Sun.Instance.sun;
-                ParallaxDebug.Log("Warning: Unable to find the parent star for: " + celestialBody.name);
-                ParallaxDebug.Log("Shadows will be cast from " + parentStar.name);
-            }
-
-            Camera.onPreCull += OnCameraPreCull;
-
             // Kick off immediately
             Update();
         }
         void Update()
         {
             UpdateVisibility();
-        }
-        void OnCameraPreCull(Camera cam)
-        {
-            if (ScaledCamera.Instance != null && cam == ScaledCamera.Instance.cam)
-            {
-                UpdateShadows();
-            }
         }
         void UpdateVisibility()
         {
@@ -116,31 +85,6 @@ namespace Parallax.Scaled_System
                 }
             }
         }
-        void UpdateShadows()
-        {
-            if (!scaledBody.Loaded)
-            {
-                return;
-            }
-
-            float penumbraAngle = CalculateSubtendedAngle(celestialBody.transform.position, parentStar.transform.position, (float)parentStar.Radius);
-
-            scaledBody.shadowCasterMaterial.SetFloat("_LightWidth", penumbraAngle);
-
-            Vector3 lightDirection = (parentStar.scaledBody.transform.position - celestialBody.scaledBody.transform.position).normalized;
-            scaledBody.shadowCasterMaterial.SetVector("_ShadowLightDirection", lightDirection);
-        }
-        /// <summary>
-        /// Calculates the angle between origin-to-target and target-to-targetradius
-        /// </summary>
-        /// <param name="origin"></param>
-        /// <param name="target"></param>
-        /// <param name="targetRadius"></param>
-        /// <returns></returns>
-        float CalculateSubtendedAngle(Vector3 origin, Vector3 target, float targetRadius)
-        {
-            return Mathf.Atan2(targetRadius, (origin - target).magnitude);
-        }
         float CalculateScreenSizePixels(Vector3 origin, Vector3 target, float radius, float fovDegrees)
         {
             float fov = fovDegrees * Mathf.Deg2Rad;
@@ -156,10 +100,6 @@ namespace Parallax.Scaled_System
         {
             ParallaxDebug.Log("Disabled " + celestialBody.bodyName);
             scaledBody?.Unload();
-        }
-        void OnDestroy()
-        {
-            Camera.onPreCull -= OnCameraPreCull;
         }
     }
 }

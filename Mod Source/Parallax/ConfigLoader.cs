@@ -285,6 +285,7 @@ namespace Parallax
             parallaxGlobalSettings.scaledGlobalSettings.scaledSpaceShadows = bool.Parse(scaledSettingsNode.GetValue("scaledSpaceShadows"));
             parallaxGlobalSettings.scaledGlobalSettings.smoothScaledSpaceShadows = bool.Parse(scaledSettingsNode.GetValue("smoothScaledSpaceShadows"));
             parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowStepCount = int.Parse(scaledSettingsNode.GetValue("scaledRaymarchedShadowStepCount"));
+            scaledSettingsNode.TryGetValue("scaledRaymarchedShadowMaxStars", ref parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowMaxStars);
             parallaxGlobalSettings.scaledGlobalSettings.loadTexturesImmediately = bool.Parse(scaledSettingsNode.GetValue("loadTexturesImmediately"));
 
             ConfigNode debugSettingsNode = config.config.GetNode("DebugSettings");

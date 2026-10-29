@@ -21,9 +21,7 @@
 
         // Saves a multicompile
         _DisableDisplacement("Disable Displacement", int) = 0
-        _LightWidth("Light Width", Range(0.0001, 0.3)) = 0.05
         _MaxRayDistance("Max Ray Distace", Range(0.0001, 100000)) = 1
-        _ShadowLightDirection("Shadow Light Direction", VECTOR) = (0,1,0,0)
 
         // Comment out when compiling
         //_ScaledPlanetOpacity("Scaled planet opacity", Range(0, 1)) = 1
@@ -58,13 +56,13 @@
         
             // Mesh to real planet scale factor
             float _ScaleFactor;
-            float _LightWidth;
             float _ScaledPlanetOpacity;
             float _OceanAltitude;
             float _MaxRayDistance;
 
-            // Direction to this planet's parent star
-            float3 _ShadowLightDirection;
+            #define MAX_SHADOW_LIGHTS 4
+            float4 _ShadowLights[MAX_SHADOW_LIGHTS];
+            int _ShadowLightCount;
 
             // Global integer - Set at runtime from settings
             int _ParallaxScaledShadowStepSize;
@@ -172,6 +170,49 @@
             }
 
             // Shadow umbra and penumbra calculation reference: https://iquilezles.org/articles/rmshadows/
+            float RaymarchShadow(float3 rayPos, float3 rayDir, float lightWidth, float stepSize, float noise, float3 origin, out float3 rayEndPos)
+            {
+                float attenuation = 1.0f;
+                float t = 0.0f;
+
+                #if defined (BLUE_NOISE)
+                    rayPos -= rayDir * noise * stepSize;
+                    t -= noise * stepSize;
+                #endif
+
+                // Raymarch towards the light
+                for (int b = 0; b < _ParallaxScaledShadowStepSize; b++)
+                {
+                    rayPos += rayDir * stepSize;
+                    t += stepSize;
+
+                    // Get ray altitude and terrain height
+                    float worldTerrainAltitude = GetTerrainHeightAt(rayPos, origin);
+                    float worldRayAltitude = GetAltitudeAt(rayPos, origin);
+
+                    // Angle between the ray and the terrain point below the sample, as seen from the receiver
+                    // Steep rays put that point back near the receiver, so it can't occlude
+                    float clearance = worldRayAltitude - worldTerrainAltitude;
+                    float upDotRay = dot(normalize(rayPos - origin), rayDir);
+                    float perpendicular = clearance * sqrt(saturate(1.0f - upDotRay * upDotRay));
+                    float along = t - clearance * upDotRay;
+                    float occluderAngle = atan2(perpendicular, along);
+                    attenuation = min(attenuation, occluderAngle / lightWidth);
+
+                    // Stop when shadowed
+                    if (attenuation < -1.0f)
+                    {
+                        break;
+                    }
+                }
+
+                rayEndPos = rayPos;
+
+                // Snap to -1 contribution and use a smoothstep function
+                attenuation = max(attenuation, -1.0f);
+                return 0.25f * (1.0f + attenuation) * (1.0f + attenuation) * (2.0f - attenuation);
+            }
+
             PS_Output frag (v2f i)
             {
                 i.worldNormal = normalize(i.worldNormal);
@@ -201,57 +242,50 @@
                 geometricNormal = dot(geometricNormal, i.worldPos - origin) < 0 ? -geometricNormal : geometricNormal;
                 float3 dhdz = geometricNormal * (_MaxRadialAltitude - _MinRadialAltitude) * SHADOW_NORMAL_BIAS;
 
-                float3 rayPos = initialRayPos + dhdz;
-                float3 rayDir = normalize(_ShadowLightDirection);
+                float3 rayStartPos = initialRayPos + dhdz;
 
                 float rayDistance = _MaxRayDistance;
                 float stepSize = rayDistance / float(_ParallaxScaledShadowStepSize);
 
-                float attenuation = 1.0f;
-                float t = 0.0f;
+                float noise = 0.0f;
 
                 // Random noise offset, could use blue noise but this looks good enough, it's only visible at shadow edges and helps remove stepping
                 #if defined (BLUE_NOISE)
 
                     float2 screenUV = (i.screenPos.xy / i.screenPos.w) * _ScreenParams.xy + 0.5f;
-                    float noise = _BlueNoise.Sample(sampler_BlueNoise_point_repeat, (screenUV % 64) / 64);
+                    noise = _BlueNoise.Sample(sampler_BlueNoise_point_repeat, (screenUV % 64) / 64);
                     noise = (noise + 1.618f * _FrameCount) % 1;
-                    rayPos -= rayDir * noise * stepSize;
-                    t -= noise * stepSize;
 
                 #endif
 
-                // Raymarch towards the light
-                for (int b = 0; b < _ParallaxScaledShadowStepSize; b++)
+                float4 attenuations = 1.0f;
+                float3 primaryRayEndPos = rayStartPos;
+
+                int lightCount = min(_ShadowLightCount, MAX_SHADOW_LIGHTS);
+                [loop]
+                for (int l = 0; l < lightCount; l++)
                 {
-                    rayPos += rayDir * stepSize;
-                    t += stepSize;
-
-                    // Get ray altitude and terrain height
-                    float worldTerrainAltitude = GetTerrainHeightAt(rayPos, origin);
-                    float worldRayAltitude = GetAltitudeAt(rayPos, origin);
-
-                    // Project the vertical clearance onto the plane perpendicular to the ray so h / t is the occluder's angle from the ray
-                    float upDotRay = dot(normalize(rayPos - origin), rayDir);
-                    float h = (worldRayAltitude - worldTerrainAltitude) * sqrt(saturate(1.0f - upDotRay * upDotRay));
-                    attenuation = min(attenuation, h / (_LightWidth * t));
-
-                    // Stop when shadowed
-                    if (attenuation < -1.0f)
+                    float4 shadowLight = _ShadowLights[l];
+                    if (shadowLight.w <= 0.0f)
                     {
-                        break;
+                        continue;
+                    }
+
+                    float3 rayEndPos;
+                    float attenuation = RaymarchShadow(rayStartPos, normalize(shadowLight.xyz), shadowLight.w, stepSize, noise, origin, rayEndPos);
+                    attenuations = lerp(attenuations, attenuation, float4(l == int4(0, 1, 2, 3)));
+
+                    if (l == 0)
+                    {
+                        primaryRayEndPos = rayEndPos;
                     }
                 }
 
-                // Snap to -1 contribution and use a smoothstep function
-                attenuation = max(attenuation, -1.0f);
-                attenuation = 0.25f * (1.0f + attenuation) * (1.0f + attenuation) * (2.0f - attenuation);
-
                 PS_Output output;
 
-                output.shadowAttenuation = attenuation;
+                output.shadowAttenuation = attenuations;
                 float shadowBlurMaxDistance = 0.05f;
-                output.shadowDistance = saturate(distance(rayPos, initialRayPos) / shadowBlurMaxDistance);
+                output.shadowDistance = saturate(distance(primaryRayEndPos, initialRayPos) / shadowBlurMaxDistance);
 
                 #if defined (SHADER_API_GLCORE) || defined (SHADER_API_OPENGL)
                 output.depth = i.pos.z - 0.001f;

@@ -342,7 +342,7 @@ Shader "Custom/ParallaxInstancedSolid"
 
                 o.planetNormal = planetNormal;
                 o.viewDir = _WorldSpaceCameraPos - worldPos;
-                o.lightDir = _WorldSpaceLightPos0 - worldPos;
+                o.lightDir = UnityWorldSpaceLightDir(worldPos);
                 o.pos = UnityWorldToClipPos(worldPos);
 
                 PARALLAX_TRANSFER_VERTEX_TO_FRAGMENT(o);
@@ -389,12 +389,11 @@ Shader "Custom/ParallaxInstancedSolid"
                 float3 worldNormal = normalize(mul(TBN, normal));
 
                 // Calculate lighting from core params, plus potential additional params (worldpos required for subsurface scattering)
-                float atten = LIGHT_ATTENUATION(i);
                 float3 result = CalculateLighting(BASIC_LIGHTING_PARAMS ADDITIONAL_LIGHTING_PARAMS );
 
                 // Process any enabled debug options that affect the output color
                 DEBUG_IF_ENABLED
-                return float4(result, atten);
+                return float4(result, GET_FORWARDADD_ATTENUATION);
             }
 
             ENDCG

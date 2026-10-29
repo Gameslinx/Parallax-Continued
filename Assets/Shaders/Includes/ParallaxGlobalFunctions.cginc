@@ -43,8 +43,10 @@ float3 CombineNormals(float3 n1, float3 n2)
 #define eta 0.7519
 #if !defined (BILLBOARD) && !defined (BILLBOARD_USE_MESH_NORMALS)
     #define GET_SHADOW LIGHT_ATTENUATION(i)
+    #define GET_FORWARDADD_ATTENUATION 1
 #else
     #define GET_SHADOW 1
+    #define GET_FORWARDADD_ATTENUATION LIGHT_ATTENUATION(i)
 #endif
 
 float FresnelEffect(float3 worldNormal, float3 viewDir, float power)
@@ -159,7 +161,11 @@ float3 CalculateLighting(LIGHTING_INPUT)
 
     float spec = pow(NdotH, _SpecularPower) * _LightColor0.rgb * _SpecularIntensity * col.a * shadow;
 
+    #if defined (UNITY_PASS_FORWARDADD)
+    float3 ambient = 0;
+    #else
     float3 ambient = UNITY_LIGHTMODEL_AMBIENT.rgb * col.rgb;
+    #endif
     float3 diffuse = _LightColor0.rgb * col.rgb * NdotL;
     float3 specular = spec * _LightColor0.rgb;
     float3 reflection = fresnel * reflColor * col.a * _EnvironmentMapFactor; // For refraction

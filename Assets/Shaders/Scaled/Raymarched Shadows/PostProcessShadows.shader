@@ -38,6 +38,7 @@
             sampler2D _CameraDepthTexture; 
             float4 _MainTex_ST;
             float4 _MainTex_TexelSize;
+            float4 _ShadowChannelMask;
 
             v2f vert (appdata v)
             {
@@ -70,7 +71,7 @@
                     return fixed4(1.0, 1.0, 1.0, 1.0);
                 }
                 //return sceneDepth;
-                return tex2Dlod(_MainTex, float4(i.uv, 0, 0)).r;
+                return dot(tex2Dlod(_MainTex, float4(i.uv, 0, 0)), _ShadowChannelMask);
             }
             ENDCG
         }

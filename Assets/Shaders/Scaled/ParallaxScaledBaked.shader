@@ -413,7 +413,7 @@ Shader "Custom/ParallaxScaledBaked"
                 o.worldTangent = normalize(mul(unity_ObjectToWorld, float4(v.tangent.xyz, 0)).xyz);
                 o.worldBinormal = normalize(mul(unity_ObjectToWorld, float4(cross(v.normal, v.tangent.xyz), 0)).xyz) * v.tangent.w;
                 o.viewDir = _WorldSpaceCameraPos - o.worldPos;
-                o.lightDir = _WorldSpaceLightPos0 - o.worldPos;
+                o.lightDir = UnityWorldSpaceLightDir(o.worldPos);
                 o.vertex = v.vertex;
                 o.landMask = GetScaledLandMask(o.worldPos, o.worldNormal);
                 o.uv = v.uv;
@@ -529,10 +529,9 @@ Shader "Custom/ParallaxScaledBaked"
 
                 #endif
 
-                float atten = LIGHT_ATTENUATION(i);
                 float3 result = CalculateLighting(finalDiffuse, finalNormal, viewDir, GET_SHADOW, lightDir);
 
-                return float4(result + atmosphereColor, atten);
+                return float4(result + atmosphereColor, 1);
             }
             ENDCG
         }

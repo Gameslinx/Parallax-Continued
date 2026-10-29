@@ -71,6 +71,9 @@ namespace Parallax.Scaled_System
 
         MeshRenderer meshRenderer;
 
+        const float kerbinSunLightWidth = 0.0192f;
+        Vector4[] shadowLights = new Vector4[RaymarchedShadowsRenderer.MaxShadowStars];
+
         // Original shadow distance
         float originalShadowDistance = 0;
 
@@ -225,6 +228,7 @@ namespace Parallax.Scaled_System
             compositorMaterial.SetTexture("_MainTex", shadowAttenuationRT);
             compositorMaterial.SetTexture("_ShadowDistances", shadowDistanceRT);
             compositorMaterial.SetTexture("_ShadowDepth", shadowObjectDepthRT);
+            compositorMaterial.SetVector("_ShadowChannelMask", new Vector4(1, 0, 0, 0));
 
             lightCommandBuffer.Blit(shadowAttenuationRT, BuiltinRenderTextureType.CurrentActive, compositorMaterial);
 
@@ -337,9 +341,7 @@ namespace Parallax.Scaled_System
             float tangentDist = _MeshRadius / Mathf.Tan(theta);
 
             body.shadowCasterMaterial.SetFloat("_MaxRayDistance", tangentDist);
-
-            // Computed at runtime, but the default is computed from Kerbin's SMA around the Sun
-            body.shadowCasterMaterial.SetFloat("_LightWidth", 0.0192f);
+            body.shadowCasterMaterial.SetInt("_ShadowLightCount", 1);
 
             // Setup environment
             scaledMaterial.SetTexture("_Skybox", SkyboxControl.cubeMap);
@@ -369,7 +371,9 @@ namespace Parallax.Scaled_System
             shadowCommandBuffer.ClearRenderTarget(true, true, Color.white);
 
             // Only render what we can see and is loaded
-            mainMenuBody.shadowCasterMaterial.SetVector("_ShadowLightDirection", -fillLight.transform.forward);
+            Vector3 lightDirection = -fillLight.transform.forward;
+            shadowLights[0] = new Vector4(lightDirection.x, lightDirection.y, lightDirection.z, kerbinSunLightWidth);
+            mainMenuBody.shadowCasterMaterial.SetVectorArray("_ShadowLights", shadowLights);
 
             shadowCommandBuffer.DrawRenderer(meshRenderer, mainMenuBody.shadowCasterMaterial, 0, 0);
 

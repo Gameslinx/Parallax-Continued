@@ -268,7 +268,7 @@ Shader "Custom/ParallaxInstancedBiplanar"
 
                 o.planetNormal = planetNormal;
                 o.viewDir = _WorldSpaceCameraPos - worldPos;
-                o.lightDir = _WorldSpaceLightPos0 - worldPos;
+                o.lightDir = UnityWorldSpaceLightDir(worldPos);
                 o.pos = UnityWorldToClipPos(worldPos);
 
                 PARALLAX_TRANSFER_VERTEX_TO_FRAGMENT(o);
@@ -301,16 +301,15 @@ Shader "Custom/ParallaxInstancedBiplanar"
                 GET_SPECULAR(mainTex, i.uv * _MainTex_ST);
                 
                 float3 viewDir = normalize(i.viewDir);
-                float3 lightDir = _WorldSpaceLightPos0;
+                float3 lightDir = normalize(i.lightDir);
                 
                 float3 worldNormal = normalize(SampleBiplanarNormal(_BumpMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend));
 
                 // Calculate lighting from core params, plus potential additional params (worldpos required for subsurface scattering)
-                float atten = LIGHT_ATTENUATION(i);
                 float3 result = CalculateLighting(BASIC_LIGHTING_PARAMS ADDITIONAL_LIGHTING_PARAMS );
 
                 // Process any enabled debug options that affect the output color
-                return float4(result, atten);
+                return float4(result, GET_FORWARDADD_ATTENUATION);
             }
 
             ENDCG
