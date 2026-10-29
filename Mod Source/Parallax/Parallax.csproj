@@ -26,7 +26,7 @@
         <KSPBT_GenerateVersionFile>false</KSPBT_GenerateVersionFile>
 
         <!-- Dependencies are expected to be installed already. Set this to true to have them installed with CKAN. -->
-        <KSPBT_InstallCKANDependencies Condition="'$(KSPBT_InstallCKANDependencies)' == ''">false</KSPBT_InstallCKANDependencies>
+        <KSPBT_InstallCKANDependencies>false</KSPBT_InstallCKANDependencies>
     </PropertyGroup>
 
     <ItemGroup>
