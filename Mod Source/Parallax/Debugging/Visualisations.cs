@@ -18,8 +18,9 @@ namespace Parallax
         bool showingBiomes = false;
         bool showingDensity = false;
         bool showingUVs = false;
+        bool showingConvexity = false;
 
-        void Update_Ignore()
+        void Update()
         {
             //return;
 
@@ -93,6 +94,20 @@ namespace Parallax
             if (logVRAMStats)
             {
                 ParallaxDiagnostics.LogComputeShaderResourceUsage();
+            }
+
+            bool convexityToggle = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Alpha7);
+            if (convexityToggle)
+            {
+                showingConvexity = !showingConvexity;
+                if (showingConvexity)
+                {
+                    QuadConvexityDisplay.ShowQuadConvexity(ConfigLoader.parallaxScatterBodies[FlightGlobals.currentMainBody.name].scatters.FirstOrDefault().Value.scatterName);
+                }
+                if (!showingConvexity)
+                {
+                    QuadConvexityDisplay.Cleanup();
+                }
             }
         }
         
@@ -283,6 +298,109 @@ namespace Parallax
                 foreach (GameObject go in objectDisplays)
                 {
                     UnityEngine.Object.Destroy(go);
+                }
+            }
+        }
+
+        // Green is flat, yellow to red approaches the scatter's maxNormalDeviance limit, magenta is rejected and blue is concave
+        public class QuadConvexityDisplay
+        {
+            public static List<GameObject> objectDisplays = new List<GameObject>();
+            static List<Mesh> meshes = new List<Mesh>();
+            static Material material;
+
+            public static void ShowQuadConvexity(string scatterName)
+            {
+                Scatter scatter = ConfigLoader.parallaxScatterBodies[FlightGlobals.currentMainBody.name].scatters[scatterName];
+                float maxConvexity = Mathf.Acos(Mathf.Clamp(1.0f - scatter.distributionParams.maxNormalDeviance, -1.0f, 1.0f));
+
+                material = new Material(Shader.Find("Hidden/Internal-Colored"));
+                material.SetInt("_ZWrite", 1);
+                material.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Back);
+
+                foreach (KeyValuePair<PQ, ScatterSystemQuadData> quadData in ScatterComponent.scatterQuadData)
+                {
+                    PQ quad = quadData.Key;
+                    ScatterSystemQuadData data = quadData.Value;
+                    GameObject go = CreateQuadGameObject(quad, out MeshRenderer meshRenderer, out MeshFilter meshFilter);
+
+                    float depthScale = 1 << (quad.sphereRoot.maxLevel - quad.subdivision);
+                    int[] triangles = data.triangles;
+                    Vector3[] vertices = new Vector3[triangles.Length];
+                    Color[] colors = new Color[triangles.Length];
+                    int[] indices = new int[triangles.Length];
+
+                    for (int i = 0; i < triangles.Length; i += 3)
+                    {
+                        int a = triangles[i];
+                        int b = triangles[i + 1];
+                        int c = triangles[i + 2];
+
+                        float convexity = Mathf.Max(GetEdgeConvexity(data.vertices[a], data.vertices[b], data.normals[a], data.normals[b]),
+                                          Mathf.Max(GetEdgeConvexity(data.vertices[b], data.vertices[c], data.normals[b], data.normals[c]),
+                                                    GetEdgeConvexity(data.vertices[c], data.vertices[a], data.normals[c], data.normals[a]))) / depthScale;
+                        Color color = GetConvexityColor(convexity / maxConvexity);
+
+                        for (int j = 0; j < 3; j++)
+                        {
+                            vertices[i + j] = data.vertices[triangles[i + j]];
+                            colors[i + j] = color;
+                            indices[i + j] = i + j;
+                        }
+                    }
+
+                    Mesh mesh = new Mesh();
+                    mesh.vertices = vertices;
+                    mesh.colors = colors;
+                    mesh.triangles = indices;
+                    mesh.RecalculateBounds();
+                    meshes.Add(mesh);
+
+                    meshFilter.sharedMesh = mesh;
+                    meshRenderer.sharedMaterial = material;
+
+                    objectDisplays.Add(go);
+                }
+            }
+
+            static float GetEdgeConvexity(Vector3 positionA, Vector3 positionB, Vector3 normalA, Vector3 normalB)
+            {
+                Vector3 edge = positionB - positionA;
+                return Vector3.Dot(normalB - normalA, edge) / Mathf.Max(edge.magnitude, 1e-6f);
+            }
+
+            static Color GetConvexityColor(float limitFraction)
+            {
+                if (limitFraction > 1.0f)
+                {
+                    return Color.magenta;
+                }
+                if (limitFraction < 0.0f)
+                {
+                    return Color.Lerp(Color.green, Color.blue, -limitFraction);
+                }
+                if (limitFraction < 0.5f)
+                {
+                    return Color.Lerp(Color.green, Color.yellow, limitFraction * 2.0f);
+                }
+                return Color.Lerp(Color.yellow, Color.red, (limitFraction - 0.5f) * 2.0f);
+            }
+
+            public static void Cleanup()
+            {
+                foreach (GameObject go in objectDisplays)
+                {
+                    UnityEngine.Object.Destroy(go);
+                }
+                foreach (Mesh mesh in meshes)
+                {
+                    UnityEngine.Object.Destroy(mesh);
+                }
+                objectDisplays.Clear();
+                meshes.Clear();
+                if (material != null)
+                {
+                    UnityEngine.Object.Destroy(material);
                 }
             }
         }

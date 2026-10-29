@@ -105,19 +105,22 @@ void DistributeCandidate(uint2 cellID, float2 cellPos, float4 randomA, float4 ra
         triangleIndex += 1u;
     }
 
+    float3 p1 = vertices[index1];
+    float3 p2 = vertices[index2];
+    float3 p3 = vertices[index3];
     float3 n1 = normals[index1];
     float3 n2 = normals[index2];
     float3 n3 = normals[index3];
 
     // If the mesh is too curved, we can end up with scatters floating/overhanging the terrain (depending on scatter mesh and size)
-    float normalDeviance = GetNormalDeviance(n1, n2, n3);
-    if (normalDeviance < 1.0f - _MaxNormalDeviance)
+    float convexity = GetTriangleConvexity(p1, p2, p3, n1, n2, n3) / depthScale;
+    if (convexity > acos(clamp(1.0f - _MaxNormalDeviance, -1.0f, 1.0f)))
     {
         return;
     }
 
     // Don't place scatters on ineligible gradients, such as mountains
-    float slope = CalculateSlope(TriCenter(n1, n2, n3));
+    float slope = CalculateSlope(normalize(Interpolate(n1, n2, n3, weights)));
     if (slope < 0.025)
     {
         slope = 0;
@@ -135,7 +138,7 @@ void DistributeCandidate(uint2 cellID, float2 cellPos, float4 randomA, float4 ra
         return;
     }
 
-    float3 localPos = Interpolate(vertices[index1], vertices[index2], vertices[index3], weights);
+    float3 localPos = Interpolate(p1, p2, p3, weights);
     float3 localCenterDir = Interpolate(directionsFromCenter[index1], directionsFromCenter[index2], directionsFromCenter[index3], weights);
     float localAllowScatter = interpolatedUV.z;
 

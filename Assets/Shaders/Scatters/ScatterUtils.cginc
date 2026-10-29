@@ -112,14 +112,16 @@ float CalculateSlope(float3 normal)
     return slope;
 }
 
-// Obtain a basic estimate for the curvature of the mesh based on how much the normals deviate from one another
-float GetNormalDeviance(float3 normal1, float3 normal2, float3 normal3)
+float GetEdgeConvexity(float3 positionA, float3 positionB, float3 normalA, float3 normalB)
 {
-    float nrmDev1 = dot(normal2, normal3);
-    float nrmDev2 = dot(normal3, normal1);
-    float nrmDev3 = dot(normal1, normal2);
-    float normalDeviance = min(nrmDev1, min(nrmDev2, nrmDev3));
-    return normalDeviance;
+    float3 edge = positionB - positionA;
+    return dot(normalB - normalA, edge) * rsqrt(max(dot(edge, edge), 1e-12f));
+}
+
+float GetTriangleConvexity(float3 p1, float3 p2, float3 p3, float3 n1, float3 n2, float3 n3)
+{
+    float convexity = max(GetEdgeConvexity(p1, p2, n1, n2), GetEdgeConvexity(p2, p3, n2, n3));
+    return max(0.0f, max(convexity, GetEdgeConvexity(p3, p1, n3, n1)));
 }
 
 // Construct translation matrix from a position
