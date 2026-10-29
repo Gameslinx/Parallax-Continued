@@ -163,6 +163,7 @@ namespace Parallax
             }
 
             UpdateCameraData();
+            EventHandler.RunQuadRangeCheck();
             JobifiedSubdivision.UpdateAll();
         }
 

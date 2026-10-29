@@ -434,8 +434,9 @@ namespace Parallax
             CollisionManager.QueueIncomingData(collisionData);
             collidersAdded = true;
         }
+
         /// <summary>
-        /// Set the evaluate parameters that are the same for every quad this scatter is on. Call once per frame before any quad is evaluated
+        /// Set the evaluate parameters that are the same for every quad this scatter is on. Called once per frame before any quad is evaluated
         /// </summary>
         public static void SetEvaluateFrameParams(Scatter scatter, ScatterRenderer renderer)
         {

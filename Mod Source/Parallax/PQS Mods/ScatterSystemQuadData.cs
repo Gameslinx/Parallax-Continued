@@ -33,6 +33,13 @@ namespace Parallax
         public Vector3 planetOrigin;
         public float planetRadius;
 
+        bool isMaxLevel;
+        Vector3 planetLocalPosition;
+        Vector3 worldPosition;
+        float maxSqrCameraRange = -1;
+        float maxSqrCraftRange = -1;
+        bool allScattersPaused = false;
+
         // PQS data
         // Potentially store a scaled version of this to get closer to the desired frequency and reduce precision errors
         // Length parity with quad vertex count
@@ -113,6 +120,8 @@ namespace Parallax
 
             planetNormal = Vector3.Normalize(quad.transform.position - quad.sphereRoot.transform.position);
             localPlanetNormal = quad.gameObject.transform.InverseTransformDirection(planetNormal);
+            isMaxLevel = quad.subdivision == quad.sphereRoot.maxLevel;
+            planetLocalPosition = quad.sphereRoot.transform.InverseTransformPoint(quad.transform.position);
 
             CelestialBody body = FlightGlobals.GetBodyByName(quad.sphereRoot.name);
             planetOrigin = body.transform.position;
@@ -178,6 +187,8 @@ namespace Parallax
                     }
                 }
             }
+            allScattersPaused = false;
+            RecalculateMaxRanges();
         }
         /// <summary>
         /// Calculate the max bound on this quad
@@ -195,16 +206,54 @@ namespace Parallax
         public void UpdateQuadCameraDistance(ref Vector3 cameraPos)
         {
             localToWorld = quad.meshRenderer.localToWorldMatrix;
-            cameraDistance = ((Vector3)localToWorld.GetColumn(3) - cameraPos).sqrMagnitude;
+            worldPosition = localToWorld.GetColumn(3);
+            cameraDistance = (worldPosition - cameraPos).sqrMagnitude;
+        }
+        public void UpdateQuadCameraDistance(ref Matrix4x4 planetToWorld, ref Vector3 cameraPos)
+        {
+            worldPosition = isMaxLevel ? (Vector3)quad.PrecisePosition : planetToWorld.MultiplyPoint3x4(planetLocalPosition);
+            cameraDistance = (worldPosition - cameraPos).sqrMagnitude;
+        }
+        public bool CanSkipEvaluate()
+        {
+            return allScattersPaused && !AnyScatterInRange();
+        }
+        bool AnyScatterInRange()
+        {
+            if (cameraDistance <= maxSqrCameraRange)
+            {
+                return true;
+            }
+            return maxSqrCraftRange >= 0 && (worldPosition - RuntimeOperations.vectorCraftPos).sqrMagnitude <= maxSqrCraftRange;
+        }
+        void RecalculateMaxRanges()
+        {
+            maxSqrCameraRange = -1;
+            maxSqrCraftRange = -1;
+            foreach (ScatterData data in quadScatters)
+            {
+                float range = data.scatter.distributionParams.range;
+                float sqrRange = range * range + sqrQuadWidth;
+                if (data.scatter.useCraftPosition)
+                {
+                    maxSqrCraftRange = Mathf.Max(maxSqrCraftRange, sqrRange);
+                }
+                else
+                {
+                    maxSqrCameraRange = Mathf.Max(maxSqrCameraRange, sqrRange);
+                }
+            }
         }
         bool alreadyReinitializedThisFrame = false;
         /// <summary>
         /// Generate the instanced transform data on this quad
         /// </summary>
-        public void EvaluateQuad()
+        public void EvaluateQuad(ref Matrix4x4 planetToWorld)
         {
-            runtimePlanetNormal = Vector3.Normalize(quad.PrecisePosition - quad.sphereRoot.PrecisePosition);
+            localToWorld = quad.meshRenderer.localToWorldMatrix;
+            runtimePlanetNormal = Vector3.Normalize(worldPosition - (Vector3)planetToWorld.GetColumn(3));
 
+            bool anyActive = false;
             for (int i = quadScatters.Count - 1; i >= 0; i--)
             {
                 ScatterData scatter = quadScatters[i];
@@ -231,8 +280,10 @@ namespace Parallax
                     }
                 }
                 scatter.Evaluate();
+                anyActive |= !scatter.cleaned;
             }
             alreadyReinitializedThisFrame = false;
+            allScattersPaused = !anyActive;
         }
         /// <summary>
         /// Determines what scatters appear on this quad
@@ -272,6 +323,7 @@ namespace Parallax
                     StartScatter(data);
                 }
             }
+            RecalculateMaxRanges();
         }
         /// <summary>
         /// Starts the scatter, or initializes it in a paused state
@@ -281,6 +333,7 @@ namespace Parallax
         {
             // Update camera distance to this quad
             UpdateQuadCameraDistance(ref RuntimeOperations.vectorCameraPos);
+            allScattersPaused = false;
 
             bool needsColliders = data.scatter.collideable && quad.subdivision == quad.sphereRoot.maxLevel;
             if (!needsColliders && !InRange(data.scatter))
@@ -301,7 +354,7 @@ namespace Parallax
         {
             if (scatter.useCraftPosition)
             {
-                return ((Vector3)localToWorld.GetColumn(3) - RuntimeOperations.vectorCraftPos).sqrMagnitude;
+                return (worldPosition - RuntimeOperations.vectorCraftPos).sqrMagnitude;
             }
             return cameraDistance;
         }
@@ -421,6 +474,7 @@ namespace Parallax
         {
             data.Cleanup();
             quadScatters.Remove(data);
+            RecalculateMaxRanges();
         }
 
         // 0 = total, 1 = theoretical min, 2 = wasted

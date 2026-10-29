@@ -203,13 +203,31 @@ namespace Parallax
             // Update quad-camera distances
             // Then dispatch the evaluate compute shaders
 
+            PQS sphere = null;
+            Matrix4x4 planetToWorld = Matrix4x4.identity;
             foreach (var data in ScatterComponent.scatterQuadData)
             {
                 ScatterSystemQuadData quadData = data.Value;
-                if (quadData.quad.isVisible && (quadData.quad.meshRenderer.isVisible || quadData.ignoreRendererVisibility))
+                if (!quadData.quad.isVisible)
                 {
-                    quadData.UpdateQuadCameraDistance(ref RuntimeOperations.vectorCameraPos);
-                    quadData.EvaluateQuad();
+                    continue;
+                }
+
+                if (!ReferenceEquals(quadData.quad.sphereRoot, sphere))
+                {
+                    sphere = quadData.quad.sphereRoot;
+                    planetToWorld = sphere.transform.localToWorldMatrix;
+                }
+
+                quadData.UpdateQuadCameraDistance(ref planetToWorld, ref RuntimeOperations.vectorCameraPos);
+                if (quadData.CanSkipEvaluate())
+                {
+                    continue;
+                }
+
+                if (quadData.quad.meshRenderer.isVisible || quadData.ignoreRendererVisibility)
+                {
+                    quadData.EvaluateQuad(ref planetToWorld);
                 }
             }
 

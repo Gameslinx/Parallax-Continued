@@ -95,7 +95,7 @@ namespace Parallax
                 }
             }
         }
-        void FixedUpdate()
+        public static void RunQuadRangeCheck()
         {
             if (OnQuadRangeCheck != null)
             {
