@@ -59,6 +59,26 @@ float Rand(float3 p3)
     return frac((p3.x + p3.y) * p3.z);
 }
 
+uint4 Pcg4d(uint4 v)
+{
+    v = v * 1664525u + 1013904223u;
+    v.x += v.y * v.w;
+    v.y += v.z * v.x;
+    v.z += v.x * v.y;
+    v.w += v.y * v.z;
+    v ^= v >> 16u;
+    v.x += v.y * v.w;
+    v.y += v.z * v.x;
+    v.z += v.x * v.y;
+    v.w += v.y * v.z;
+    return v;
+}
+
+float4 HashToFloat(uint4 hash)
+{
+    return (float4)(hash >> 8u) * (1.0f / 16777216.0f);
+}
+
 // Returns a uniformly distributed point at a random position on a triangle
 float3 RandomPoint(float3 p1, float3 p2, float3 p3, float r1, float r2)
 {
@@ -280,13 +300,12 @@ float GetAltitudeScalar(float altitude, float3 worldPosition)
 }
 
 // Get random chance to cull before max range
-bool IsOutOfRangeEarly(float normalisedRange, float3 localPosition)
+bool IsOutOfRangeEarly(float normalisedRange, float objectRotation)
 {
     // 0 when at _RangeFadeStart, 1 at cutoff
     float despawnWeight = GetPercentageBetween(normalisedRange, _RangeFadeStart, 1);
     
-    // Use local positions as the random seed for despawning
-    float despawnChance = Rand(localPosition);
+    float despawnChance = HashToFloat(Pcg4d(uint4(asuint(objectRotation), 0u, 0u, 0u))).x;
     
     // Despawn if the chance is lower than the weight
     return despawnChance < despawnWeight;

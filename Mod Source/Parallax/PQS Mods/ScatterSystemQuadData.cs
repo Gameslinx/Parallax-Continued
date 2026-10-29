@@ -25,6 +25,7 @@ namespace Parallax
         public float cameraDistance;
         public Matrix4x4 localToWorld;
         public bool ignoreRendererVisibility;
+        public bool awaitingFirstEvaluate = true;
 
         // Direction from planet to quad in world and local space
         public Vector3 planetNormal;
@@ -60,6 +61,9 @@ namespace Parallax
         // Density multiplier based on the quad's position on the sphere
         public float sphereRelativeDensityMult = 1.0f;
 
+        public int[] quadGridOrigin = new int[3];
+        public float gridCellSize;
+
         // Corners in 0 to 3, center in 4
         string[] cornerBiomes = new string[5];
 
@@ -89,7 +93,7 @@ namespace Parallax
             mesh = quad.mesh;
             vertices = mesh.vertices;
             normals = mesh.normals;
-            triangles = mesh.triangles;
+            triangles = PQS.cacheIndices[0];
             colors = mesh.colors;
 
             // We can estimate this using (float)((2f * Mathf.PI * quad.sphereRoot.radius / 4f) / (Mathf.Pow(2f, quad.subdivision)));
@@ -127,7 +131,7 @@ namespace Parallax
             planetOrigin = body.transform.position;
             planetRadius = (float)body.Radius;
 
-            sphereRelativeDensityMult = BiomeLoader.GetSphereRelativeDensityMult(body, quad);
+            CalculateGridPlacement();
 
             GetCornerBiomes(body);
 
@@ -148,8 +152,22 @@ namespace Parallax
 
             directionsFromCenter = GetDirectionsFromCenter(vertices, quad.sphereRoot.gameObject.transform.position);
             sourceDirsFromCenterBuffer.SetData(directionsFromCenter);
+        }
+        void CalculateGridPlacement()
+        {
+            PQ faceQuad = quad.quadRoot != null ? quad.quadRoot : quad;
+            Vector3d planeCenter = QuaternionD.Inverse(faceQuad.planeRotation) * quad.positionPlanePosition;
+            double halfSide = quad.quadScaleFactor * 0.5;
+            double cellsPerPlaneUnit = 7.0 * System.Math.Pow(2.0, quad.sphereRoot.maxLevel);
 
-            sphereRelativeDensityMult = BiomeLoader.GetSphereRelativeDensityMult(body, quad);
+            quadGridOrigin[0] = (int)quad.plane;
+            quadGridOrigin[1] = (int)System.Math.Round((1.0 - planeCenter.x - halfSide) * cellsPerPlaneUnit);
+            quadGridOrigin[2] = (int)System.Math.Round((1.0 - planeCenter.z - halfSide) * cellsPerPlaneUnit);
+            gridCellSize = (float)(1.0 / cellsPerPlaneUnit);
+
+            double nearestX = System.Math.Max(planeCenter.x - halfSide, System.Math.Min(0.0, planeCenter.x + halfSide));
+            double nearestZ = System.Math.Max(planeCenter.z - halfSide, System.Math.Min(0.0, planeCenter.z + halfSide));
+            sphereRelativeDensityMult = (float)System.Math.Pow(1.0 + nearestX * nearestX + nearestZ * nearestZ, -1.5);
         }
         /// <summary>
         /// Reinitializes an amount of scatters. Refreshes prerequisite data and regenerates the scatters specified.
@@ -284,6 +302,7 @@ namespace Parallax
             }
             alreadyReinitializedThisFrame = false;
             allScattersPaused = !anyActive;
+            awaitingFirstEvaluate = false;
         }
         /// <summary>
         /// Determines what scatters appear on this quad

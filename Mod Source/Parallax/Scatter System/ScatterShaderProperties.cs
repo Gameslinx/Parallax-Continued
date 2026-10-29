@@ -18,6 +18,10 @@ namespace Parallax
         public static int alignToTerrainNormalID =          Shader.PropertyToID("_AlignToTerrainNormal");
         public static int maxNormalDevianceID =             Shader.PropertyToID("_MaxNormalDeviance");
         public static int seedID =                          Shader.PropertyToID("_Seed");
+        public static int subdivisionDepthID =              Shader.PropertyToID("_SubdivisionDepth");
+        public static int candidateSlicesID =               Shader.PropertyToID("_CandidateSlices");
+        public static int quadGridOriginID =                Shader.PropertyToID("_QuadGridOrigin");
+        public static int gridCellSizeID =                  Shader.PropertyToID("_GridCellSize");
         public static int minScaleID =                      Shader.PropertyToID("_MinScale");
         public static int maxScaleID =                      Shader.PropertyToID("_MaxScale");
         public static int scaleRandomnessID =               Shader.PropertyToID("_ScaleRandomness");
@@ -51,7 +55,6 @@ namespace Parallax
         public static int cameraFrustumPlanesID =           Shader.PropertyToID("_CameraFrustumPlanes");
         public static int worldSpaceCameraPositionID =      Shader.PropertyToID("_WorldSpaceCameraPosition");
         public static int worldSpaceReferencePositionID =   Shader.PropertyToID("_WorldSpaceReferencePosition");
-        public static int maxCountID =                      Shader.PropertyToID("_MaxCount");
         public static int cullRadiusID =                    Shader.PropertyToID("_CullRadius");
         public static int cullLimitID =                     Shader.PropertyToID("_CullLimit");
         public static int maxRangeID =                      Shader.PropertyToID("_MaxRange");

@@ -225,7 +225,7 @@ namespace Parallax
                     continue;
                 }
 
-                if (quadData.quad.meshRenderer.isVisible || quadData.ignoreRendererVisibility)
+                if (quadData.quad.meshRenderer.isVisible || quadData.ignoreRendererVisibility || quadData.awaitingFirstEvaluate)
                 {
                     quadData.EvaluateQuad(ref planetToWorld);
                 }

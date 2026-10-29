@@ -2,6 +2,11 @@
 int _PopulationMultiplier;
 float _Seed;
 
+int _SubdivisionDepth;
+int _CandidateSlices;
+int3 _QuadGridOrigin;
+float _GridCellSize;
+
 // Only used if blockmap is enabled
 float3 _BlockMapDirectionFromCenter;
 float4 _BlockMapRotation;	// Quaternion in float4 format
@@ -30,9 +35,6 @@ float _ScaleRandomness;
 float _MinAltitude;
 float _MaxAltitude;
 float _AltitudeFadeRange;
-
-// Max distribution count
-int _MaxCount;
 
 float _NoiseScale;
 

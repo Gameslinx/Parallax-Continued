@@ -91,7 +91,6 @@ namespace Parallax
 
             // Required values
             scatterShader.SetFloat(ParallaxScatterShaderProperties.planetRadiusID, parent.planetRadius);
-            scatterShader.SetInt(ParallaxScatterShaderProperties.maxCountID, maxCount);
             scatterShader.SetInts(ParallaxScatterShaderProperties.biomeMaskID, scatter.biomeMask);
 
             scatterShader.SetVector(ParallaxScatterShaderProperties.planetNormalID, parent.planetNormal);
@@ -111,7 +110,6 @@ namespace Parallax
 
             scatterShader.SetBuffer(distributeKernel, ParallaxScatterShaderProperties.parentVertsBufferID, parent.sourceVertsBuffer);
             scatterShader.SetBuffer(distributeKernel, ParallaxScatterShaderProperties.parentNormalsBufferID, parent.sourceNormalsBuffer);
-            scatterShader.SetBuffer(distributeKernel, ParallaxScatterShaderProperties.parentTrisBufferID, parent.sourceTrianglesBuffer);
             scatterShader.SetBuffer(distributeKernel, ParallaxScatterShaderProperties.parentUVsBufferID, parent.sourceUVsBuffer);
             scatterShader.SetBuffer(distributeKernel, ParallaxScatterShaderProperties.parentDirsBufferID, parent.sourceDirsFromCenterBuffer);
             
@@ -193,14 +191,15 @@ namespace Parallax
         public void SetDistributionVars()
         {
             // Values from config
-            scatterShader.SetInt(ParallaxScatterShaderProperties.populationMultiplierID, scatter.distributionParams.populationMultiplier * (int)Mathf.Pow(2, parent.quad.sphereRoot.maxLevel - parent.quad.subdivision));
-            scatterShader.SetFloat(ParallaxScatterShaderProperties.spawnChanceID, scatter.distributionParams.spawnChance * parent.sphereRelativeDensityMult);
+            scatterShader.SetInt(ParallaxScatterShaderProperties.populationMultiplierID, scatter.distributionParams.populationMultiplier);
+            scatterShader.SetInt(ParallaxScatterShaderProperties.subdivisionDepthID, parent.quad.sphereRoot.maxLevel - parent.quad.subdivision);
+            scatterShader.SetInts(ParallaxScatterShaderProperties.quadGridOriginID, parent.quadGridOrigin);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.gridCellSizeID, parent.gridCellSize);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.spawnChanceID, scatter.distributionParams.spawnChance);
             scatterShader.SetInt(ParallaxScatterShaderProperties.alignToTerrainNormalID, scatter.distributionParams.alignToTerrainNormal);
             scatterShader.SetFloat(ParallaxScatterShaderProperties.maxNormalDevianceID, scatter.distributionParams.maxNormalDeviance);
 
-            // Use the quad index to vary the seed per-quad
-            float quadUniqueSeed = scatter.distributionParams.seed + (float)parent.quad.quadIndex;
-            scatterShader.SetFloat(ParallaxScatterShaderProperties.seedID, quadUniqueSeed);
+            scatterShader.SetFloat(ParallaxScatterShaderProperties.seedID, scatter.distributionParams.seed);
 
             scatterShader.SetVector(ParallaxScatterShaderProperties.minScaleID, scatter.distributionParams.minScale);
             scatterShader.SetVector(ParallaxScatterShaderProperties.maxScaleID, scatter.distributionParams.maxScale);
@@ -246,9 +245,12 @@ namespace Parallax
         {
             outputScatterDataBuffer.SetCounterValue(0);
 
-            // Dispatch 1 thread per triangle
-            int dispatchCount = Mathf.CeilToInt((float)numTriangles / 32.0f);
-            scatterShader.Dispatch(distributeKernel, dispatchCount, 1, 1);
+            int depth = parent.quad.sphereRoot.maxLevel - parent.quad.subdivision;
+            int cellsPerSide = 14 << depth;
+            int dispatchCount = Mathf.CeilToInt((float)cellsPerSide / 8.0f);
+            int candidateSlices = Mathf.Max(1, Mathf.CeilToInt((float)scatter.distributionParams.populationMultiplier / (1 << depth)));
+            scatterShader.SetInt(ParallaxScatterShaderProperties.candidateSlicesID, candidateSlices);
+            scatterShader.Dispatch(distributeKernel, dispatchCount, dispatchCount, candidateSlices * 2);
 
             // Prepare for evaluation
             ComputeDispatchArgs();
@@ -264,6 +266,10 @@ namespace Parallax
             // Read count from AppendStructuredBuffer to the objectlimits, used in the early return check from evaluate - can't process more data than exists
             scatterShader.SetBuffer(evaluateKernel, ParallaxScatterShaderProperties.objectLimitsBufferID, objectLimits);
             ComputeBuffer.CopyCount(outputScatterDataBuffer, objectLimits, 0);
+
+            dispatchArgs = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
+            dispatchArgs.SetData(new int[] { Mathf.CeilToInt((float)outputSize / 32f), 1, 1 });
+            eventAdded = true;
 
             // Read this back to construct indirect dispatch args
             if (SystemInfo.supportsAsyncGPUReadback)
@@ -307,12 +313,7 @@ namespace Parallax
             count[1] = 1;
             count[2] = 1;
 
-            dispatchArgs = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
             dispatchArgs.SetData(count);
-
-            // This function may never execute because the quad tries to cleanup before the readback is complete
-            // So add this guard to prevent trying to remove the event before it was ever added
-            eventAdded = true;
         }
         /// <summary>
         /// For systems that don't support asyncGPUReadback - such as OpenGL
@@ -357,12 +358,7 @@ namespace Parallax
             count[1] = 1;
             count[2] = 1;
 
-            dispatchArgs = new ComputeBuffer(3, sizeof(int), ComputeBufferType.IndirectArguments);
             dispatchArgs.SetData(count);
-
-            // This function may never execute because the quad tries to cleanup before the readback is complete
-            // So add this guard to prevent trying to remove the event before it was ever added
-            eventAdded = true;
         }
 
         // Request the output buffer for collider processing
@@ -464,9 +460,6 @@ namespace Parallax
         public bool paused = false;
         public void Evaluate()
         {
-            // There aren't any of this scatter on this quad
-            if (count[0] == 0) { return; }
-
             // Quad is suspended
             if (paused) { return; }
 
