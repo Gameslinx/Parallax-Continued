@@ -4,187 +4,83 @@
         <Platforms>AnyCPU;x86;x64</Platforms>
         <AssemblyName>ParallaxContinued</AssemblyName>
         <LangVersion>13</LangVersion>
-    </PropertyGroup>
-    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-        <DebugSymbols>true</DebugSymbols>
-        <DebugType>portable</DebugType>
-        <Optimize>false</Optimize>
-        <GameDataPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\</GameDataPath>
-        <OutDir>$(GameDataPath)$(AssemblyName)\Plugins\</OutDir>
-        <ErrorReport>prompt</ErrorReport>
-        <WarningLevel>4</WarningLevel>
         <NoWarn>0169</NoWarn>
         <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
         <DefineConstants>TRACE;DEBUG;ENABLE_PROFILER</DefineConstants>
-      </PropertyGroup>
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      <DebugSymbols>true</DebugSymbols>
-      <DebugType>portable</DebugType>
-      <Optimize>false</Optimize>
-      <GameDataPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\</GameDataPath>
-      <OutDir>$(GameDataPath)$(AssemblyName)\Plugins\</OutDir>
-      <ErrorReport>prompt</ErrorReport>
-      <WarningLevel>4</WarningLevel>
-      <NoWarn>0169</NoWarn>
-      <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
-      <DefineConstants>TRACE;DEBUG;ENABLE_PROFILER</DefineConstants>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
-      <DebugSymbols>true</DebugSymbols>
-      <DebugType>portable</DebugType>
-      <Optimize>false</Optimize>
-      <GameDataPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\</GameDataPath>
-      <OutDir>$(GameDataPath)$(AssemblyName)\Plugins\</OutDir>
-      <ErrorReport>prompt</ErrorReport>
-      <WarningLevel>4</WarningLevel>
-      <NoWarn>0169</NoWarn>
-      <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
-      <DefineConstants>TRACE;DEBUG;ENABLE_PROFILER</DefineConstants>
-    </PropertyGroup>
-      <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-        <DebugType>pdbonly</DebugType>
-        <Optimize>true</Optimize>
-        <GameDataPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\</GameDataPath>
-        <OutDir>$(GameDataPath)$(AssemblyName)\Plugins\</OutDir>
-        <ErrorReport>prompt</ErrorReport>
-        <WarningLevel>4</WarningLevel>
-        <NoWarn>0169</NoWarn>
-        <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
-      </PropertyGroup>
-      <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-        <DebugType>pdbonly</DebugType>
-        <Optimize>true</Optimize>
-        <GameDataPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\</GameDataPath>
-        <OutDir>$(GameDataPath)$(AssemblyName)\Plugins\</OutDir>
-        <ErrorReport>prompt</ErrorReport>
-        <WarningLevel>4</WarningLevel>
-        <NoWarn>0169</NoWarn>
-        <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
-      </PropertyGroup>
-      <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
-        <DebugType>pdbonly</DebugType>
-        <Optimize>true</Optimize>
-        <GameDataPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\</GameDataPath>
-        <OutDir>$(GameDataPath)$(AssemblyName)\Plugins\</OutDir>
-        <ErrorReport>prompt</ErrorReport>
-        <WarningLevel>4</WarningLevel>
-        <NoWarn>0169</NoWarn>
-        <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
-      </PropertyGroup>
-      <ItemGroup>
-        <PackageReference Include="Krafs.Publicizer" Version="2.2.1">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-      </ItemGroup>
-    <ItemGroup>
-      <Reference Include="0Harmony">
-        <HintPath>$(GameDataPath)000_Harmony\0Harmony.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="Assembly-CSharp">
-        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\Assembly-CSharp.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="Assembly-CSharp-firstpass">
-        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="Kopernicus">
-        <HintPath>$(GameDataPath)Kopernicus\Plugins\Kopernicus.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="Kopernicus.Parser">
-        <HintPath>$(GameDataPath)Kopernicus\Plugins\Kopernicus.Parser.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="KSPBurst">
-        <HintPath>$(GameDataPath)000_KSPBurst\Plugins\KSPBurst.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="KSPTextureLoader">
-        <HintPath>$(GameDataPath)KSPTextureLoader\Plugins\KSPTextureLoader.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="Microsoft.Extensions.FileSystemGlobbing">
-        <HintPath>$(GameDataPath)000_KSPBurst\Plugins\Microsoft.Extensions.FileSystemGlobbing.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="System.IO.Compression" />
-      <Reference Include="System.Runtime" />
-      <Reference Include="System.Runtime.CompilerServices.Unsafe">
-        <HintPath>$(GameDataPath)000_KSPBurst\Plugins\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="Unity.Burst">
-        <HintPath>$(GameDataPath)000_KSPBurst\Plugins\Unity.Burst.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="Unity.Burst.Unsafe">
-        <HintPath>$(GameDataPath)000_KSPBurst\Plugins\Unity.Burst.Unsafe.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="Unity.Collections">
-        <HintPath>$(GameDataPath)000_KSPBurst\Plugins\Unity.Collections.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="Unity.Jobs">
-        <HintPath>$(GameDataPath)000_KSPBurst\Plugins\Unity.Jobs.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="Unity.Mathematics">
-        <HintPath>$(GameDataPath)000_KSPBurst\Plugins\Unity.Mathematics.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="UnityEngine">
-        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="UnityEngine.AnimationModule">
-        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="UnityEngine.AssetBundleModule">
-        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.AssetBundleModule.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="UnityEngine.CoreModule">
-        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="UnityEngine.ImageConversionModule">
-        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="UnityEngine.IMGUIModule">
-        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="UnityEngine.InputLegacyModule">
-        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="UnityEngine.PhysicsModule">
-        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="UnityEngine.TextRenderingModule">
-        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="UnityEngine.UnityWebRequestModule">
-        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.UnityWebRequestModule.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="UnityEngine.UnityWebRequestTextureModule">
-        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.UnityWebRequestTextureModule.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
-      <Reference Include="UnityEngine.UnityWebRequestAssetBundleModule">
-        <HintPath>$(GameDataPath)..\KSP_x64_Data\Managed\UnityEngine.UnityWebRequestAssetBundleModule.dll</HintPath>
-        <Private>false</Private>
-      </Reference>
 
+    <!-- KSPBuildTools -->
+    <PropertyGroup>
+        <!-- KSPBT_GameRoot is only resolved in KSPBuildTools.targets, so KSPBT_ModRoot is set from the
+             KSPBT_UseGameModRoot target below. Set KSPBT_InstallToGame to false to output into
+             Mod Source/GameData instead. -->
+        <KSPBT_InstallToGame Condition="'$(KSPBT_InstallToGame)' == ''">true</KSPBT_InstallToGame>
+        <KSPBT_ModRoot>$(MSBuildProjectDirectory)/../GameData/ParallaxContinued</KSPBT_ModRoot>
+        <KSPBT_ModPluginFolder>Plugins</KSPBT_ModPluginFolder>
+
+        <!-- The assembly attributes are declared manually in ConfigLoader.cs -->
+        <KSPBT_GenerateAssemblyAttribute>false</KSPBT_GenerateAssemblyAttribute>
+        <KSPBT_GenerateDependencyAttributes>false</KSPBT_GenerateDependencyAttributes>
+        <KSPBT_GenerateVersionFile>false</KSPBT_GenerateVersionFile>
+
+        <!-- Dependencies are expected to be installed already. Set this to true to have them installed with CKAN. -->
+        <KSPBT_InstallCKANDependencies Condition="'$(KSPBT_InstallCKANDependencies)' == ''">false</KSPBT_InstallCKANDependencies>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="KSPBuildTools" Version="1.1.1" />
+        <PackageReference Include="Krafs.Publicizer" Version="2.2.1">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ModReference Include="0Harmony">
+            <DLLPath>GameData/000_Harmony/0Harmony.dll</DLLPath>
+            <CKANIdentifier>Harmony2</CKANIdentifier>
+        </ModReference>
+        <ModReference Include="Kopernicus">
+            <DLLPath>GameData/Kopernicus/Plugins/Kopernicus.dll</DLLPath>
+            <CKANIdentifier>Kopernicus</CKANIdentifier>
+        </ModReference>
+        <ModReference Include="Kopernicus.Parser">
+            <DLLPath>GameData/Kopernicus/Plugins/Kopernicus.Parser.dll</DLLPath>
+        </ModReference>
+        <ModReference Include="KSPBurst">
+            <DLLPath>GameData/000_KSPBurst/Plugins/KSPBurst.dll</DLLPath>
+            <CKANIdentifier>KSPBurst</CKANIdentifier>
+        </ModReference>
+        <ModReference Include="KSPTextureLoader">
+            <DLLPath>GameData/KSPTextureLoader/Plugins/KSPTextureLoader.dll</DLLPath>
+            <CKANIdentifier>KSPTextureLoader</CKANIdentifier>
+        </ModReference>
+        <ModReference Include="Microsoft.Extensions.FileSystemGlobbing">
+            <DLLPath>GameData/000_KSPBurst/Plugins/Microsoft.Extensions.FileSystemGlobbing.dll</DLLPath>
+        </ModReference>
+        <ModReference Include="System.Runtime.CompilerServices.Unsafe">
+            <DLLPath>GameData/000_KSPBurst/Plugins/System.Runtime.CompilerServices.Unsafe.dll</DLLPath>
+        </ModReference>
+        <ModReference Include="Unity.Burst">
+            <DLLPath>GameData/000_KSPBurst/Plugins/Unity.Burst.dll</DLLPath>
+        </ModReference>
+        <ModReference Include="Unity.Burst.Unsafe">
+            <DLLPath>GameData/000_KSPBurst/Plugins/Unity.Burst.Unsafe.dll</DLLPath>
+        </ModReference>
+        <ModReference Include="Unity.Collections">
+            <DLLPath>GameData/000_KSPBurst/Plugins/Unity.Collections.dll</DLLPath>
+        </ModReference>
+        <ModReference Include="Unity.Jobs">
+            <DLLPath>GameData/000_KSPBurst/Plugins/Unity.Jobs.dll</DLLPath>
+        </ModReference>
+        <ModReference Include="Unity.Mathematics">
+            <DLLPath>GameData/000_KSPBurst/Plugins/Unity.Mathematics.dll</DLLPath>
+        </ModReference>
+    </ItemGroup>
+
+    <ItemGroup>
       <!-- Publicizer-->
       <!-- PQS -->
       <Publicize Include="Assembly-CSharp:PQ.PrecisePosition" />
@@ -220,5 +116,11 @@
       <Publicize Include="Assembly-CSharp:MapSO.PixelIndex" />
       <Publicize Include="Assembly-CSharp" MemberPattern="^MapSO\..*" />
     </ItemGroup>
+
+    <Target Name="KSPBT_UseGameModRoot" BeforeTargets="KSPBT_CopyDLLsToPluginFolder" Condition="'$(KSPBT_InstallToGame)' == 'true'">
+        <PropertyGroup>
+            <KSPBT_ModRoot>$(KSPBT_GameRoot)/GameData/ParallaxContinued</KSPBT_ModRoot>
+        </PropertyGroup>
+    </Target>
 
 </Project>
