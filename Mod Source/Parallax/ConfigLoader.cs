@@ -37,6 +37,10 @@ namespace Parallax
         // Stores all parallax scatter bodies by planet name
         public static Dictionary<string, ParallaxScatterBody> parallaxScatterBodies = new Dictionary<string, ParallaxScatterBody>();
 
+        // Shader and material names of structure ground materials defined in StructureGround.cfg
+        public static HashSet<string> structureGroundShaders = new HashSet<string>();
+        public static HashSet<string> structureGroundMaterials = new HashSet<string>();
+
         public static ObjectPool<GameObject> colliderPool;
 
         // Stores transparent material for terrain quads
@@ -82,6 +86,7 @@ namespace Parallax
             LoadTerrainConfigs(GetConfigsByName("ParallaxTerrain"));
             LoadScatterConfigs(GetConfigsByName("ParallaxScatters"));
             LoadSharedScatterConfigs(GetConfigsByName("ParallaxScatters"));
+            LoadStructureGroundConfig(GetConfigByName("ParallaxStructureGround"));
             InitializeObjectPools(parallaxGlobalSettings);
 
             transparentMaterial = new Material(AssetBundleLoader.parallaxTerrainShaders["Custom/DiscardAll"]);
@@ -304,6 +309,22 @@ namespace Parallax
             }
 
             parallaxGlobalSettings.LogAll();
+        }
+        public static void LoadStructureGroundConfig(UrlDir.UrlConfig config)
+        {
+            if (config == null)
+            {
+                ParallaxDebug.LogError("ParallaxStructureGround config is missing, structure ground will not be replaced");
+                return;
+            }
+
+            ConfigNode shadersNode = config.config.GetNode("Shaders") ?? new ConfigNode();
+            structureGroundShaders.UnionWith(shadersNode.GetValues("name"));
+
+            ConfigNode materialsNode = config.config.GetNode("Materials") ?? new ConfigNode();
+            structureGroundMaterials.UnionWith(materialsNode.GetValues("name"));
+
+            ParallaxDebug.Log("Loaded " + structureGroundShaders.Count + " structure ground shaders and " + structureGroundMaterials.Count + " structure ground materials");
         }
         public static void InitializeObjectPools(ParallaxSettings settings)
         {
