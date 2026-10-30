@@ -14,6 +14,7 @@ namespace Parallax.Structures
     public class StructureGroundTerrain : MonoBehaviour
     {
         const string groundShaderName = "Custom/ParallaxKSCTerrain";
+        const string launchPadGroundName = "model_launchpad_ground_v46n";
 
         static readonly string[] altitudeKeywords =
         {
@@ -30,6 +31,9 @@ namespace Parallax.Structures
 
         static readonly Dictionary<Renderer, GroundRendererProperties> groundRenderers = new Dictionary<Renderer, GroundRendererProperties>();
         static readonly Dictionary<Transform, Color> structureTerrainColors = new Dictionary<Transform, Color>();
+
+        // Meshes are shared assets that persist across scenes, so each one only needs fixing once
+        static readonly HashSet<Mesh> fixedSkirtMeshes = new HashSet<Mesh>();
 
         // KK statics and KSC facility upgrades spawn their renderers after Start and statics can activate outside these scenes
         // So we need to queue up these
@@ -256,6 +260,11 @@ namespace Parallax.Structures
                 renderer.sharedMaterials = materials;
             }
 
+            if (renderer.name == launchPadGroundName)
+            {
+                FixLaunchPadSkirtNormals(GetMesh(renderer));
+            }
+
             if (!groundRenderers.TryGetValue(renderer, out GroundRendererProperties properties))
             {
                 Mesh mesh = GetMesh(renderer);
@@ -371,6 +380,43 @@ namespace Parallax.Structures
                 stats.terrainColors++;
             }
             return terrainColor;
+        }
+
+        // The other KSC ground meshes have upward skirt normals so they blend into the terrain, but the launch pad's skirt normals face outwards
+        // Skirt triangles are the ones that dip below the ground plane at local y = 0
+        static void FixLaunchPadSkirtNormals(Mesh mesh)
+        {
+            if (mesh == null || !mesh.isReadable || !fixedSkirtMeshes.Add(mesh))
+            {
+                return;
+            }
+
+            Vector3[] vertices = mesh.vertices;
+            Vector3[] normals = mesh.normals;
+            int[] triangles = mesh.triangles;
+            if (normals.Length != vertices.Length)
+            {
+                return;
+            }
+
+            const float groundPlaneTolerance = -0.01f;
+            int fixedTriangles = 0;
+            for (int i = 0; i < triangles.Length; i += 3)
+            {
+                int a = triangles[i];
+                int b = triangles[i + 1];
+                int c = triangles[i + 2];
+                if (vertices[a].y < groundPlaneTolerance || vertices[b].y < groundPlaneTolerance || vertices[c].y < groundPlaneTolerance)
+                {
+                    normals[a] = Vector3.up;
+                    normals[b] = Vector3.up;
+                    normals[c] = Vector3.up;
+                    fixedTriangles++;
+                }
+            }
+
+            mesh.normals = normals;
+            ParallaxDebug.Log("[Structure ground] Pointed the normals of " + fixedTriangles + " skirt triangles upwards on " + mesh.name);
         }
 
         static Mesh GetMesh(Renderer renderer)
@@ -537,6 +583,7 @@ namespace Parallax.Structures
             RemoveDestroyedKeys(groundMaterialAltitudes);
             RemoveDestroyedKeys(groundRenderers);
             RemoveDestroyedKeys(structureTerrainColors);
+            fixedSkirtMeshes.RemoveWhere(mesh => mesh == null);
 
             foreach ((Material, CelestialBody) key in bodyMaterialClones.Where(clone => clone.Value == null).Select(clone => clone.Key).ToList())
             {
