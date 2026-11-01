@@ -3,20 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using KSPTextureLoader;
 using UnityEngine;
 
 namespace Parallax
 {
     public partial class ParallaxGUI
     {
-        static void ScatterMenu()
+        static void ScatterHeader()
         {
-            // Reset window size
-            if (!showDistribution && !showMaterial && !showDistributionNoise && !showScatterExporter && !showDebug)
-            {
-                window.height = windowDefault.height;
-            }
-
             GUIStyle labelSkin = HighLogic.Skin.label;
             labelSkin.alignment = TextAnchor.MiddleCenter;
 
@@ -26,9 +21,14 @@ namespace Parallax
 
             // Align correctly
             labelSkin.alignment = TextAnchor.MiddleLeft;
+        }
+        static void ScatterMenu()
+        {
+            Scatter scatter = scatters[currentScatterIndex];
 
             ProcessDistributionParams(scatter);
             ProcessDistributionNoiseParams(scatter);
+            ProcessBiomeBlacklist(scatter);
             ProcessBaseMaterialParams(scatter);
 
             ProcessDebug(scatter);
@@ -40,117 +40,156 @@ namespace Parallax
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Previous Scatter", HighLogic.Skin.button, GUILayout.Width(214)))
             {
-                currentScatterIndex = DecrementScatterIndex();
+                ChangeScatter(DecrementScatterIndex());
             }
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("Next Scatter", HighLogic.Skin.button, GUILayout.Width(214)))
             {
-                currentScatterIndex = IncrementScatterIndex();
+                ChangeScatter(IncrementScatterIndex());
             }
             GUILayout.EndHorizontal();
             return scatters[currentScatterIndex];
         }
+        static void ChangeScatter(int newIndex)
+        {
+            if (debugShowFaceOrientation)
+            {
+                ShowFaceOrientation(false, scatters[currentScatterIndex]);
+                ShowFaceOrientation(true, scatters[newIndex]);
+            }
+            currentScatterIndex = newIndex;
+        }
         static void ProcessDistributionParams(Scatter scatter)
         {
+            if (scatter.isShared) { return; }
             if (GUILayout.Button("Distribution Params", GetButtonColor(showDistribution)))
             {
                 showDistribution = !showDistribution;
             }
             if (showDistribution)
             {
+                GUISection.Begin();
+                // Callback method that regenerates scatters when these values are changed
                 ParamCreator.ChangeMethod callback = scatter.ReinitializeDistribution;
-                if (!scatter.isShared)
+
+                GUILayout.Label("Distribution Params: ", HighLogic.Skin.label);
+
+                // General params
+                ParamCreator.CreateParam("Seed", ref scatter.distributionParams.seed, GUIHelperFunctions.FloatField, callback);
+                ParamCreator.CreateParam("Spawn Chance", ref scatter.distributionParams.spawnChance, GUIHelperFunctions.FloatField, callback);
+                // These edit the config values, which the global settings then scale
+                ParamCreator.ChangeMethod globalSettingsCallback = () =>
                 {
-                    // Callback method that regenerates scatters when these values are changed
+                    ConfigLoader.ApplyGlobalScatterSettings(scatter);
+                    callback();
+                };
+                ParamCreator.CreateParam("Range", ref scatter.distributionParams.originalRange, GUIHelperFunctions.FloatField, globalSettingsCallback);
+                ParamCreator.CreateParam("Population Mult", ref scatter.distributionParams.originalPopulationMultiplier, GUIHelperFunctions.IntField, globalSettingsCallback);
 
-                    GUILayout.Label("Distribution Params: ", HighLogic.Skin.label);
+                // Scale params
+                ParamCreator.CreateParam("Min Scale", ref scatter.distributionParams.minScale, GUIHelperFunctions.Vector3Field, callback);
+                ParamCreator.CreateParam("Max Scale", ref scatter.distributionParams.maxScale, GUIHelperFunctions.Vector3Field, callback);
+                ParamCreator.CreateParam("Scale Randomness", ref scatter.distributionParams.scaleRandomness, GUIHelperFunctions.FloatField, callback);
 
-                    // General params
-                    ParamCreator.CreateParam("Seed", ref scatter.distributionParams.seed, GUIHelperFunctions.FloatField, callback);
-                    ParamCreator.CreateParam("Spawn Chance", ref scatter.distributionParams.spawnChance, GUIHelperFunctions.FloatField, callback);
-                    ParamCreator.CreateParam("Range", ref scatter.distributionParams.range, GUIHelperFunctions.FloatField, callback);
-                    ParamCreator.CreateParam("Population Mult", ref scatter.distributionParams.populationMultiplier, GUIHelperFunctions.IntField, callback);
+                ParamCreator.CreateParam("Noise Cutoff", ref scatter.distributionParams.noiseCutoff, GUIHelperFunctions.FloatField, callback);
 
-                    // Scale params
-                    ParamCreator.CreateParam("Min Scale", ref scatter.distributionParams.minScale, GUIHelperFunctions.Vector3Field, callback);
-                    ParamCreator.CreateParam("Max Scale", ref scatter.distributionParams.maxScale, GUIHelperFunctions.Vector3Field, callback);
-                    ParamCreator.CreateParam("Scale Randomness", ref scatter.distributionParams.scaleRandomness, GUIHelperFunctions.FloatField, callback);
+                // Steep params
+                ParamCreator.CreateParam("Steep Power", ref scatter.distributionParams.steepPower, GUIHelperFunctions.FloatField, callback);
+                ParamCreator.CreateParam("Steep Contrast", ref scatter.distributionParams.steepContrast, GUIHelperFunctions.FloatField, callback);
+                ParamCreator.CreateParam("Steep Midpoint", ref scatter.distributionParams.steepMidpoint, GUIHelperFunctions.FloatField, callback);
 
-                    ParamCreator.CreateParam("Noise Cutoff", ref scatter.distributionParams.noiseCutoff, GUIHelperFunctions.FloatField, callback);
+                ParamCreator.CreateParam("Max Normal Deviance", ref scatter.distributionParams.maxNormalDeviance, GUIHelperFunctions.FloatField, callback);
 
-                    // Steep params
-                    ParamCreator.CreateParam("Steep Power", ref scatter.distributionParams.steepPower, GUIHelperFunctions.FloatField, callback);
-                    ParamCreator.CreateParam("Steep Contrast", ref scatter.distributionParams.steepContrast, GUIHelperFunctions.FloatField, callback);
-                    ParamCreator.CreateParam("Steep Midpoint", ref scatter.distributionParams.steepMidpoint, GUIHelperFunctions.FloatField, callback);
+                // Altitude params
+                ParamCreator.CreateParam("Min Altitude", ref scatter.distributionParams.minAltitude, GUIHelperFunctions.FloatField, callback);
+                ParamCreator.CreateParam("Max Altitude", ref scatter.distributionParams.maxAltitude, GUIHelperFunctions.FloatField, callback);
+                ParamCreator.CreateParam("Altitude Fade Range", ref scatter.distributionParams.altitudeFadeRange, GUIHelperFunctions.FloatField, callback);
 
-                    ParamCreator.CreateParam("Max Normal Deviance", ref scatter.distributionParams.maxNormalDeviance, GUIHelperFunctions.FloatField, callback);
+                // Mesh params
+                ParamCreator.CreateParam("Align To Terrain Normal", ref scatter.distributionParams.alignToTerrainNormal, GUIHelperFunctions.IntField, callback);
+                ParamCreator.CreateParam("Use Terrain Colour", ref scatter.distributionParams.coloredByTerrain, GUIHelperFunctions.BoolField, callback);
 
-                    // Altitude params
-                    ParamCreator.CreateParam("Min Altitude", ref scatter.distributionParams.minAltitude, GUIHelperFunctions.FloatField, callback);
-                    ParamCreator.CreateParam("Max Altitude", ref scatter.distributionParams.maxAltitude, GUIHelperFunctions.FloatField, callback);
-                    ParamCreator.CreateParam("Altitude Fade Range", ref scatter.distributionParams.altitudeFadeRange, GUIHelperFunctions.FloatField, callback);
-
-                    // Mesh params
-                    ParamCreator.CreateParam("Align To Terrain Normal", ref scatter.distributionParams.alignToTerrainNormal, GUIHelperFunctions.IntField, callback);
-                    ParamCreator.CreateParam("Use Terrain Colour", ref scatter.distributionParams.coloredByTerrain, GUIHelperFunctions.BoolField, callback);
-                }
-
-                if (GUILayout.Button("LOD 1 Params", GetButtonColor(showLOD1)))
-                {
-                    showLOD1 = !showLOD1;
-                }
-                if (showLOD1)
-                {
-                    GUILayout.Label("LOD 1 Params: ", HighLogic.Skin.label);
-                    if (!scatter.isShared)
-                    {
-                        ParamCreator.CreateParam("Range", ref scatter.distributionParams.lod1.range, GUIHelperFunctions.FloatField, callback);
-                    }
-
-                    if (GUILayout.Button("LOD 1 Material Override", GetButtonColor(showLOD1Material)))
-                    {
-                        showLOD1Material = !showLOD1Material;
-                    }
-                    if (showLOD1Material)
-                    {
-                        ProcessMaterialParams(scatter,
-                            scatter.distributionParams.lod1.materialOverride,
-                            ScatterManager.Instance.fastScatterRenderers[scatter.scatterName],
-                            ScatterManager.Instance.fastScatterRenderers[scatter.scatterName].instancedMaterialLOD1,
-                            ScatterManager.Instance.fastScatterRenderers[scatter.scatterName].SetLOD1MaterialParams,
-                            ref showLOD1Keywords,
-                            false);
-                    }
-                }
-
-                if (GUILayout.Button("LOD 2 Params", GetButtonColor(showLOD2)))
-                {
-                    showLOD2 = !showLOD2;
-                }
-                if (showLOD2)
-                {
-                    GUILayout.Label("LOD 2 Params: ", HighLogic.Skin.label);
-                    if (!scatter.isShared)
-                    {
-                        ParamCreator.CreateParam("Range", ref scatter.distributionParams.lod2.range, GUIHelperFunctions.FloatField, callback);
-                    }
-                    if (GUILayout.Button("LOD 2 Material Override", GetButtonColor(showLOD2Material)))
-                    {
-                        showLOD2Material = !showLOD2Material;
-                    }
-                    if (showLOD2Material)
-                    {
-                        ProcessMaterialParams(scatter,
-                            scatter.distributionParams.lod2.materialOverride,
-                            ScatterManager.Instance.fastScatterRenderers[scatter.scatterName],
-                            ScatterManager.Instance.fastScatterRenderers[scatter.scatterName].instancedMaterialLOD2,
-                            ScatterManager.Instance.fastScatterRenderers[scatter.scatterName].SetLOD2MaterialParams,
-                            ref showLOD2Keywords,
-                            false);
-                    }
-                }
-                GUILayout.Space(15);
+                GUILayout.Label("LOD Params: ", HighLogic.Skin.label);
+                ParamCreator.CreateParam("LOD 1 Range", ref scatter.distributionParams.lod1.range, GUIHelperFunctions.FloatField, callback);
+                ParamCreator.CreateParam("LOD 2 Range", ref scatter.distributionParams.lod2.range, GUIHelperFunctions.FloatField, callback);
+                GUISection.End();
             }
+        }
+        static void ProcessBiomeBlacklist(Scatter scatter)
+        {
+            if (scatter.isShared) { return; }
+            CBAttributeMapSO biomeMap = FlightGlobals.currentMainBody.BiomeMap;
+            if (biomeMap == null || biomeMap.Attributes == null)
+            {
+                return;
+            }
+
+            if (GUILayout.Button("Biome Blacklist", GetButtonColor(showBiomeBlacklist)))
+            {
+                showBiomeBlacklist = !showBiomeBlacklist;
+            }
+            if (!showBiomeBlacklist)
+            {
+                return;
+            }
+
+            GUISection.Begin();
+            CBAttributeMapSO.MapAttribute[] attributes = biomeMap.Attributes;
+            List<string> blacklistedBiomes = scatter.biomeBlacklistParams.blacklistedBiomes;
+            bool blacklistChanged = false;
+
+            GUILayout.Label("Biome Blacklist: ", HighLogic.Skin.label);
+            for (int i = 0; i < blacklistedBiomes.Count; i++)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Blacklisted Biome " + (i + 1));
+
+                List<string> options = GetSelectableBiomes(attributes, blacklistedBiomes, blacklistedBiomes[i]);
+                string biome = GUIHelperFunctions.DropdownField(blacklistedBiomes[i], options, scatter.scatterName + "-" + i, out bool biomeChanged);
+                if (biomeChanged)
+                {
+                    blacklistedBiomes[i] = biome;
+                    blacklistChanged = true;
+                }
+
+                if (GUIHelperFunctions.CompactButton("X", 24))
+                {
+                    blacklistedBiomes.RemoveAt(i);
+                    GUIHelperFunctions.CloseDropdown();
+                    blacklistChanged = true;
+                    i--;
+                }
+                GUILayout.EndHorizontal();
+            }
+
+            List<string> remainingBiomes = GetSelectableBiomes(attributes, blacklistedBiomes, null);
+            if (remainingBiomes.Count > 0 && GUILayout.Button("Add Blacklisted Biome", HighLogic.Skin.button))
+            {
+                blacklistedBiomes.Add(remainingBiomes[0]);
+                blacklistChanged = true;
+            }
+            GUISection.End();
+
+            if (blacklistChanged)
+            {
+                scatter.biomeBlacklistParams.fastBlacklistedBiomes.Clear();
+                scatter.biomeBlacklistParams.fastBlacklistedBiomes.UnionWith(blacklistedBiomes);
+                BiomeLoader.UpdateBiomeMask(scatter, attributes);
+                scatter.ReinitializeDistribution();
+            }
+        }
+        static List<string> GetSelectableBiomes(CBAttributeMapSO.MapAttribute[] attributes, List<string> blacklistedBiomes, string currentBiome)
+        {
+            List<string> biomes = new List<string>();
+            for (int i = 0; i < Mathf.Min(attributes.Length, 64); i++)
+            {
+                string name = attributes[i].name;
+                if (name == currentBiome || !blacklistedBiomes.Contains(name))
+                {
+                    biomes.Add(name);
+                }
+            }
+            return biomes;
         }
         static void ProcessBaseMaterialParams(Scatter scatter)
         {
@@ -160,15 +199,60 @@ namespace Parallax
             }
             if (showMaterial)
             {
-                ProcessMaterialParams(scatter,
-                    scatter.materialParams,
-                    ScatterManager.Instance.fastScatterRenderers[scatter.scatterName],
-                    ScatterManager.Instance.fastScatterRenderers[scatter.scatterName].instancedMaterialLOD0,
-                    ScatterManager.Instance.fastScatterRenderers[scatter.scatterName].SetLOD0MaterialParams,
-                    ref showLOD0Keywords,
-                    true);
+                GUISection.Begin();
+                ScatterRenderer renderer = ScatterManager.Instance.fastScatterRenderers[scatter.scatterName];
 
-                GUILayout.Space(15);
+                if (GUILayout.Button("LOD 0", GetButtonColor(showLOD0)))
+                {
+                    showLOD0 = !showLOD0;
+                }
+                if (showLOD0)
+                {
+                    GUISection.Begin();
+                    ProcessMaterialParams(scatter,
+                        scatter.materialParams,
+                        renderer,
+                        renderer.instancedMaterialLOD0,
+                        renderer.SetLOD0MaterialParams,
+                        ref showLOD0Keywords,
+                        true);
+                    GUISection.End();
+                }
+
+                if (GUILayout.Button("LOD 1", GetButtonColor(showLOD1)))
+                {
+                    showLOD1 = !showLOD1;
+                }
+                if (showLOD1)
+                {
+                    GUISection.Begin();
+                    ProcessMaterialParams(scatter,
+                        scatter.distributionParams.lod1.materialOverride,
+                        renderer,
+                        renderer.instancedMaterialLOD1,
+                        renderer.SetLOD1MaterialParams,
+                        ref showLOD1Keywords,
+                        false);
+                    GUISection.End();
+                }
+
+                if (GUILayout.Button("LOD 2", GetButtonColor(showLOD2)))
+                {
+                    showLOD2 = !showLOD2;
+                }
+                if (showLOD2)
+                {
+                    GUISection.Begin();
+                    ProcessMaterialParams(scatter,
+                        scatter.distributionParams.lod2.materialOverride,
+                        renderer,
+                        renderer.instancedMaterialLOD2,
+                        renderer.SetLOD2MaterialParams,
+                        ref showLOD2Keywords,
+                        false);
+                    GUISection.End();
+                }
+                GUISection.End();
             }
         }
         static void ProcessDistributionNoiseParams(Scatter scatter)
@@ -180,25 +264,20 @@ namespace Parallax
             }
             if (showDistributionNoise)
             {
+                GUISection.Begin();
                 // Callback method that regenerates scatters when these values are changed
                 ParamCreator.ChangeMethod callback = scatter.ReinitializeDistribution;
 
                 GUILayout.Label("Distribution Params: ", HighLogic.Skin.label);
 
-                int noiseType = (int)scatter.noiseParams.noiseType;
-                if (ParamCreator.CreateParam("Noise Type (" + ((NoiseType)noiseType).ToString() + ")", ref noiseType, GUIHelperFunctions.IntField))
-                {
-                    scatter.noiseParams.noiseType = (NoiseType)noiseType;
-                    callback();
-                }
+                ParamCreator.CreateParam("Noise Type", ref scatter.noiseParams.noiseType, GUIHelperFunctions.EnumField, callback);
 
                 ParamCreator.CreateParam("Seed", ref scatter.noiseParams.seed, GUIHelperFunctions.IntField, callback);
                 ParamCreator.CreateParam("Frequency", ref scatter.noiseParams.frequency, GUIHelperFunctions.FloatField, callback);
                 ParamCreator.CreateParam("Lacunarity", ref scatter.noiseParams.lacunarity, GUIHelperFunctions.FloatField, callback);
                 ParamCreator.CreateParam("Octaves", ref scatter.noiseParams.octaves, GUIHelperFunctions.IntField, callback);
                 ParamCreator.CreateParam("Inverted", ref scatter.noiseParams.inverted, GUIHelperFunctions.BoolField, callback);
-
-                GUILayout.Space(15);
+                GUISection.End();
             }
         }
         // Very ugly method which used to be quite elegant until I needed to parse keywords while keeping LOD material overrides consistent
@@ -207,7 +286,38 @@ namespace Parallax
             GUILayout.Label("Material Params: ", HighLogic.Skin.label);
             ShaderProperties properties = materialParams.shaderProperties;
 
-            ProcessGenericMaterialParams(materialParams, callback);
+            List<(ShaderProperties properties, ParamCreator.ChangeMethod callback)> inheritors = null;
+            if (isBaseMaterial)
+            {
+                inheritors = new List<(ShaderProperties properties, ParamCreator.ChangeMethod callback)>();
+                if (scatter.distributionParams.lod1.materialOverride.shader == materialParams.shader)
+                {
+                    inheritors.Add((scatter.distributionParams.lod1.materialOverride.shaderProperties, renderer.SetLOD1MaterialParams));
+                }
+                if (scatter.distributionParams.lod2.materialOverride.shader == materialParams.shader)
+                {
+                    inheritors.Add((scatter.distributionParams.lod2.materialOverride.shaderProperties, renderer.SetLOD2MaterialParams));
+                }
+            }
+
+            GUILayout.Label("Textures: ", HighLogic.Skin.label);
+            List<string> textureKeys = new List<string>(properties.shaderTextures.Keys);
+            foreach (string key in textureKeys)
+            {
+                string value = properties.shaderTextures[key];
+                string oldValue = value;
+                if (ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.StringField))
+                {
+                    properties.shaderTextures[key] = value;
+                    if (!string.IsNullOrEmpty(value) && TextureLoader.TextureExists(value))
+                    {
+                        callback();
+                    }
+                    PropagateToInheritors(x => x.shaderTextures, key, oldValue, value, inheritors);
+                }
+            }
+
+            ProcessGenericMaterialParams(materialParams, callback, inheritors: inheritors);
 
             // Process keywords
             // This requires reading configs which can be slow, since we don't store keywords anywhere except ones that are already enabled
@@ -217,17 +327,22 @@ namespace Parallax
             }
             if (keywordBool)
             {
-
+                GUISection.Begin();
                 GUILayout.Label("Keywords", HighLogic.Skin.label);
-                GUILayout.Label("Warning: The keywords menu has a significant performance impact!");
+                if (wrappedLabel == null)
+                {
+                    wrappedLabel = new GUIStyle(UnityEngine.GUI.skin.label) { wordWrap = true };
+                }
+                GUILayout.Label("Warning: The keywords menu has a significant performance impact!", wrappedLabel);
                 // Get shader name
                 string shaderName = materialParams.shader;
 
                 // The linq incident
                 // Gets "ParallaxShader" node
-                ConfigNode config = GameDatabase.Instance.GetConfigs("ParallaxScatterShaderProperties").FirstOrDefault().config.GetNodes("ParallaxShader").Where(x => x.GetValue("name") == shaderName).FirstOrDefault();
-                ConfigNode[] keywords = config.GetNode("Keywords").GetNodes();
-                foreach (ConfigNode node in keywords)
+                UrlDir.UrlConfig shaderBank = GameDatabase.Instance.GetConfigs("ParallaxScatterShaderProperties").FirstOrDefault();
+                ConfigNode config = shaderBank.config.GetNodes("ParallaxShader").Where(x => x.GetValue("name") == shaderName).FirstOrDefault();
+                ConfigNode keywordsNode = config.GetNode("Keywords");
+                foreach (ConfigNode node in keywordsNode.GetNodes())
                 {
                     // These are our keywords
                     string keywordName = node.name;
@@ -235,54 +350,97 @@ namespace Parallax
                     bool wasChanged = ParamCreator.CreateParam(keywordName, ref enabled, GUIHelperFunctions.BoolField);
                     if (wasChanged)
                     {
-                        if (!enabled)
-                        {
-                            materialParams.shaderKeywords.Remove(keywordName);
-                            material.DisableKeyword(keywordName);
-                            // Remove the keyword specific params from the properties list, as they are unused
-                            // and remove duplicates when the keyword is re-enabled again
-                            RemoveKeywordValues(materialParams.shaderProperties, node);
-
-                            // If the lod is a material override, then update its keywords as well
-                            if (isBaseMaterial && scatter.distributionParams.lod1.inheritsMaterial)
-                            {
-                                RemoveKeywordValues(scatter.distributionParams.lod1.materialOverride.shaderProperties, node);
-                                scatter.distributionParams.lod1.materialOverride.shaderKeywords.Remove(keywordName);
-                                renderer.instancedMaterialLOD1.DisableKeyword(keywordName);
-                                renderer.SetLOD1MaterialParams();
-                            }
-                            if (isBaseMaterial && scatter.distributionParams.lod2.inheritsMaterial)
-                            {
-                                RemoveKeywordValues(scatter.distributionParams.lod2.materialOverride.shaderProperties, node);
-                                scatter.distributionParams.lod2.materialOverride.shaderKeywords.Remove(keywordName);
-                                renderer.instancedMaterialLOD2.DisableKeyword(keywordName);
-                                renderer.SetLOD2MaterialParams();
-                            }
-                        }
-                        if (enabled)
-                        {
-                            materialParams.shaderKeywords.Add(keywordName);
-                            // Now we need to initialize defaults for the keywords
-                            ConfigLoader.InitializeTemplateConfig(node, materialParams.shaderProperties);
-
-                            // If the lod is a material override, then update its keywords as well
-                            if (isBaseMaterial && scatter.distributionParams.lod1.inheritsMaterial)
-                            {
-                                scatter.distributionParams.lod1.materialOverride.shaderKeywords.Add(keywordName);
-                                ConfigLoader.InitializeTemplateConfig(node, scatter.distributionParams.lod1.materialOverride.shaderProperties);
-                                renderer.instancedMaterialLOD1.EnableKeyword(keywordName);
-                                renderer.SetLOD1MaterialParams();
-                            }
-                            if (isBaseMaterial && scatter.distributionParams.lod2.inheritsMaterial)
-                            {
-                                scatter.distributionParams.lod2.materialOverride.shaderKeywords.Add(keywordName);
-                                ConfigLoader.InitializeTemplateConfig(node, scatter.distributionParams.lod2.materialOverride.shaderProperties);
-                                renderer.instancedMaterialLOD2.EnableKeyword(keywordName);
-                                renderer.SetLOD2MaterialParams();
-                            }
-                        }
+                        SetKeyword(materialParams, null, material, shaderBank, keywordsNode, keywordName, enabled);
                         callback();
+
+                        // LODs follow the base material's keyword unless they had it set differently
+                        if (isBaseMaterial && FollowsBaseKeyword(scatter.distributionParams.lod1.materialOverride, materialParams.shader, keywordName, enabled))
+                        {
+                            SetKeyword(scatter.distributionParams.lod1.materialOverride, materialParams.shaderProperties, renderer.instancedMaterialLOD1, shaderBank, keywordsNode, keywordName, enabled);
+                            renderer.SetLOD1MaterialParams();
+                        }
+                        if (isBaseMaterial && FollowsBaseKeyword(scatter.distributionParams.lod2.materialOverride, materialParams.shader, keywordName, enabled))
+                        {
+                            SetKeyword(scatter.distributionParams.lod2.materialOverride, materialParams.shaderProperties, renderer.instancedMaterialLOD2, shaderBank, keywordsNode, keywordName, enabled);
+                            renderer.SetLOD2MaterialParams();
+                        }
                     }
+                }
+                GUISection.End();
+            }
+        }
+        static bool FollowsBaseKeyword(in MaterialParams lodMaterialParams, string baseShader, string keyword, bool enabled)
+        {
+            return lodMaterialParams.shader == baseShader && lodMaterialParams.shaderKeywords.Contains(keyword) != enabled;
+        }
+        static void SetKeyword(in MaterialParams materialParams, ShaderProperties fallbackProperties, Material material, UrlDir.UrlConfig shaderBank, ConfigNode keywordsNode, string keyword, bool enabled)
+        {
+            List<string> keywords = materialParams.shaderKeywords;
+            if (enabled)
+            {
+                // The config loader drops a keyword when the keyword superseding it is also enabled, so only allow one of them
+                string supersededBy = keywordsNode.GetNode(keyword).GetValue("supersededBy");
+                keywords.RemoveAll(x => x == supersededBy || keywordsNode.GetNode(x)?.GetValue("supersededBy") == keyword);
+                if (!keywords.Contains(keyword))
+                {
+                    keywords.Add(keyword);
+                }
+            }
+            else
+            {
+                keywords.Remove(keyword);
+            }
+
+            // Rebuild from the template so properties shared between keywords are kept, and removed values come back if the keyword is re-enabled
+            ShaderProperties template = ConfigLoader.LookupTemplateConfig(shaderBank, materialParams.shader, new List<string>(keywords));
+            ShaderProperties properties = materialParams.shaderProperties;
+            if (!removedKeywordProperties.TryGetValue(properties, out ShaderProperties removed))
+            {
+                removed = new ShaderProperties();
+                removedKeywordProperties.Add(properties, removed);
+            }
+
+            SyncKeywordProperties(properties.shaderTextures, template.shaderTextures, removed.shaderTextures, fallbackProperties?.shaderTextures);
+            SyncKeywordProperties(properties.shaderFloats, template.shaderFloats, removed.shaderFloats, fallbackProperties?.shaderFloats);
+            SyncKeywordProperties(properties.shaderVectors, template.shaderVectors, removed.shaderVectors, fallbackProperties?.shaderVectors);
+            SyncKeywordProperties(properties.shaderColors, template.shaderColors, removed.shaderColors, fallbackProperties?.shaderColors);
+            SyncKeywordProperties(properties.shaderInts, template.shaderInts, removed.shaderInts, fallbackProperties?.shaderInts);
+
+            foreach (ConfigNode node in keywordsNode.GetNodes())
+            {
+                if (keywords.Contains(node.name))
+                {
+                    material.EnableKeyword(node.name);
+                }
+                else
+                {
+                    material.DisableKeyword(node.name);
+                }
+            }
+        }
+        static void SyncKeywordProperties<T>(Dictionary<string, T> properties, Dictionary<string, T> template, Dictionary<string, T> removed, Dictionary<string, T> fallback)
+        {
+            foreach (string key in properties.Keys.ToList())
+            {
+                if (!template.ContainsKey(key))
+                {
+                    removed[key] = properties[key];
+                    properties.Remove(key);
+                }
+            }
+            foreach (KeyValuePair<string, T> pair in template)
+            {
+                if (properties.ContainsKey(pair.Key))
+                {
+                    continue;
+                }
+                if (removed.TryGetValue(pair.Key, out T value) || (fallback != null && fallback.TryGetValue(pair.Key, out value)))
+                {
+                    properties.Add(pair.Key, value);
+                }
+                else
+                {
+                    properties.Add(pair.Key, pair.Value);
                 }
             }
         }
@@ -294,6 +452,7 @@ namespace Parallax
             }
             if (showDebug)
             {
+                GUISection.Begin();
                 GUILayout.Label("Debug Settings", HighLogic.Skin.label);
                 if (ParamCreator.CreateParam("Show Face Orientation", ref debugShowFaceOrientation, GUIHelperFunctions.BoolField))
                 {
@@ -307,6 +466,7 @@ namespace Parallax
                 {
                     LogPerformanceStats();
                 }
+                GUISection.End();
             }
         }
         static void ShowFaceOrientation(bool enabled, Scatter scatter)
@@ -367,35 +527,9 @@ namespace Parallax
             {
                 foreach (Scatter scatter in scatters)
                 {
-                    if (scatter.renderer.instancedMaterialLOD0.HasProperty("_FresnelPower"))
-                    {
-                        scatter.renderer.instancedMaterialLOD0.SetFloat("_FresnelPower", scatter.materialParams.shaderProperties.shaderFloats["_FresnelPower"]);
-                    }
-                    if (scatter.renderer.instancedMaterialLOD1.HasProperty("_FresnelPower"))
-                    {
-                        scatter.renderer.instancedMaterialLOD1.SetFloat("_FresnelPower", scatter.distributionParams.lod1.materialOverride.shaderProperties.shaderFloats["_FresnelPower"]);
-                    }
-                    if (scatter.renderer.instancedMaterialLOD2.HasProperty("_FresnelPower"))
-                    {
-                        scatter.renderer.instancedMaterialLOD2.SetFloat("_FresnelPower", scatter.distributionParams.lod2.materialOverride.shaderProperties.shaderFloats["_FresnelPower"]);
-                    }
-
-                    if (scatter.renderer.instancedMaterialLOD0.HasProperty("_FresnelColor"))
-                    {
-                        scatter.renderer.instancedMaterialLOD0.SetColor("_FresnelColor", scatter.materialParams.shaderProperties.shaderColors["_FresnelColor"]);
-                    }
-                    if (scatter.renderer.instancedMaterialLOD1.HasProperty("_FresnelColor"))
-                    {
-                        scatter.renderer.instancedMaterialLOD1.SetColor("_FresnelColor", scatter.distributionParams.lod1.materialOverride.shaderProperties.shaderColors["_FresnelColor"]);
-                    }
-                    if (scatter.renderer.instancedMaterialLOD2.HasProperty("_FresnelColor"))
-                    {
-                        scatter.renderer.instancedMaterialLOD2.SetColor("_FresnelColor", scatter.distributionParams.lod2.materialOverride.shaderProperties.shaderColors["_FresnelColor"]);
-                    }
-
-                    scatter.renderer.instancedMaterialLOD0.SetColor("_Color", scatter.materialParams.shaderProperties.shaderColors["_Color"]);
-                    scatter.renderer.instancedMaterialLOD1.SetColor("_Color", scatter.distributionParams.lod2.materialOverride.shaderProperties.shaderColors["_Color"]);
-                    scatter.renderer.instancedMaterialLOD2.SetColor("_Color", scatter.distributionParams.lod2.materialOverride.shaderProperties.shaderColors["_Color"]);
+                    scatter.renderer.SetLOD0MaterialParams();
+                    scatter.renderer.SetLOD1MaterialParams();
+                    scatter.renderer.SetLOD2MaterialParams();
                 }
             }
         }

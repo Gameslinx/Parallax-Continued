@@ -19,9 +19,12 @@ namespace Parallax
     [KSPAddon(KSPAddon.Startup.AllGameScenes, false)]
     public class ToolbarMenu : MonoBehaviour
     {
-        private static Rect window = new Rect(100, 100, 450, 600);
+        const float maxWindowHeightToWidth = 1.45f;
+        private static ScrollableWindow window;
         private static Rect hoverWindow = new Rect(0, 0, 350, 80);
         private static GUIStyle activeButton;
+        private static GUIStyle titleLabel;
+        private static GUIStyle headerLabel;
         private static ApplicationLauncherButton button;
 
         static string maxTessellationTooltip = "The close-up terrain detail - Makes terrain 3D. Higher is better quality, max 64. Moderate GPU performance impact";
@@ -46,11 +49,17 @@ namespace Parallax
         static string scaledRaymarchedShadowMaxStarsTooltip = "Controls how many stars can cast scaledspace shadows at once, prioritising the brightest star near each planet. Only affects systems with multiple stars. Moderate GPU performance impact per star, no impact if there are no additional stars bright enough to affect a planet.";
         static string loadTexturesImmediatelyTooltip = "Toggles loading planet orbit textures immediately or spreads it out over a few frames. No performance impact";
 
+        static string wireframeTerrainTooltip = "Renders the terrain as a wireframe. The current planet's terrain is rebuilt when this changes";
+        static string suppressCriticalMessagesTooltip = "Stops critical error and warning popups from appearing. They are still written to the log";
+        static string enableDebugVisualizationsTooltip = "Enables Parallax's debug visualisations";
+
         bool showGUI = false;
 
         bool initialized = false;
 
         static bool showCollideables = false;
+
+        static bool showDebugSettings = false;
         static string tooltip = "";
 
         static int bingusCount = 0;
@@ -58,12 +67,19 @@ namespace Parallax
         {
             if (!initialized)
             {
-                window = new Rect(Screen.width / 2 - 450 / 2, Screen.height / 2 - 50, 450, 100);
+                window = new ScrollableWindow(new Rect(Screen.width / 2 - 450 / 2, Screen.height / 2 - 50, 450, 100), maxWindowHeightToWidth, "ParallaxSettingsScroll");
 
                 // Create on button hover style
                 activeButton = new GUIStyle(HighLogic.Skin.button);
                 activeButton.normal.textColor = HighLogic.Skin.label.normal.textColor;
                 activeButton.hover.textColor = HighLogic.Skin.label.normal.textColor * 1.25f;
+
+                titleLabel = new GUIStyle(HighLogic.Skin.label);
+                titleLabel.alignment = TextAnchor.MiddleCenter;
+                titleLabel.fontStyle = FontStyle.Bold;
+
+                headerLabel = new GUIStyle(HighLogic.Skin.label);
+                headerLabel.fontStyle = FontStyle.Bold;
 
                 // Create toolbar button
                 Texture buttonTexture = GameDatabase.Instance.GetTexture("ParallaxContinued/Textures/button", false);
@@ -81,11 +97,15 @@ namespace Parallax
             showGUI = false;
         }
         
+        void Update()
+        {
+            window?.UpdateInputLock(showGUI);
+        }
         void OnGUI()
         {
             if (showGUI)
             {
-                window = GUILayout.Window(GetInstanceID(), window, DrawWindow, "Parallax GUI", HighLogic.Skin.window);
+                window.Draw(GetInstanceID(), DrawWindow, "Parallax GUI");
 
                 if (!string.IsNullOrEmpty(tooltip))
                 {
@@ -123,15 +143,11 @@ namespace Parallax
             GUILayout.BeginVertical();
             ///////////////////////////
 
-            GUIStyle labelSkin = HighLogic.Skin.label;
-            labelSkin.alignment = TextAnchor.MiddleCenter;
-            labelSkin.fontStyle = FontStyle.Bold;
+            GUILayout.Label("Parallax Global Settings", titleLabel);
 
-            GUILayout.Label("Parallax Global Settings", labelSkin);
-            GUILayout.Space(15);
+            window.BeginScrollView();
 
-            // Terrain shader settings
-            GUILayout.Label("Terrain Shader Settings", HighLogic.Skin.label);
+            GUILayout.Label("Terrain Shader Settings", headerLabel);
             ParamCreator.ChangeMethod terrainCallback = UpdateTerrainMaterials;
             ParamCreator.ChangeMethod terrainKeywordCallback = UpdateTerrainKeywords;
 
@@ -140,10 +156,9 @@ namespace Parallax
             ParamCreator.CreateParam("Tessellation Range",       ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.maxTessellationRange,        GUIHelperFunctions.FloatField, terrainCallback, maxTessellationRangeTooltip);
             ParamCreator.CreateParam("Use Advanced Blending",    ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.advancedTextureBlending,     GUIHelperFunctions.BoolField, terrainKeywordCallback, advancedTextureBlendingTooltip);
             ParamCreator.CreateParam("Ambient Occlusion",        ref ConfigLoader.parallaxGlobalSettings.terrainGlobalSettings.ambientOcclusion,            GUIHelperFunctions.BoolField, terrainKeywordCallback, ambientOcclusionTooltip);
-
             GUILayout.Space(15);
-            // Scatter system settings
-            GUILayout.Label("Scatter System Settings", HighLogic.Skin.label);
+
+            GUILayout.Label("Scatter System Settings", headerLabel);
             ParamCreator.ChangeMethod scatterCallback = UpdateScatterSettings;
             ParamCreator.ChangeMethod colliderCallback = UpdateColliderSettings;
 
@@ -155,21 +170,19 @@ namespace Parallax
             ParamCreator.CreateParam("Fade Out Start Range",                ref ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.fadeOutStartRange,        GUIHelperFunctions.FloatField, scatterCallback, fadeOutStartRangeTooltip);
             ParamCreator.CreateParam("Collision Level (Restart Required)",  ref ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.collisionLevel,           GUIHelperFunctions.IntField,   scatterCallback, collisionLevelTooltip);
             ParamCreator.CreateParam("Collider Lookahead Time",             ref ConfigLoader.parallaxGlobalSettings.scatterGlobalSettings.colliderLookaheadTime,    GUIHelperFunctions.FloatField, colliderCallback, colliderLookaheadTimeTooltip);
-
             GUILayout.Space(15);
-            // Light settings
-            GUILayout.Label("Lighting Settings", HighLogic.Skin.label);
+
+            GUILayout.Label("Lighting Settings", headerLabel);
             ParamCreator.ChangeMethod lightingCallback = UpdateLightingSettings;
 
             ParamCreator.CreateParam("Light Shadows",         ref ConfigLoader.parallaxGlobalSettings.lightingGlobalSettings.lightShadows,          GUIHelperFunctions.BoolField,   lightingCallback, lightShadowsTooltip);
             ParamCreator.CreateParam("Light Shadows Quality", ref ConfigLoader.parallaxGlobalSettings.lightingGlobalSettings.lightShadowsQuality,   EnumField,                      lightingCallback, lightShadowsQualityTooltip);
 
-            GUILayout.Label("Visualisations", HighLogic.Skin.label);
+            GUILayout.Label("Visualisations", headerLabel);
             ParamCreator.CreateParam("Highlight Collideable Objects", ref showCollideables, GUIHelperFunctions.BoolField, ShowCollideableScatters, showCollidersTooltip);
-
             GUILayout.Space(15);
-            // Scaled settings
-            GUILayout.Label("Scaled System Settings", HighLogic.Skin.label);
+
+            GUILayout.Label("Scaled System Settings", headerLabel);
             GUILayout.Label("Tip: You can press Alt + 7 in the tracking station to display the shadow map");
             ParamCreator.ChangeMethod scaledShadowCallback = UpdateScaledShadowSettings;
             ParamCreator.ChangeMethod scaledTextureCallback = UpdateScaledTextureSettings;
@@ -180,6 +193,18 @@ namespace Parallax
             ParamCreator.CreateParam("Raymarched Scaled Shadows Step Count",    ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowStepCount, GUIHelperFunctions.IntField, scaledShadowMaterialCallback, scaledRaymarchedShadowStepCountTooltip);
             ParamCreator.CreateParam("Raymarched Scaled Shadows Max Stars",     ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowMaxStars, GUIHelperFunctions.IntField, scaledShadowMaterialCallback, scaledRaymarchedShadowMaxStarsTooltip);
             ParamCreator.CreateParam("Load Scaled Textures Immediately",        ref ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.loadTexturesImmediately, GUIHelperFunctions.BoolField, scaledTextureCallback, loadTexturesImmediatelyTooltip);
+            GUILayout.Space(15);
+
+            if (SectionButton("Debug", ref showDebugSettings))
+            {
+                GUISection.Begin();
+                ParamCreator.CreateParam("Wireframe Terrain",               ref ConfigLoader.parallaxGlobalSettings.debugGlobalSettings.wireframeTerrain,           GUIHelperFunctions.BoolField, UpdateWireframeTerrain, wireframeTerrainTooltip);
+                ParamCreator.CreateParam("Suppress Critical Messages",      ref ConfigLoader.parallaxGlobalSettings.debugGlobalSettings.suppressCriticalMessages,   GUIHelperFunctions.BoolField, null, suppressCriticalMessagesTooltip);
+                ParamCreator.CreateParam("Enable Debug Visualizations",     ref ConfigLoader.parallaxGlobalSettings.debugGlobalSettings.enableDebugVisualizations,  GUIHelperFunctions.BoolField, null, enableDebugVisualizationsTooltip);
+                GUISection.End();
+            }
+
+            window.EndScrollView();
 
             // Prevent some stupid settings
             if (ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowStepCount > 256)
@@ -188,7 +213,6 @@ namespace Parallax
             }
             ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowMaxStars = Mathf.Clamp(ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowMaxStars, 1, RaymarchedShadowsRenderer.MaxShadowStars);
 
-            GUILayout.Space(15);
             // Save button
             if (GUILayout.Button("Save Changes", activeButton))
             {
@@ -203,6 +227,15 @@ namespace Parallax
 
             // Must be last or buttons wont work
             UnityEngine.GUI.DragWindow();
+        }
+
+        static bool SectionButton(string name, ref bool isOpen)
+        {
+            if (GUILayout.Button(name, isOpen ? activeButton : HighLogic.Skin.button))
+            {
+                isOpen = !isOpen;
+            }
+            return isOpen;
         }
 
         //
@@ -276,6 +309,15 @@ namespace Parallax
 
             // Restore previous pause state
             FlightDriver.SetPause(isGamePaused);
+        }
+
+        static void UpdateWireframeTerrain()
+        {
+            // The terrain material is picked when each quad is built
+            if (HighLogic.LoadedSceneIsFlight && FlightGlobals.currentMainBody != null)
+            {
+                FlightGlobals.currentMainBody.pqsController.RebuildSphere();
+            }
         }
 
         static void UpdateColliderSettings()
@@ -390,6 +432,8 @@ namespace Parallax
         }
         void OnDestroy()
         {
+            window?.ReleaseInputLock();
+
             if (button)
             {
                 ApplicationLauncher.Instance.RemoveModApplication(button);

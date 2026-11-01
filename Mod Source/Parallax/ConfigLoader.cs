@@ -298,6 +298,7 @@ namespace Parallax
             ConfigNode debugSettingsNode = config.config.GetNode("DebugSettings") ?? new ConfigNode();
             allSettingsPresent &= debugSettingsNode.TryGetValue("wireframeTerrain", ref parallaxGlobalSettings.debugGlobalSettings.wireframeTerrain);
             allSettingsPresent &= debugSettingsNode.TryGetValue("suppressCriticalMessages", ref parallaxGlobalSettings.debugGlobalSettings.suppressCriticalMessages);
+            allSettingsPresent &= debugSettingsNode.TryGetValue("enableDebugVisualizations", ref parallaxGlobalSettings.debugGlobalSettings.enableDebugVisualizations);
 
             ConfigNode objectPoolsNode = config.config.GetNode("ObjectPoolSettings") ?? new ConfigNode();
             allSettingsPresent &= objectPoolsNode.TryGetValue("cachedColliderCount", ref parallaxGlobalSettings.objectPoolSettings.cachedColliderCount);
@@ -1234,11 +1235,7 @@ namespace Parallax
             scatter.distributionParams.originalRange = scatter.distributionParams.range;
             scatter.distributionParams.originalPopulationMultiplier = scatter.distributionParams.populationMultiplier;
 
-            // Apply global settings
-            scatter.distributionParams.range *= parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier;
-            scatter.distributionParams.populationMultiplier = (int)((float)scatter.distributionParams.populationMultiplier * parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier);
-            if (scatter.distributionParams.populationMultiplier == 0) { scatter.distributionParams.populationMultiplier = 1; }
-            scatter.distributionParams.populationMultiplier *= Math.Max(scatter.distributionParams.rescalePopulationMultiplier, 1);
+            ApplyGlobalScatterSettings(scatter);
 
             // Normalise the LOD distances as a percentage of max range
             scatter.distributionParams.lod1.range /= scatter.distributionParams.range;
@@ -1246,6 +1243,16 @@ namespace Parallax
 
             // Normalise the frustum culling start range as a percentage of max range
             scatter.optimizationParams.frustumCullingIgnoreRadius /= scatter.distributionParams.range;
+        }
+        /// <summary>
+        /// Sets the range and population multiplier from their config values, scaled by the global settings and rescale
+        /// </summary>
+        public static void ApplyGlobalScatterSettings(Scatter scatter)
+        {
+            scatter.distributionParams.range = scatter.distributionParams.originalRange * parallaxGlobalSettings.scatterGlobalSettings.rangeMultiplier;
+            scatter.distributionParams.populationMultiplier = (int)((float)scatter.distributionParams.originalPopulationMultiplier * parallaxGlobalSettings.scatterGlobalSettings.densityMultiplier);
+            if (scatter.distributionParams.populationMultiplier == 0) { scatter.distributionParams.populationMultiplier = 1; }
+            scatter.distributionParams.populationMultiplier *= Math.Max(scatter.distributionParams.rescalePopulationMultiplier, 1);
         }
         public static void ReverseNormalisationConversions(Scatter scatter)
         {
@@ -1286,7 +1293,7 @@ namespace Parallax
             // Fade range function is NaN when fade range is 0
             if (scatter.distributionParams.altitudeFadeRange == 0)
             {
-                scatter.distributionParams.altitudeFadeRange = 0.05f;
+                scatter.distributionParams.altitudeFadeRange = DistributionParams.minAltitudeFadeRange;
             }
 
             // Calculate the LOD1 mesh's largest bound for colliders

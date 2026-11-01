@@ -85,6 +85,7 @@ namespace Parallax
             }
             if (showTerrainExporter)
             {
+                GUISection.Begin();
                 if (overwriteOnExport)
                 {
                     GUILayout.Label("Existing config will be backed up to GameData/ParallaxContinued/Exports/Backups");
@@ -118,6 +119,7 @@ namespace Parallax
 
                                 // Get our new config node
                                 ConfigNode newTerrainNode = ConfigLoader.parallaxTerrainBodies[FlightGlobals.currentMainBody.name].ToConfigNode();
+                                PreserveUnwrittenEntries(originalTerrainNode, newTerrainNode);
 
                                 // Populates lists preceding and trailing so we can preserve the terrain node position in the config instead of forcing it to the bottom
                                 ConfigLoader.DeterminePrecedingAndTrailingNodes(rootPlanetNodeConfig, originalTerrainNode, precedingNodes, trailingNodes);
@@ -134,6 +136,24 @@ namespace Parallax
                     {
                         ScreenMessages.PostScreenMessage("Non-overwriting terrain saving not implemented yet");
                     }
+                }
+                GUISection.End();
+            }
+        }
+        static void PreserveUnwrittenEntries(ConfigNode originalNode, ConfigNode newNode)
+        {
+            foreach (ConfigNode.Value value in originalNode.values)
+            {
+                if (!newNode.HasValue(value.name))
+                {
+                    newNode.AddValue(value.name, value.value);
+                }
+            }
+            foreach (ConfigNode childNode in originalNode.GetNodes())
+            {
+                if (!newNode.HasNode(childNode.name))
+                {
+                    newNode.AddNode(childNode.CreateCopy());
                 }
             }
         }

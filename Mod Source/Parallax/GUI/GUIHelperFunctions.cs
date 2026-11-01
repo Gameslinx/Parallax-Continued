@@ -39,6 +39,29 @@ namespace Parallax
         private static NoiseType activeEnumFieldLastValue = NoiseType.simplexPerlin;
         private static string activeEnumFieldString = "";
 
+        private const float dropdownOptionHeight = 22;
+        private const int dropdownMaxVisibleOptions = 10;
+
+        private static string openDropdownKey = null;
+        private static string openDropdownValue = null;
+        private static readonly List<string> openDropdownOptions = new List<string>();
+        private static Rect openDropdownAnchor;
+        private static Rect openDropdownPopupRect;
+        private static int openDropdownLastSeenFrame = -1;
+        private static Vector2 openDropdownScroll = Vector2.zero;
+
+        private static string selectedDropdownKey = null;
+        private static string selectedDropdownValue = null;
+
+        private static GUIStyle dropdownFieldStyle;
+        private static GUIStyle dropdownPopupStyle;
+        private static GUIStyle dropdownOptionStyle;
+        private static GUIStyle dropdownSelectedOptionStyle;
+        private static GUIStyle compactButtonStyle;
+        private static Texture2D dropdownBackgroundTexture;
+        private static Texture2D dropdownHoverTexture;
+        private static Texture2D dropdownSelectedTexture;
+
         /// <summary>
         /// Float Field for ingame purposes. Behaves exactly like UnityEditor.EditorGUILayout.FloatField.
         /// From https://forum.unity.com/threads/float-input-gui-item.83739/
@@ -148,10 +171,10 @@ namespace Parallax
         {
             valueWasChanged = false;
             string newValue = GUILayout.TextArea(value, HighLogic.Skin.textArea, GUILayout.Width(150));
-            char[] invalidChars = Path.GetInvalidFileNameChars();
+            char[] invalidChars = Path.GetInvalidPathChars();
 
             // If we have illegal chars in the string
-            if (newValue.Any(c => invalidChars.Contains(c)))
+            if (newValue == value || newValue.Any(c => invalidChars.Contains(c)))
             {
                 return value;
             }
@@ -448,6 +471,225 @@ namespace Parallax
             }
 
             return value;
+        }
+
+        public static string DropdownField(string value, IList<string> options, string dropdownKey, out bool valueWasChanged)
+        {
+            valueWasChanged = false;
+            InitializeDropdownStyles();
+
+            if (selectedDropdownKey == dropdownKey)
+            {
+                valueWasChanged = selectedDropdownValue != value;
+                value = selectedDropdownValue;
+                selectedDropdownKey = null;
+            }
+
+            Rect pos = GUILayoutUtility.GetRect(new GUIContent(value), HighLogic.Skin.label, new GUILayoutOption[] { GUILayout.ExpandWidth(false), GUILayout.MinWidth(160) });
+            bool isOpen = openDropdownKey == dropdownKey;
+            if (GUI.Button(pos, value, dropdownFieldStyle))
+            {
+                if (isOpen)
+                {
+                    CloseDropdown();
+                }
+                else
+                {
+                    openDropdownKey = dropdownKey;
+                    openDropdownScroll = Vector2.zero;
+                }
+                isOpen = !isOpen;
+            }
+
+            if (isOpen)
+            {
+                if (Event.current.type != EventType.Layout)
+                {
+                    openDropdownAnchor = new Rect(GUIUtility.GUIToScreenPoint(pos.position), pos.size);
+                }
+                openDropdownValue = value;
+                openDropdownOptions.Clear();
+                openDropdownOptions.AddRange(options);
+                openDropdownLastSeenFrame = Time.frameCount;
+            }
+
+            return value;
+        }
+
+        public static void DrawDropdownPopup(int windowID)
+        {
+            if (openDropdownKey == null)
+            {
+                return;
+            }
+            if (Time.frameCount - openDropdownLastSeenFrame > 1 || openDropdownOptions.Count == 0)
+            {
+                CloseDropdown();
+                return;
+            }
+
+            openDropdownPopupRect = GetDropdownPopupRect();
+
+            Event current = Event.current;
+            bool clickedOutside = current.type == EventType.MouseDown && !openDropdownPopupRect.Contains(current.mousePosition) && !openDropdownAnchor.Contains(current.mousePosition);
+            bool pressedEscape = current.type == EventType.KeyDown && current.keyCode == KeyCode.Escape;
+            if (clickedOutside || pressedEscape)
+            {
+                CloseDropdown();
+                if (pressedEscape)
+                {
+                    current.Use();
+                }
+                return;
+            }
+
+            GUI.Window(windowID, openDropdownPopupRect, DrawDropdownOptions, GUIContent.none, dropdownPopupStyle);
+            GUI.BringWindowToFront(windowID);
+        }
+
+        public static bool IsMouseOverDropdown()
+        {
+            if (openDropdownKey == null || Time.frameCount - openDropdownLastSeenFrame > 1)
+            {
+                return false;
+            }
+            Vector2 mousePosition = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
+            return openDropdownPopupRect.Contains(mousePosition);
+        }
+
+        public static void CloseDropdown()
+        {
+            openDropdownKey = null;
+            openDropdownOptions.Clear();
+        }
+
+        public static bool CompactButton(string text, float width)
+        {
+            InitializeDropdownStyles();
+            Rect pos = GUILayoutUtility.GetRect(new GUIContent(text), HighLogic.Skin.label, new GUILayoutOption[] { GUILayout.Width(width) });
+            return GUI.Button(pos, text, compactButtonStyle);
+        }
+
+        private static Rect GetDropdownPopupRect()
+        {
+            int visibleOptions = Mathf.Min(openDropdownOptions.Count, dropdownMaxVisibleOptions);
+            bool needsScrollbar = openDropdownOptions.Count > dropdownMaxVisibleOptions;
+
+            float widestOption = 0;
+            foreach (string option in openDropdownOptions)
+            {
+                widestOption = Mathf.Max(widestOption, dropdownOptionStyle.CalcSize(new GUIContent(option)).x);
+            }
+            if (needsScrollbar)
+            {
+                widestOption += HighLogic.Skin.verticalScrollbar.fixedWidth;
+            }
+
+            float width = Mathf.Max(openDropdownAnchor.width, widestOption + dropdownPopupStyle.padding.horizontal);
+            float height = visibleOptions * dropdownOptionHeight + dropdownPopupStyle.padding.vertical;
+
+            Rect rect = new Rect(openDropdownAnchor.x, openDropdownAnchor.yMax, width, height);
+            if (rect.yMax > Screen.height && openDropdownAnchor.y - height >= 0)
+            {
+                rect.y = openDropdownAnchor.y - height;
+            }
+            if (rect.xMax > Screen.width)
+            {
+                rect.x = Mathf.Max(0, Screen.width - width);
+            }
+            return rect;
+        }
+
+        private static void DrawDropdownOptions(int windowID)
+        {
+            RectOffset padding = dropdownPopupStyle.padding;
+            Rect viewRect = new Rect(padding.left, padding.top, openDropdownPopupRect.width - padding.horizontal, openDropdownPopupRect.height - padding.vertical);
+            float contentHeight = openDropdownOptions.Count * dropdownOptionHeight;
+            bool needsScrollbar = contentHeight > viewRect.height;
+            float contentWidth = viewRect.width - (needsScrollbar ? HighLogic.Skin.verticalScrollbar.fixedWidth : 0);
+
+            GUISkin previousSkin = GUI.skin;
+            GUI.skin = HighLogic.Skin;
+            openDropdownScroll = GUI.BeginScrollView(viewRect, openDropdownScroll, new Rect(0, 0, contentWidth, contentHeight), false, needsScrollbar, GUIStyle.none, HighLogic.Skin.verticalScrollbar);
+            GUI.skin = previousSkin;
+
+            for (int i = 0; i < openDropdownOptions.Count; i++)
+            {
+                string option = openDropdownOptions[i];
+                Rect row = new Rect(0, i * dropdownOptionHeight, contentWidth, dropdownOptionHeight);
+                GUIStyle style = option == openDropdownValue ? dropdownSelectedOptionStyle : dropdownOptionStyle;
+                if (GUI.Button(row, option, style))
+                {
+                    selectedDropdownKey = openDropdownKey;
+                    selectedDropdownValue = option;
+                    CloseDropdown();
+                    break;
+                }
+            }
+
+            GUI.EndScrollView();
+        }
+
+        private static void InitializeDropdownStyles()
+        {
+            if (dropdownFieldStyle != null && dropdownBackgroundTexture != null && dropdownHoverTexture != null && dropdownSelectedTexture != null)
+            {
+                return;
+            }
+
+            dropdownBackgroundTexture = CreateSolidTexture(new Color(0.1f, 0.1f, 0.1f, 0.97f));
+            dropdownHoverTexture = CreateSolidTexture(new Color(1.0f, 1.0f, 1.0f, 0.15f));
+            dropdownSelectedTexture = CreateSolidTexture(new Color(1.0f, 1.0f, 1.0f, 0.07f));
+
+            dropdownFieldStyle = new GUIStyle(HighLogic.Skin.textField)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                wordWrap = false,
+                clipping = TextClipping.Clip
+            };
+
+            dropdownPopupStyle = new GUIStyle
+            {
+                padding = new RectOffset(2, 2, 2, 2),
+                border = new RectOffset(0, 0, 0, 0)
+            };
+            dropdownPopupStyle.normal.background = dropdownBackgroundTexture;
+            dropdownPopupStyle.onNormal.background = dropdownBackgroundTexture;
+
+            dropdownOptionStyle = new GUIStyle(HighLogic.Skin.label)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                wordWrap = false,
+                clipping = TextClipping.Clip,
+                padding = new RectOffset(6, 6, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0),
+                fixedHeight = dropdownOptionHeight
+            };
+            dropdownOptionStyle.normal.background = null;
+            dropdownOptionStyle.hover.background = dropdownHoverTexture;
+            dropdownOptionStyle.hover.textColor = Color.white;
+            dropdownOptionStyle.active.background = dropdownHoverTexture;
+            dropdownOptionStyle.active.textColor = Color.white;
+
+            dropdownSelectedOptionStyle = new GUIStyle(dropdownOptionStyle);
+            dropdownSelectedOptionStyle.normal.background = dropdownSelectedTexture;
+            dropdownSelectedOptionStyle.normal.textColor = Color.white;
+
+            compactButtonStyle = new GUIStyle(HighLogic.Skin.button)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0)
+            };
+        }
+
+        private static Texture2D CreateSolidTexture(Color color)
+        {
+            Texture2D texture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+            texture.hideFlags = HideFlags.HideAndDontSave;
+            texture.SetPixel(0, 0, color);
+            texture.Apply(false, true);
+            return texture;
         }
 
         // Helper method to parse NoiseType enum from a string

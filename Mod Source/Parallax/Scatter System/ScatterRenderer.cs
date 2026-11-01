@@ -78,6 +78,10 @@ namespace Parallax
                 if (loadedTextures.ContainsKey($"{path}"))
                     continue;
 
+                // The GUI can leave paths empty or half typed
+                if (string.IsNullOrEmpty(path) || !TextureLoader.TextureExists(path))
+                    continue;
+
                 bool linear = TextureUtils.IsLinear(name);
                 bool isCube = TextureUtils.IsCube(name);
                 var options = new TextureLoadOptions
@@ -106,6 +110,9 @@ namespace Parallax
         /// <param name="material"></param>
         public void SetMaterialParams(in MaterialParams materialParams, Material material)
         {
+            // Texture paths can be changed from the GUI after the renderer was enabled
+            PreloadMaterialTextures(in materialParams);
+
             ShaderProperties properties = materialParams.shaderProperties;
             // Set textures - OnEnable is called when the renderer is re-enabled on planet change, so we can load textures here
             // They are unloaded by the scatter manager
@@ -178,8 +185,9 @@ namespace Parallax
             var loadedTextures = ConfigLoader.parallaxScatterBodies[planetName].loadedTextures;
             foreach (var (name, path) in properties.shaderTextures)
             {
-                var handle = loadedTextures[path];
-                
+                if (!loadedTextures.TryGetValue(path, out var handle))
+                    continue;
+
                 Texture tex;
                 yield return handle;
 
@@ -207,8 +215,9 @@ namespace Parallax
             var loadedTextures = ConfigLoader.parallaxScatterBodies[planetName].loadedTextures;
             foreach (var (name, path) in properties.shaderTextures)
             {
-                var handle = loadedTextures[path];
-                
+                if (!loadedTextures.TryGetValue(path, out var handle))
+                    continue;
+
                 Texture tex;
                 try
                 {

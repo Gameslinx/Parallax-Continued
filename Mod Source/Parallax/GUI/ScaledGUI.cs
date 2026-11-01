@@ -50,6 +50,7 @@ namespace Parallax
             }
             if (showExporter)
             {
+                GUISection.Begin();
                 // Options
                 GUILayout.Label("Planet Texture Exporter Options:", HighLogic.Skin.label);
 
@@ -80,6 +81,7 @@ namespace Parallax
                 {
                     GenerateEntireSystem();
                 }
+                GUISection.End();
             }
         }
         public static void SetMinMaxAltitudeLabels(string body, float min, float max)

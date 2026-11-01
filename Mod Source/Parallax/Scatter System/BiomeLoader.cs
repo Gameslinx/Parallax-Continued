@@ -61,25 +61,30 @@ namespace Parallax
                     // Process all scatters on this scatter body
                     foreach (Scatter scatter in scatterBody.fastScatters)
                     {
-                        List<string> blacklistedBiomes = scatter.biomeBlacklistParams.blacklistedBiomes;
-                        ulong biomeMask = 0;
-
-                        for (int i = 0; i < Mathf.Min(biomeMapAttributes.Length, 64); i++)
-                        {
-                            if (!blacklistedBiomes.Contains(biomeMapAttributes[i].name))
-                            {
-                                biomeMask |= 1UL << i;
-                            }
-                        }
-
-                        scatter.biomeMask[0] = (int)(uint)biomeMask;
-                        scatter.biomeMask[1] = (int)(uint)(biomeMask >> 32);
+                        UpdateBiomeMask(scatter, biomeMapAttributes);
                     }
                 }
             }
             stopwatch.Stop();
 
             ParallaxDebug.Log("Biome processing took " + stopwatch.Elapsed.TotalMilliseconds + " ms");
+        }
+
+        public static void UpdateBiomeMask(Scatter scatter, CBAttributeMapSO.MapAttribute[] biomeMapAttributes)
+        {
+            HashSet<string> blacklistedBiomes = scatter.biomeBlacklistParams.fastBlacklistedBiomes;
+            ulong biomeMask = 0;
+
+            for (int i = 0; i < Mathf.Min(biomeMapAttributes.Length, 64); i++)
+            {
+                if (!blacklistedBiomes.Contains(biomeMapAttributes[i].name))
+                {
+                    biomeMask |= 1UL << i;
+                }
+            }
+
+            scatter.biomeMask[0] = (int)(uint)biomeMask;
+            scatter.biomeMask[1] = (int)(uint)(biomeMask >> 32);
         }
 
         /// <summary>

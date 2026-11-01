@@ -82,6 +82,7 @@ namespace Parallax
 
             debugSettingsNode.AddValue("wireframeTerrain", debugGlobalSettings.wireframeTerrain);
             debugSettingsNode.AddValue("suppressCriticalMessages", debugGlobalSettings.suppressCriticalMessages);
+            debugSettingsNode.AddValue("enableDebugVisualizations", debugGlobalSettings.enableDebugVisualizations);
 
             objectPoolSettingsNode.AddValue("cachedColliderCount", objectPoolSettings.cachedColliderCount);
 
@@ -168,11 +169,13 @@ namespace Parallax
     {
         public bool wireframeTerrain;
         public bool suppressCriticalMessages;
+        public bool enableDebugVisualizations;
 
         private static readonly DebugGlobalSettings defaultSetting = new DebugGlobalSettings()
         {
             wireframeTerrain = false,
-            suppressCriticalMessages = false
+            suppressCriticalMessages = false,
+            enableDebugVisualizations = false
         };
 
         public static DebugGlobalSettings Default => defaultSetting;
@@ -1018,6 +1021,8 @@ namespace Parallax
     }
     public struct DistributionParams
     {
+        public const float minAltitudeFadeRange = 0.05f;
+
         public float seed;
         public float spawnChance;
         public float range;
@@ -1245,6 +1250,10 @@ namespace Parallax
 
             node.AddValue("model", modelPath);
             node.AddValue("collisionLevel", collisionLevel);
+            if (useCraftPosition)
+            {
+                node.AddValue("useCraftPositionForDistanceCulling", useCraftPosition);
+            }
         }
         protected virtual void PopulateOptimizationNode(ConfigNode node)
         {
@@ -1308,8 +1317,8 @@ namespace Parallax
         {
             node.AddValue("seed", distributionParams.seed);
             node.AddValue("spawnChance", distributionParams.spawnChance);
-            node.AddValue("range", distributionParams.range);
-            node.AddValue("populationMultiplier", (int)distributionParams.populationMultiplier);
+            node.AddValue("range", distributionParams.originalRange);
+            node.AddValue("populationMultiplier", distributionParams.originalPopulationMultiplier);
             node.AddValue("minScale", distributionParams.minScale);
             node.AddValue("maxScale", distributionParams.maxScale);
             node.AddValue("scaleRandomness", distributionParams.scaleRandomness);
@@ -1323,6 +1332,10 @@ namespace Parallax
             node.AddValue("altitudeFadeRange", distributionParams.altitudeFadeRange);
             node.AddValue("alignToTerrainNormal", distributionParams.alignToTerrainNormal == 1 ? true : false);
             node.AddValue("coloredByTerrain", distributionParams.coloredByTerrain);
+            if (distributionParams.fixedAltitude)
+            {
+                node.AddValue("placementAltitude", distributionParams.placementAltitude);
+            }
 
             ConfigNode lodNode = node.AddNode("LODs");
 

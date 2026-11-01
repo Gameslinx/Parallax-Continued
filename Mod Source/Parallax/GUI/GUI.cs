@@ -16,19 +16,22 @@ namespace Parallax
     public partial class ParallaxGUI : MonoBehaviour
     {
         // Update is called once per frame
-        private static Rect window = new Rect(100, 100, 450, 600);
-        private static Rect windowDefault = new Rect(100, 100, 450, 350);
+        const float maxWindowHeightToWidth = 2.35f;
+        static ScrollableWindow window;
 
         static bool showGUI = false;
         static bool showDistribution = false;
-        static bool showLOD1 = false;
-        static bool showLOD2 = false;
-        static bool showLOD1Material = false;
-        static bool showLOD2Material = false;
 
         static bool showDistributionNoise = false;
 
+        static bool showBiomeBlacklist = false;
+
         static bool showMaterial = false;
+        static bool showLOD0 = false;
+        static bool showLOD1 = false;
+        static bool showLOD2 = false;
+
+        static Dictionary<ShaderProperties, ShaderProperties> removedKeywordProperties = new Dictionary<ShaderProperties, ShaderProperties>();
 
         static bool showLOD0Keywords = false;
         static bool showLOD1Keywords = false;
@@ -57,6 +60,8 @@ namespace Parallax
         private static TextureExporterOptions exportOptions;
 
         static GUIStyle activeButton;
+        static GUIStyle wrappedLabel;
+
         public enum GUIEditorMode
         {
             Scatter,
@@ -72,7 +77,7 @@ namespace Parallax
         }
         void Start()
         {
-            window = new Rect(Screen.width / 2 - 450 / 2, Screen.height / 2 - 50, 450, 100);
+            window = new ScrollableWindow(new Rect(Screen.width / 2 - 450 / 2, Screen.height / 2 - 50, 450, 100), maxWindowHeightToWidth, "ParallaxGUIScroll");
 
             activeButton = new GUIStyle(HighLogic.Skin.button);
             activeButton.normal.textColor = HighLogic.Skin.label.normal.textColor;
@@ -114,6 +119,7 @@ namespace Parallax
         {
             PQSStartPatch.onPQSStart -= OnBodyChanged;
             GameEvents.onPlanetariumTargetChanged.Remove(OnScaledBodyChanged);
+            window?.ReleaseInputLock();
         }
         // Update GUI on body change, reset scatter counter and get new scatters
         void OnBodyChanged(string bodyName)
@@ -189,13 +195,16 @@ namespace Parallax
             {
                 showGUI = !showGUI;
             }
+
+            window.UpdateInputLock(showGUI, showGUI && GUIHelperFunctions.IsMouseOverDropdown());
         }
         void OnGUI()
         {
             // Show GUI if toggle enabled
             if (showGUI)
             {
-                window = GUILayout.Window(GetInstanceID(), window, DrawWindow, "Parallax GUI", HighLogic.Skin.window);
+                window.Draw(GetInstanceID(), DrawWindow, "Parallax GUI");
+                GUIHelperFunctions.DrawDropdownPopup(GetInstanceID() + 1);
             }
         }
         static void DrawWindow(int windowID)
@@ -217,11 +226,19 @@ namespace Parallax
             }
             GUILayout.EndHorizontal();
 
+            bool showScatterMenu = editorMode == GUIEditorMode.Scatter && currentBodyHasScatters;
+            if (showScatterMenu)
+            {
+                ScatterHeader();
+            }
+
+            window.BeginScrollView();
+
             if (editorMode == GUIEditorMode.Terrain && currentBodyHasTerrain)
             {
                 TerrainMenu();
             }
-            else if (editorMode == GUIEditorMode.Scatter && currentBodyHasScatters)
+            else if (showScatterMenu)
             {
                 ScatterMenu();
             }
@@ -241,6 +258,8 @@ namespace Parallax
             {
                 GUILayout.Label("Current planet is not configured for Parallax", HighLogic.Skin.label);
             }
+
+            window.EndScrollView();
 
             ///////////////////////////
             GUILayout.EndVertical();
@@ -307,6 +326,7 @@ namespace Parallax
             }
             if (showScatterExporter)
             {
+                GUISection.Begin();
                 if (overwriteOnExport)
                 {
                     GUILayout.Label("Existing config will be backed up to GameData/ParallaxContinued/Exports/Backups");
@@ -370,9 +390,10 @@ namespace Parallax
                     Directory.CreateDirectory(KSPUtil.ApplicationRootPath + directory);
                     ConfigLoader.SaveConfigNode(node, directory + fileName);
                 }
+                GUISection.End();
             }
         }
-        public static void ProcessGenericMaterialParams(in MaterialParams materialParams, ParamCreator.ChangeMethod callback, bool includeKeywords = false, Material material = null, string configName = null)
+        public static void ProcessGenericMaterialParams(in MaterialParams materialParams, ParamCreator.ChangeMethod callback, bool includeKeywords = false, Material material = null, string configName = null, List<(ShaderProperties properties, ParamCreator.ChangeMethod callback)> inheritors = null)
         {
             // Process ints
             GUILayout.Label("Integers: ", HighLogic.Skin.label);
@@ -382,11 +403,13 @@ namespace Parallax
             {
                 // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
                 int value = properties.shaderInts[key];
+                int oldValue = value;
                 bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.IntField);
                 if (valueChanged)
                 {
                     properties.shaderInts[key] = value;
                     callback();
+                    PropagateToInheritors(x => x.shaderInts, key, oldValue, value, inheritors);
                 }
             }
 
@@ -397,11 +420,13 @@ namespace Parallax
             {
                 // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
                 float value = properties.shaderFloats[key];
+                float oldValue = value;
                 bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.FloatField);
                 if (valueChanged)
                 {
                     properties.shaderFloats[key] = value;
                     callback();
+                    PropagateToInheritors(x => x.shaderFloats, key, oldValue, value, inheritors);
                 }
             }
 
@@ -412,11 +437,13 @@ namespace Parallax
             {
                 // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
                 Vector3 value = properties.shaderVectors[key];
+                Vector3 oldValue = value;
                 bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.Vector3Field);
                 if (valueChanged)
                 {
                     properties.shaderVectors[key] = value;
                     callback();
+                    PropagateToInheritors(x => x.shaderVectors, key, oldValue, value, inheritors);
                 }
             }
 
@@ -427,11 +454,13 @@ namespace Parallax
             {
                 // Can't pass dictionary value by reference - create temporary variable, update it, then run the callback
                 Color value = properties.shaderColors[key];
+                Color oldValue = value;
                 bool valueChanged = ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.ColorField);
                 if (valueChanged)
                 {
                     properties.shaderColors[key] = value;
                     callback();
+                    PropagateToInheritors(x => x.shaderColors, key, oldValue, value, inheritors);
                 }
             }
 
@@ -468,6 +497,24 @@ namespace Parallax
                         ConfigLoader.InitializeTemplateConfig(node, materialParams.shaderProperties);
                     }
                     callback();
+                }
+            }
+        }
+
+        // Copies a change over to inheriting materials whose value still matches the old one
+        static void PropagateToInheritors<T>(Func<ShaderProperties, Dictionary<string, T>> getProperties, string key, T oldValue, T newValue, List<(ShaderProperties properties, ParamCreator.ChangeMethod callback)> inheritors)
+        {
+            if (inheritors == null)
+            {
+                return;
+            }
+            foreach (var inheritor in inheritors)
+            {
+                Dictionary<string, T> properties = getProperties(inheritor.properties);
+                if (properties.TryGetValue(key, out T value) && EqualityComparer<T>.Default.Equals(value, oldValue))
+                {
+                    properties[key] = newValue;
+                    inheritor.callback();
                 }
             }
         }
@@ -528,8 +575,7 @@ namespace Parallax
                 callback();
             }
 
-            GUIContent content = new GUIContent("?", tooltip);
-            GUILayout.Button(content, HighLogic.Skin.button, GUILayout.Width(20));
+            TooltipButton(tooltip);
 
             GUILayout.EndHorizontal();
         }
@@ -554,6 +600,12 @@ namespace Parallax
         }
 
 
+        static void TooltipButton(string tooltip)
+        {
+            GUIContent content = new GUIContent("?", tooltip);
+            Rect pos = GUILayoutUtility.GetRect(content, HighLogic.Skin.label, GUILayout.Width(20));
+            UnityEngine.GUI.Button(pos, content, HighLogic.Skin.button);
+        }
         public static bool CreateParam<T>(string name, ref T existingValue, ParamTypeMethod<T> fieldMethod, string tooltip)
         {
             // Create a left aligned label and right aligned text box
@@ -562,8 +614,7 @@ namespace Parallax
             GUILayout.Label(name);
             existingValue = fieldMethod(existingValue, out bool valueWasChanged);
 
-            GUIContent content = new GUIContent("?", tooltip);
-            GUILayout.Button(content, HighLogic.Skin.button, GUILayout.Width(20));
+            TooltipButton(tooltip);
 
             GUILayout.EndHorizontal();
             return valueWasChanged;
