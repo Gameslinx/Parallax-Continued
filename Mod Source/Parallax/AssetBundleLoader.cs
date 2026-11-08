@@ -17,7 +17,19 @@ namespace Parallax
         public static Dictionary<string, ComputeShader> parallaxComputeShaders = new Dictionary<string, ComputeShader>();
         public static Dictionary<string, Shader> parallaxScaledShaders = new Dictionary<string, Shader>();
         public static Dictionary<string, Shader> parallaxDebugShaders = new Dictionary<string, Shader>();
-        public static void Initialize()
+        struct PendingAssetBundle
+        {
+            public string filePath;
+            public AssetBundleCreateRequest request;
+            public Action<AssetBundle> extractAssets;
+        }
+
+        static readonly List<PendingAssetBundle> pendingAssetBundles = new List<PendingAssetBundle>();
+
+        /// <summary>
+        /// Starts reading and decompressing the shader bundles on Unity's loading thread. Call CompleteAssetBundleLoads before using any shader
+        /// </summary>
+        public static void BeginAssetBundleLoads()
         {
             // Log the active graphics API so bug reports show which one was in use
             ParallaxDebug.Log("Graphics API: " + SystemInfo.graphicsDeviceType + " (" + SystemInfo.graphicsDeviceVersion + ")");
@@ -30,11 +42,30 @@ namespace Parallax
             string[] scaledShaderFilePaths = GetShaderPaths(assetBundleNode, "Scaled");
             string[] debugShaderFilePaths = GetShaderPaths(assetBundleNode, "Debug");
 
-            LoadAssetBundles<Shader>(terrainShaderFilePaths, parallaxTerrainShaders);
-            LoadAssetBundles<Shader>(scatterShaderFilePaths, parallaxScatterShaders);
-            LoadAssetBundles<ComputeShader>(computeShaderFilePaths, parallaxComputeShaders);
-            LoadAssetBundles<Shader>(scaledShaderFilePaths, parallaxScaledShaders);
-            LoadAssetBundles<Shader>(debugShaderFilePaths, parallaxDebugShaders);
+            BeginAssetBundleLoads<Shader>(terrainShaderFilePaths, parallaxTerrainShaders);
+            BeginAssetBundleLoads<Shader>(scatterShaderFilePaths, parallaxScatterShaders);
+            BeginAssetBundleLoads<ComputeShader>(computeShaderFilePaths, parallaxComputeShaders);
+            BeginAssetBundleLoads<Shader>(scaledShaderFilePaths, parallaxScaledShaders);
+            BeginAssetBundleLoads<Shader>(debugShaderFilePaths, parallaxDebugShaders);
+        }
+
+        /// <summary>
+        /// Blocks until every bundle started by BeginAssetBundleLoads has loaded, then fills the shader dictionaries
+        /// </summary>
+        public static void CompleteAssetBundleLoads()
+        {
+            foreach (PendingAssetBundle pending in pendingAssetBundles)
+            {
+                // Accessing the bundle before the request is done completes it synchronously
+                AssetBundle assetBundle = pending.request.assetBundle;
+                if (assetBundle == null)
+                {
+                    ParallaxDebug.LogCritical("Failed to load bundle at path: " + pending.filePath);
+                    continue;
+                }
+                pending.extractAssets(assetBundle);
+            }
+            pendingAssetBundles.Clear();
         }
         static string[] GetShaderPaths(ConfigNode assetBundleNode, string nodePrefix)
         {
@@ -42,9 +73,22 @@ namespace Parallax
             string[] bundleNames = shaderTypeNode.GetValues("path");
             for (int i = 0; i < bundleNames.Length; i++)
             {
-                bundleNames[i] = ConfigLoader.GameDataPath + DeterminePlatform(bundleNames[i]);
+                bundleNames[i] = ResolveBundlePath(ConfigLoader.GameDataPath + bundleNames[i]);
             }
             return bundleNames;
+        }
+        static string ResolveBundlePath(string basePath)
+        {
+            if (Application.unityVersion.StartsWith("6000"))
+            {
+                string unity6Path = DeterminePlatform(basePath + "-unity6");
+                if (File.Exists(unity6Path))
+                {
+                    return unity6Path;
+                }
+                ParallaxDebug.Log("No Unity 6 shader bundle found at " + unity6Path + ", using the Unity 2019 bundle which is slower to load");
+            }
+            return DeterminePlatform(basePath);
         }
         static string DeterminePlatform(string filePath)
         {
@@ -73,8 +117,7 @@ namespace Parallax
                     return filePath + "-linux.unity3d";
             }
         }
-        // Get all shaders from asset bundle
-        static void LoadAssetBundles<T>(string[] filePaths, Dictionary<string, T> dest) where T : UnityEngine.Object
+        static void BeginAssetBundleLoads<T>(string[] filePaths, Dictionary<string, T> dest) where T : UnityEngine.Object
         {
             if (filePaths.Length == 0)
             {
@@ -87,31 +130,34 @@ namespace Parallax
                     ParallaxDebug.LogCritical("Asset bundle load requested, but the file doesn't exist on disk! " + filePath);
                     return;
                 }
-                var assetBundle = AssetBundle.LoadFromFile(filePath);
-                if (assetBundle == null)
-                {
-                    ParallaxDebug.LogCritical("Failed to load bundle at path: " + filePath);
-                }
-                else
-                {
-                    T[] shaders = assetBundle.LoadAllAssets<T>();
-                    foreach (T shader in shaders)
-                    {
-                        // Flag assets with no usable variant for the current graphics API
-                        Shader s = shader as Shader;
-                        if (s != null && !s.isSupported)
-                        {
-                            ParallaxDebug.LogCritical("Shader has no usable variant on this API: " + s.name);
-                        }
-                        else if (shader is ComputeShader && !SystemInfo.supportsComputeShaders)
-                        {
-                            ParallaxDebug.LogCritical("Compute shaders unsupported on this device: " + shader.name);
-                        }
 
-                        dest.Add(shader.name, shader);
-                        ParallaxDebug.Log("Loaded shader: " + shader.name);
-                    }
+                pendingAssetBundles.Add(new PendingAssetBundle
+                {
+                    filePath = filePath,
+                    request = AssetBundle.LoadFromFileAsync(filePath),
+                    extractAssets = assetBundle => ExtractAssets(assetBundle, dest)
+                });
+            }
+        }
+        // Get all shaders from asset bundle
+        static void ExtractAssets<T>(AssetBundle assetBundle, Dictionary<string, T> dest) where T : UnityEngine.Object
+        {
+            T[] shaders = assetBundle.LoadAllAssets<T>();
+            foreach (T shader in shaders)
+            {
+                // Flag assets with no usable variant for the current graphics API
+                Shader s = shader as Shader;
+                if (s != null && !s.isSupported)
+                {
+                    ParallaxDebug.LogCritical("Shader has no usable variant on this API: " + s.name);
                 }
+                else if (shader is ComputeShader && !SystemInfo.supportsComputeShaders)
+                {
+                    ParallaxDebug.LogCritical("Compute shaders unsupported on this device: " + shader.name);
+                }
+
+                dest.Add(shader.name, shader);
+                ParallaxDebug.Log("Loaded shader: " + shader.name);
             }
         }
     }

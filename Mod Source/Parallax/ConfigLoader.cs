@@ -68,11 +68,11 @@ namespace Parallax
             ParallaxDebug.Log("Beginning config load");
             System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
 
-            // Get system information
+            AssetBundleLoader.BeginAssetBundleLoads();
+
             ParallaxSystemInfo.ReadInfo();
             ParallaxSystemInfo.LogInfo();
 
-            AssetBundleLoader.Initialize();
             InitializeGlobalSettings(GetConfigByName("ParallaxGlobal"));
             Shader.SetGlobalInt("_ParallaxScaledShadowStepSize", ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.scaledRaymarchedShadowStepCount);
 
@@ -82,6 +82,8 @@ namespace Parallax
             ParallaxDebug.Log("Harmony patching complete");
 
             InitializeTemplateConfig(GetConfigByName("ParallaxShaderProperties").config, shaderPropertiesTemplate);
+
+            AssetBundleLoader.CompleteAssetBundleLoads();
 
             LoadTerrainConfigs(GetConfigsByName("ParallaxTerrain"));
             LoadScatterConfigs(GetConfigsByName("ParallaxScatters"));
@@ -97,6 +99,9 @@ namespace Parallax
 
             ApplyCompatibilityPatches();
             CheckSettings();
+
+            // Bodies don't exist until PSystemSpawn runs
+            GameEvents.onLevelWasLoaded.Add(onFirstMainMenuLoad);
         }
 
         private static void CheckSettings()
@@ -1284,7 +1289,7 @@ namespace Parallax
             if (!File.Exists(lod2ModelPath) || GameDatabase.Instance.GetModel(scatter.distributionParams.lod2.modelPathOverride) == null)
             {
                 ParallaxDebug.LogCritical("This model file doesn't exist: " + scatter.distributionParams.lod2.modelPathOverride + " on scatter: " + scatter.scatterName);
-                scatter.distributionParams.lod1.modelPathOverride = "ParallaxContinued/Models/errorMesh";
+                scatter.distributionParams.lod2.modelPathOverride = "ParallaxContinued/Models/errorMesh";
             }
 
             // Cube the normal deviance, as it gives better results and becomes more sensitive to larger values
@@ -1298,6 +1303,47 @@ namespace Parallax
 
             // Calculate the LOD1 mesh's largest bound for colliders
             scatter.sqrMeshBound = scatter.CalculateSqrLargestBound(scatter.distributionParams.lod1.modelPathOverride);
+        }
+
+        static readonly EventData<GameScenes>.OnEvent onFirstMainMenuLoad = scene =>
+        {
+            if (scene != GameScenes.MAINMENU)
+            {
+                return;
+            }
+            GameEvents.onLevelWasLoaded.Remove(onFirstMainMenuLoad);
+            RemoveHighQualityFadeOverrides();
+        };
+
+        // Stock bodies can define high quality shader fade altitudes which replace the PQS fadeStart and fadeEnd at terrain shader quality High
+        // Kopernicus doesn't handle this
+        static void RemoveHighQualityFadeOverrides()
+        {
+            if (FlightGlobals.Bodies == null)
+            {
+                return;
+            }
+
+            foreach (CelestialBody body in FlightGlobals.Bodies)
+            {
+                if (body.pqsController == null || !parallaxTerrainBodies.ContainsKey(body.name))
+                {
+                    continue;
+                }
+
+                foreach (PQSMod_CelestialBodyTransform transform in body.pqsController.GetComponentsInChildren<PQSMod_CelestialBodyTransform>(true))
+                {
+                    PQSMod_CelestialBodyTransform.AltitudeFade fade = transform.planetFade;
+                    if (fade == null || (fade.highQualityShaderFadeStart <= 0 && fade.highQualityShaderFadeEnd <= 0))
+                    {
+                        continue;
+                    }
+
+                    ParallaxDebug.Log($"Removing high quality PQS fade override on {body.name} ({fade.highQualityShaderFadeStart} - {fade.highQualityShaderFadeEnd}), using {fade.fadeStart} - {fade.fadeEnd}");
+                    fade.highQualityShaderFadeStart = -1;
+                    fade.highQualityShaderFadeEnd = -1;
+                }
+            }
         }
         static void ApplyCompatibilityPatches()
         {
