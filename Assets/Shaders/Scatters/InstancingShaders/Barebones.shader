@@ -1,4 +1,4 @@
-﻿﻿Shader "Custom/Barebones" {
+﻿Shader "Custom/Barebones" {
     Properties
     {
         _MainTex("Main Tex", 2D) = "white" {}

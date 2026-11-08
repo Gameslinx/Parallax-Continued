@@ -1,4 +1,4 @@
-﻿﻿Shader "Custom/InstancedCutout" {
+﻿Shader "Custom/InstancedCutout" {
     Properties
     {
         _MainTex("Main Tex", 2D) = "white" {}

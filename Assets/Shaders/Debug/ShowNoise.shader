@@ -1,4 +1,4 @@
-﻿﻿Shader "Custom/ShowNoise" {
+﻿Shader "Custom/ShowNoise" {
     Properties
     {
         _MainTex("Main Tex", 2D) = "white" {}
