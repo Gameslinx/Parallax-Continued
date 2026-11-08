@@ -22,9 +22,9 @@ namespace Parallax.Harmony_Patches
             Overlay = 4,
         }
 
-        internal static readonly System.Type _type = AccessTools.TypeByName("SCANsat.SCANcontroller");
-        internal static readonly System.Type settingsType = AccessTools.TypeByName("SCANsat.SCAN_Settings_Config");
-        internal static readonly System.Type mapSourceType = AccessTools.TypeByName("SCANsat.SCAN_Map.mapSource");
+        internal static readonly System.Type _type = ModTypes.Find("SCANsat", "SCANsat.SCANcontroller");
+        internal static readonly System.Type settingsType = ModTypes.Find("SCANsat", "SCANsat.SCAN_Settings_Config");
+        internal static readonly System.Type mapSourceType = ModTypes.Find("SCANsat", "SCANsat.SCAN_Map.mapSource");
         internal static MethodBase TargetMethod() => AccessTools.Method(_type, "LoadVisualMapTexture", new Type[] { typeof(CelestialBody), mapSourceType });
 
         [HarmonyPrepare]

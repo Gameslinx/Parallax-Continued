@@ -12,7 +12,7 @@ namespace Parallax.Harmony_Patches
     [HarmonyPatch]
     internal class KerbalKonstructsGrasColorPatch
     {
-        static readonly Type grasColorType = AccessTools.TypeByName("KerbalKonstructs.GrasColor");
+        static readonly Type grasColorType = ModTypes.Find("KerbalKonstructs", "KerbalKonstructs.GrasColor");
 
         [HarmonyPrepare]
         static bool Prepare()
@@ -32,7 +32,7 @@ namespace Parallax.Harmony_Patches
     [HarmonyPatch]
     internal class KerbalKonstructsGrassColor2Patch
     {
-        static readonly Type grassColor2Type = AccessTools.TypeByName("KerbalKonstructs.GrassColor2");
+        static readonly Type grassColor2Type = ModTypes.Find("KerbalKonstructs", "KerbalKonstructs.GrassColor2");
 
         [HarmonyPrepare]
         static bool Prepare()
