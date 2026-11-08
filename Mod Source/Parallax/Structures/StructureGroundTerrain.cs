@@ -49,6 +49,7 @@ namespace Parallax.Structures
 
         // Leaving a body releases its textures
         CelestialBody appliedBody;
+        int appliedTextureVersion;
 
         // Building a terrain colour reads the body's PQS maps, which would load them if the body is unloaded
         // So colours are only built for the current main body
@@ -156,7 +157,8 @@ namespace Parallax.Structures
             {
                 appliedBody = null;
             }
-            if (appliedBody == null && mainBody != null && ConfigLoader.parallaxTerrainBodies.TryGetValue(mainBody.name, out ParallaxTerrainBody terrainBody) && terrainBody.Loaded)
+            if (mainBody != null && ConfigLoader.parallaxTerrainBodies.TryGetValue(mainBody.name, out ParallaxTerrainBody terrainBody) && terrainBody.Loaded
+                && (appliedBody == null || appliedTextureVersion != terrainBody.TextureVersion))
             {
                 System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
                 int appliedCount = 0;
@@ -170,6 +172,7 @@ namespace Parallax.Structures
                     }
                 }
                 appliedBody = mainBody;
+                appliedTextureVersion = terrainBody.TextureVersion;
 
                 ParallaxDebug.Log("[Structure ground] Applying " + mainBody.name + " terrain properties to " + appliedCount + " materials took " + sw.Elapsed.TotalMilliseconds.ToString("F2") + " ms");
             }

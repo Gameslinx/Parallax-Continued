@@ -50,7 +50,7 @@ namespace Parallax.Scaled_System
             {
                 // Prevent an unload if we just dipped into it and back out
                 pendingUnload = false;
-                if (!scaledBody.Loaded && !scaledBody.IsLoading)
+                if (!scaledBody.Loaded && !scaledBody.IsLoading && !scaledBody.texturesReloading)
                 {
                     // We don't need to wait for this
                     if (!ConfigLoader.parallaxGlobalSettings.scaledGlobalSettings.loadTexturesImmediately && !(HighLogic.LoadedScene == GameScenes.MAINMENU))

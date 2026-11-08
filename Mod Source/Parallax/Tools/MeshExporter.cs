@@ -37,9 +37,9 @@ namespace Parallax.Tools
                         ParallaxDebug.Log(" - " + lod1Path);
                         ParallaxDebug.Log(" - " + lod2Path);
         
-                        GameObject lod0 = GameDatabase.Instance.GetModel(lod0Path);
-                        GameObject lod1 = GameDatabase.Instance.GetModel(lod1Path);
-                        GameObject lod2 = GameDatabase.Instance.GetModel(lod2Path);
+                        GameObject lod0 = GameDatabase.Instance.GetModelPrefab(lod0Path);
+                        GameObject lod1 = GameDatabase.Instance.GetModelPrefab(lod1Path);
+                        GameObject lod2 = GameDatabase.Instance.GetModelPrefab(lod2Path);
         
                         ExportMeshToOBJ(lod0, basePath + GetFileName(lod0Path) + ".obj");
                         ExportMeshToOBJ(lod1, basePath + GetFileName(lod1Path) + ".obj");

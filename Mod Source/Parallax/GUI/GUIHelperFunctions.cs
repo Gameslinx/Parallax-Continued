@@ -170,7 +170,7 @@ namespace Parallax
         public static string StringField(string value, out bool valueWasChanged)
         {
             valueWasChanged = false;
-            string newValue = GUILayout.TextArea(value, HighLogic.Skin.textArea, GUILayout.Width(150));
+            string newValue = GUILayout.TextArea(value, HighLogic.Skin.textArea, GUILayout.ExpandWidth(true));
             char[] invalidChars = Path.GetInvalidPathChars();
 
             // If we have illegal chars in the string

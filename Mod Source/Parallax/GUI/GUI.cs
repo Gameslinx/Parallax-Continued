@@ -1,11 +1,13 @@
 ﻿using Parallax.Harmony_Patches;
 using Steamworks;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using KSPTextureLoader;
 using UnityEngine;
 using static Parallax.Tools.TextureExporter;
 using static SystemInformation;
@@ -60,6 +62,11 @@ namespace Parallax
         private static TextureExporterOptions exportOptions;
 
         static GUIStyle activeButton;
+
+        static bool textureReloadInProgress = false;
+
+        // Gives KSPTextureLoader time to destroy released textures and unload their bundles itself, as ImmediatelyDestroyUnusedTextures orphans loaded bundles
+        const int textureLoaderCleanupFrames = 10;
         static GUIStyle wrappedLabel;
 
         public enum GUIEditorMode
@@ -74,6 +81,44 @@ namespace Parallax
             {
                 Destroy(this);
             }
+        }
+        static void BeginTextureReload(IEnumerator reload)
+        {
+            if (textureReloadInProgress)
+            {
+                return;
+            }
+            textureReloadInProgress = true;
+            ScatterManager.Instance.StartCoroutine(RunTextureReload(reload));
+        }
+        static IEnumerator RunTextureReload(IEnumerator reload)
+        {
+            try
+            {
+                while (reload.MoveNext())
+                {
+                    yield return reload.Current;
+                }
+            }
+            finally
+            {
+                textureReloadInProgress = false;
+            }
+        }
+        static IEnumerator WaitForTextureLoaderCleanup()
+        {
+            for (int i = 0; i < textureLoaderCleanupFrames; i++)
+            {
+                yield return null;
+            }
+        }
+        static bool ReloadTexturesButton()
+        {
+            bool wasEnabled = UnityEngine.GUI.enabled;
+            UnityEngine.GUI.enabled = wasEnabled && !textureReloadInProgress;
+            bool pressed = GUILayout.Button(textureReloadInProgress ? "Reloading Textures..." : "Reload Textures", HighLogic.Skin.button);
+            UnityEngine.GUI.enabled = wasEnabled;
+            return pressed && !textureReloadInProgress;
         }
         void Start()
         {
@@ -392,6 +437,45 @@ namespace Parallax
                 }
                 GUISection.End();
             }
+        }
+        static void ProcessTextureParams(Dictionary<string, string> textures, Action<string, string, string> onChanged)
+        {
+            GUILayout.Label("Textures: ", HighLogic.Skin.label);
+
+            float labelWidth = GetLabelWidth(textures.Keys);
+            List<string> textureKeys = new List<string>(textures.Keys);
+            foreach (string key in textureKeys)
+            {
+                string oldValue = textures[key];
+                string value = oldValue;
+                if (PathField(key, labelWidth, ref value))
+                {
+                    textures[key] = value;
+                    onChanged(key, oldValue, value);
+                }
+            }
+        }
+        static float GetLabelWidth(IEnumerable<string> labels)
+        {
+            GUIStyle labelStyle = UnityEngine.GUI.skin.label;
+            float labelWidth = 0;
+            foreach (string label in labels)
+            {
+                labelWidth = Mathf.Max(labelWidth, labelStyle.CalcSize(new GUIContent(label)).x);
+            }
+            return labelWidth;
+        }
+        static bool PathField(string label, float labelWidth, ref string value)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(label, UnityEngine.GUI.skin.label, GUILayout.Width(labelWidth));
+            value = GUIHelperFunctions.StringField(value, out bool valueChanged);
+            GUILayout.EndHorizontal();
+            return valueChanged;
+        }
+        static bool IsValidTexturePath(string path)
+        {
+            return !string.IsNullOrEmpty(path) && TextureLoader.TextureExists(path);
         }
         public static void ProcessGenericMaterialParams(in MaterialParams materialParams, ParamCreator.ChangeMethod callback, bool includeKeywords = false, Material material = null, string configName = null, List<(ShaderProperties properties, ParamCreator.ChangeMethod callback)> inheritors = null)
         {

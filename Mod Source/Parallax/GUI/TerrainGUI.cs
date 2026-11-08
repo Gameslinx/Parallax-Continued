@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,11 +15,22 @@ namespace Parallax
             ParallaxTerrainBody body = ConfigLoader.parallaxTerrainBodies[FlightGlobals.currentMainBody.name];
             ShaderProperties props = body.terrainShaderProperties;
             ParamCreator.ChangeMethod callback = body.SetMaterialValues;
-            ParamCreator.ChangeMethod texCallback = body.Reload;
             // Parse shader properties
 
             GUILayout.Label("Terrain Shader Properties: ", HighLogic.Skin.label);
             GUILayout.Space(15);
+            ProcessTextureParams(props.shaderTextures, (key, oldValue, value) =>
+            {
+                if (IsValidTexturePath(value))
+                {
+                    body.ReloadTexture(key);
+                }
+            });
+            if (ReloadTexturesButton())
+            {
+                BeginTextureReload(ReloadBodyTexturesFromDisk(body.planetName));
+            }
+
             // Process floats
             GUILayout.Label("Floats: ", HighLogic.Skin.label);
             List<string> floatKeys = new List<string>(props.shaderFloats.Keys);
@@ -154,6 +166,48 @@ namespace Parallax
                 if (!newNode.HasNode(childNode.name))
                 {
                     newNode.AddNode(childNode.CreateCopy());
+                }
+            }
+        }
+        static IEnumerator ReloadBodyTexturesFromDisk(string planetName)
+        {
+            ConfigLoader.parallaxTerrainBodies.TryGetValue(planetName, out ParallaxTerrainBody terrainBody);
+            ConfigLoader.parallaxScaledBodies.TryGetValue(planetName, out ParallaxScaledBody scaledBody);
+
+            bool terrainWasLoaded = terrainBody != null && (terrainBody.Loaded || terrainBody.IsLoading);
+            bool scaledWasLoaded = scaledBody != null && (scaledBody.Loaded || scaledBody.IsLoading);
+
+            if (scaledBody != null)
+            {
+                scaledBody.texturesReloading = true;
+            }
+            try
+            {
+                if (scaledWasLoaded)
+                {
+                    scaledBody.Unload();
+                }
+                if (terrainBody != null && (terrainBody.Loaded || terrainBody.IsLoading))
+                {
+                    terrainBody.Unload();
+                }
+
+                yield return WaitForTextureLoaderCleanup();
+
+                if (terrainWasLoaded && FlightGlobals.currentMainBody != null && FlightGlobals.currentMainBody.name == planetName)
+                {
+                    terrainBody.Load();
+                }
+                if (scaledWasLoaded)
+                {
+                    scaledBody.Load();
+                }
+            }
+            finally
+            {
+                if (scaledBody != null)
+                {
+                    scaledBody.texturesReloading = false;
                 }
             }
         }

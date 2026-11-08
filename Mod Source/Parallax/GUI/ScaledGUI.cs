@@ -26,13 +26,20 @@ namespace Parallax
         static void ProcessBaseScaledMaterial(ParallaxScaledBody body)
         {
             ParamCreator.ChangeMethod callback = body.UpdateBaseMaterialParamsFromGUI;
-            ProcessGenericMaterialParams(body.scaledMaterialParams, callback, true, body.scaledMaterial, "ParallaxScaledShaderProperties");
 
-            if (GUILayout.Button("Reload", HighLogic.Skin.button))
+            ProcessTextureParams(body.scaledMaterialParams.shaderProperties.shaderTextures, (key, oldValue, value) =>
             {
-                body.Unload();
-                body.Load();
+                if (IsValidTexturePath(value))
+                {
+                    body.ReloadTexture(key);
+                }
+            });
+            if (ReloadTexturesButton())
+            {
+                BeginTextureReload(ReloadBodyTexturesFromDisk(body.planetName));
             }
+
+            ProcessGenericMaterialParams(body.scaledMaterialParams, callback, true, body.scaledMaterial, "ParallaxScaledShaderProperties");
         }
         static void TextureExporterMenu()
         {

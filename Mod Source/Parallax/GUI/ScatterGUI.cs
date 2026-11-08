@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -252,8 +253,48 @@ namespace Parallax
                         false);
                     GUISection.End();
                 }
+
+                if (ReloadTexturesButton())
+                {
+                    BeginTextureReload(ReloadScatterTexturesFromDisk(FlightGlobals.currentMainBody.name));
+                }
+
                 GUISection.End();
             }
+        }
+        static IEnumerator ReloadScatterTexturesFromDisk(string planetName)
+        {
+            if (!ConfigLoader.parallaxScatterBodies.TryGetValue(planetName, out ParallaxScatterBody body))
+            {
+                yield break;
+            }
+
+            body.UnloadTextures();
+
+            yield return WaitForTextureLoaderCleanup();
+
+            if (FlightGlobals.currentMainBody == null || FlightGlobals.currentMainBody.name != planetName)
+            {
+                yield break;
+            }
+
+            foreach (ScatterRenderer renderer in ScatterManager.Instance.activeScatterRenderers)
+            {
+                renderer.SetLOD0MaterialParams();
+                renderer.SetLOD1MaterialParams();
+                renderer.SetLOD2MaterialParams();
+            }
+
+            foreach (TextureHandle handle in new List<TextureHandle>(body.loadedTextures.Values))
+            {
+                if (!handle.IsComplete)
+                {
+                    yield return handle;
+                }
+            }
+
+            // Lets the renderers' texture assignment coroutines finish before unlocking
+            yield return null;
         }
         static void ProcessDistributionNoiseParams(Scatter scatter)
         {
@@ -300,22 +341,14 @@ namespace Parallax
                 }
             }
 
-            GUILayout.Label("Textures: ", HighLogic.Skin.label);
-            List<string> textureKeys = new List<string>(properties.shaderTextures.Keys);
-            foreach (string key in textureKeys)
+            ProcessTextureParams(properties.shaderTextures, (key, oldValue, value) =>
             {
-                string value = properties.shaderTextures[key];
-                string oldValue = value;
-                if (ParamCreator.CreateParam(key, ref value, GUIHelperFunctions.StringField))
+                if (IsValidTexturePath(value))
                 {
-                    properties.shaderTextures[key] = value;
-                    if (!string.IsNullOrEmpty(value) && TextureLoader.TextureExists(value))
-                    {
-                        callback();
-                    }
-                    PropagateToInheritors(x => x.shaderTextures, key, oldValue, value, inheritors);
+                    callback();
                 }
-            }
+                PropagateToInheritors(x => x.shaderTextures, key, oldValue, value, inheritors);
+            });
 
             ProcessGenericMaterialParams(materialParams, callback, inheritors: inheritors);
 

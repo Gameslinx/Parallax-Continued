@@ -204,6 +204,9 @@ namespace Parallax
         public ShaderProperties terrainShaderProperties;
         public bool emissive = false;
 
+        // Increments whenever a texture on the terrain materials changes, so anything copying them knows to copy again
+        public int TextureVersion { get; private set; }
+
         private bool loaded = false;
         public bool Loaded
         {
@@ -390,17 +393,7 @@ namespace Parallax
                     continue;
                 }
 
-                // Bump maps need to be linear, while everything else sRGB
-                // This could be handled better, tbh, but at least we're accounting for linear textures this time around
-
-                parallaxMaterials.parallaxLow.SetTexture(name, tex);
-                parallaxMaterials.parallaxMid.SetTexture(name, tex);
-                parallaxMaterials.parallaxHigh.SetTexture(name, tex);
-
-                parallaxMaterials.parallaxLowMid.SetTexture(name, tex);
-                parallaxMaterials.parallaxMidHigh.SetTexture(name, tex);
-
-                parallaxMaterials.parallaxFull.SetTexture(name, tex);
+                SetMaterialTexture(name, tex);
             }
 
             loaded = true;
@@ -434,17 +427,7 @@ namespace Parallax
                     continue;
                 }
 
-                // Bump maps need to be linear, while everything else sRGB
-                // This could be handled better, tbh, but at least we're accounting for linear textures this time around
-
-                parallaxMaterials.parallaxLow.SetTexture(name, tex);
-                parallaxMaterials.parallaxMid.SetTexture(name, tex);
-                parallaxMaterials.parallaxHigh.SetTexture(name, tex);
-
-                parallaxMaterials.parallaxLowMid.SetTexture(name, tex);
-                parallaxMaterials.parallaxMidHigh.SetTexture(name, tex);
-
-                parallaxMaterials.parallaxFull.SetTexture(name, tex);
+                SetMaterialTexture(name, tex);
             }
 
             loaded = true;
@@ -477,13 +460,44 @@ namespace Parallax
                 return null;
             }
         }
-        /// <summary>
-        /// Used by the GUI to load textures on texture changes
-        /// </summary>
-        public void Reload()
+        void SetMaterialTexture(string name, Texture tex)
         {
-            Unload();
-            Load();
+            parallaxMaterials.parallaxLow.SetTexture(name, tex);
+            parallaxMaterials.parallaxMid.SetTexture(name, tex);
+            parallaxMaterials.parallaxHigh.SetTexture(name, tex);
+
+            parallaxMaterials.parallaxLowMid.SetTexture(name, tex);
+            parallaxMaterials.parallaxMidHigh.SetTexture(name, tex);
+
+            parallaxMaterials.parallaxFull.SetTexture(name, tex);
+
+            TextureVersion++;
+        }
+        /// <summary>
+        /// Used by the GUI to load a texture after its path was changed
+        /// </summary>
+        public void ReloadTexture(string name)
+        {
+            if (loadedTextures.TryGetValue(name, out var oldHandle))
+            {
+                oldHandle.Dispose();
+                loadedTextures.Remove(name);
+            }
+
+            StartLoadByName(name);
+
+            if (!loaded || !loadedTextures.TryGetValue(name, out var handle))
+                return;
+
+            try
+            {
+                SetMaterialTexture(name, handle.GetTexture());
+            }
+            catch (Exception e)
+            {
+                ParallaxDebug.LogError($"Failed to load texture {handle.Path}");
+                Debug.LogException(e);
+            }
         }
         public void Unload()
         {
@@ -528,6 +542,9 @@ namespace Parallax
 
         public Dictionary<string, TextureHandle> loadedTextures = [];
         public float worldSpaceMeshRadius;
+
+        // Stops the scaled component reloading the textures while the GUI waits for them to be released
+        public bool texturesReloading = false;
 
         private bool loaded = false;
         public bool Loaded
@@ -713,7 +730,8 @@ namespace Parallax
                     continue;
 
                 // Check to see if the texture we're trying to load is a terrain texture
-                if (mode == ParallaxScaledBodyMode.FromTerrain || mode == ParallaxScaledBodyMode.CustomRequiresTerrain)
+                bool usesTerrain = mode == ParallaxScaledBodyMode.FromTerrain || mode == ParallaxScaledBodyMode.CustomRequiresTerrain;
+                if (usesTerrain && terrainBody.terrainShaderProperties.shaderTextures.TryGetValue(name, out var terrainPath) && terrainPath == path)
                 {
                     // Explicitly make sure that the terrain body has started
                     // loading the texture if we need it.
@@ -735,6 +753,41 @@ namespace Parallax
                 handle.OnCompleted += ParallaxDebug.LogTextureLoaded;
 
                 loadedTextures.Add(name, handle);
+            }
+        }
+
+        void SetMaterialTexture(string name, Texture tex)
+        {
+            scaledMaterial.SetTexture(name, tex);
+            if (name == "_HeightMap")
+            {
+                shadowCasterMaterial.SetTexture("_HeightMap", tex);
+            }
+        }
+        /// <summary>
+        /// Used by the GUI to load a texture after its path was changed
+        /// </summary>
+        public void ReloadTexture(string name)
+        {
+            if (loadedTextures.TryGetValue(name, out var oldHandle))
+            {
+                oldHandle.Dispose();
+                loadedTextures.Remove(name);
+            }
+
+            StartLoadingTextures();
+
+            if (!loaded || !loadedTextures.TryGetValue(name, out var handle))
+                return;
+
+            try
+            {
+                SetMaterialTexture(name, handle.GetTexture());
+            }
+            catch (Exception e)
+            {
+                ParallaxDebug.LogError($"Failed to load texture {handle.Path}");
+                Debug.LogException(e);
             }
         }
 
@@ -770,11 +823,7 @@ namespace Parallax
                     continue;
                 }
 
-                scaledMaterial.SetTexture(name, tex);
-                if (name == "_HeightMap")
-                {
-                    shadowCasterMaterial.SetTexture("_HeightMap", tex);
-                }
+                SetMaterialTexture(name, tex);
             }
 
             // Set ocean color
@@ -864,11 +913,7 @@ namespace Parallax
                     continue;
                 }
 
-                scaledMaterial.SetTexture(name, tex);
-                if (name == "_HeightMap")
-                {
-                    shadowCasterMaterial.SetTexture("_HeightMap", tex);
-                }
+                SetMaterialTexture(name, tex);
             }
 
             if (terrainBodyLoad is not null)

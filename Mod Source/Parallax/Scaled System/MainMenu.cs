@@ -152,7 +152,7 @@ namespace Parallax.Scaled_System
             // Should really check against 'using stock mesh' but disable deformity will achieve the same thing
             if (!mainMenuBody.disableDeformity)
             {
-                mainMenuPlanet.GetComponent<MeshFilter>().sharedMesh = UnityEngine.Object.Instantiate(GameDatabase.Instance.GetModel("ParallaxContinued/Models/ScaledMesh").GetComponent<MeshFilter>().mesh);
+                mainMenuPlanet.GetComponent<MeshFilter>().sharedMesh = UnityEngine.Object.Instantiate(GameDatabase.Instance.GetModelPrefab("ParallaxContinued/Models/ScaledMesh").GetComponent<MeshFilter>().sharedMesh);
             }
             else
             {

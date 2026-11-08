@@ -101,7 +101,7 @@ namespace Parallax.Scaled_System
             }
 
             // Get the scaled mesh and material for rendering
-            scaledMesh = UnityEngine.Object.Instantiate(GameDatabase.Instance.GetModel("ParallaxContinued/Models/ScaledMesh").GetComponent<MeshFilter>().mesh);
+            scaledMesh = UnityEngine.Object.Instantiate(GameDatabase.Instance.GetModelPrefab("ParallaxContinued/Models/ScaledMesh").GetComponent<MeshFilter>().sharedMesh);
             if (scaledMesh == null)
             {
                 ParallaxDebug.LogError("Parallax Scaled mesh couldn't be located, it should be in ParallaxContinued/Models/ScaledMesh");
