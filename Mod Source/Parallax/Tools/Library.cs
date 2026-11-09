@@ -29,7 +29,7 @@ namespace Parallax
             {
                 PopupDialog dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), "Critical Parallax Error", "Critical Parallax Error", message, "Okay", true, HighLogic.UISkin);
             }
-            Debug.LogError("[Parallax] " + message);
+            Debug.LogError("[Parallax Exception] " + message);
         }
         public static void LogPopupWarning(string message)
         {
