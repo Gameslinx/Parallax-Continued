@@ -11,22 +11,6 @@ using Debug = UnityEngine.Debug;
 
 public static class ShaderBundleBuilder
 {
-    struct BundleDefinition
-    {
-        public string name;
-        public string folder;
-        public string filter;
-        public string[] excludedFolders;
-
-        public BundleDefinition(string name, string folder, string filter, params string[] excludedFolders)
-        {
-            this.name = name;
-            this.folder = folder;
-            this.filter = filter;
-            this.excludedFolders = excludedFolders;
-        }
-    }
-
     struct PlatformDefinition
     {
         public BuildTarget target;
@@ -40,15 +24,6 @@ public static class ShaderBundleBuilder
             this.graphicsAPIs = graphicsAPIs;
         }
     }
-
-    static readonly BundleDefinition[] bundles =
-    {
-        new BundleDefinition("ParallaxTerrain", "Assets/Shaders/Terrain", "t:Shader"),
-        new BundleDefinition("ParallaxScatters", "Assets/Shaders/Scatters/InstancingShaders", "t:Shader"),
-        new BundleDefinition("ParallaxCompute", "Assets/Shaders/Scatters", "t:ComputeShader"),
-        new BundleDefinition("ParallaxScaled", "Assets/Shaders/Scaled", "t:Shader"),
-        new BundleDefinition("ParallaxDebug", "Assets/Shaders/Debug", "t:Shader", "Assets/Shaders/Debug/Old Parallax"),
-    };
 
 #if UNITY_6000_0_OR_NEWER
     const string versionInfix = "-unity6";
@@ -72,21 +47,13 @@ public static class ShaderBundleBuilder
     };
 #endif
 
+    const string assetsOption = "-parallaxAssets";
     const string outputOption = "-parallaxOutput";
+    const string nameOption = "-parallaxBundleName";
 
     static string ProjectRoot => Path.GetFullPath(Path.Combine(Application.dataPath, "..")).Replace('\\', '/');
 
-    static string[] FindBundleAssets(BundleDefinition bundle)
-    {
-        return AssetDatabase.FindAssets(bundle.filter, new[] { bundle.folder })
-            .Select(AssetDatabase.GUIDToAssetPath)
-            .Where(path => !bundle.excludedFolders.Any(excluded => path.StartsWith(excluded + "/", StringComparison.OrdinalIgnoreCase)))
-            .Distinct()
-            .OrderBy(path => path, StringComparer.Ordinal)
-            .ToArray();
-    }
-
-    static void BuildBundles(string outputDirectory)
+    static void BuildBundle(string[] assetPaths, string outputDirectory, string bundleName)
     {
         string stagingDirectory = ProjectRoot + "/Temp/ParallaxShaderBundles";
         Directory.CreateDirectory(outputDirectory);
@@ -99,58 +66,54 @@ public static class ShaderBundleBuilder
                 PlayerSettings.SetGraphicsAPIs(platform.target, platform.graphicsAPIs);
             }
 
-            List<AssetBundleBuild> builds = new List<AssetBundleBuild>();
-            foreach (BundleDefinition bundle in bundles)
-            {
-                string[] assets = FindBundleAssets(bundle);
-                if (assets.Length == 0)
-                {
-                    throw new Exception("No assets found for shader bundle " + bundle.name + " in " + bundle.folder);
-                }
-                builds.Add(new AssetBundleBuild
-                {
-                    assetBundleName = (bundle.name + versionInfix + platform.suffix + ".unity3d").ToLowerInvariant(),
-                    assetNames = assets
-                });
-            }
-
             if (Directory.Exists(stagingDirectory))
             {
                 Directory.Delete(stagingDirectory, true);
             }
             Directory.CreateDirectory(stagingDirectory);
 
-            AssetBundleManifest manifest = BuildPipeline.BuildAssetBundles(stagingDirectory, builds.ToArray(), options, platform.target);
+            string fileName = bundleName + versionInfix + platform.suffix + ".unity3d";
+            AssetBundleBuild build = new AssetBundleBuild
+            {
+                assetBundleName = fileName.ToLowerInvariant(),
+                assetNames = assetPaths
+            };
+
+            AssetBundleManifest manifest = BuildPipeline.BuildAssetBundles(stagingDirectory, new[] { build }, options, platform.target);
             if (manifest == null)
             {
                 throw new Exception("Shader bundle build failed for " + platform.target);
             }
 
-            foreach (BundleDefinition bundle in bundles)
-            {
-                string fileName = bundle.name + versionInfix + platform.suffix + ".unity3d";
-                File.Copy(stagingDirectory + "/" + fileName.ToLowerInvariant(), outputDirectory + "/" + fileName, true);
-                Debug.Log("[Parallax] Built shader bundle " + outputDirectory + "/" + fileName);
-            }
+            File.Copy(stagingDirectory + "/" + fileName.ToLowerInvariant(), outputDirectory + "/" + fileName, true);
+            Debug.Log("[Parallax] Built shader bundle " + outputDirectory + "/" + fileName);
         }
 
         Directory.Delete(stagingDirectory, true);
     }
 
 #if UNITY_6000_0_OR_NEWER
+    static string GetArgument(string[] args, string option)
+    {
+        int index = Array.IndexOf(args, option);
+        if (index < 0 || index + 1 >= args.Length)
+        {
+            throw new Exception("Missing " + option + " argument");
+        }
+        return args[index + 1];
+    }
+
     public static void BuildFromCommandLine()
     {
         try
         {
             string[] args = Environment.GetCommandLineArgs();
-            int index = Array.IndexOf(args, outputOption);
-            if (index < 0 || index + 1 >= args.Length)
-            {
-                throw new Exception("Missing " + outputOption + " <directory> argument");
-            }
+            string[] assetPaths = File.ReadAllLines(GetArgument(args, assetsOption)).Where(line => line.Length > 0).ToArray();
+            string outputDirectory = GetArgument(args, outputOption);
+            string bundleName = GetArgument(args, nameOption);
 
             KeepInstancingVariants();
-            BuildBundles(args[index + 1]);
+            BuildBundle(assetPaths, outputDirectory, bundleName);
             EditorApplication.Exit(0);
         }
         catch (Exception e)
@@ -181,31 +144,81 @@ public static class ShaderBundleBuilder
     const string editorPathKey = "Parallax.ShaderBundles.Unity6EditorPath";
     const string projectPathKey = "Parallax.ShaderBundles.Unity6ProjectPath";
     const string hubEditorDirectory = "C:/Program Files/Unity/Hub/Editor";
+    const string syncedFolder = "Assets/Shaders";
+    const string dialogTitle = "Build Shader Bundle";
 
-    static string OutputDirectory => ProjectRoot + "/Mod Source/GameData/ParallaxContinued/Shaders";
-
-    [MenuItem("Parallax/Build Shader Bundles/All")]
-    static void BuildAll()
+    [MenuItem("Assets/Build Shader Bundle")]
+    static void BuildSelected()
     {
-        if (BuildUnity2019())
+        string[] assetPaths = GetSelectedShaderPaths();
+        if (assetPaths.Length == 0)
         {
-            BuildUnity6();
+            EditorUtility.DisplayDialog(dialogTitle, "No shaders or compute shaders are selected.", "OK");
+            return;
+        }
+
+        string[] unsyncedPaths = assetPaths.Where(path => !path.StartsWith(syncedFolder + "/", StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (unsyncedPaths.Length > 0)
+        {
+            EditorUtility.DisplayDialog(dialogTitle, "Only shaders inside " + syncedFolder + " are copied to the Unity 6 project, so these can't be built:\n\n" + string.Join("\n", unsyncedPaths), "OK");
+            return;
+        }
+
+        string savePath = EditorUtility.SaveFilePanel("Save Shader Bundle", "", "New Resource", "unity3d");
+        if (string.IsNullOrEmpty(savePath))
+        {
+            Debug.Log("[Parallax] Shader bundle build cancelled");
+            return;
+        }
+
+        string outputDirectory = Path.GetDirectoryName(savePath).Replace('\\', '/');
+        string bundleName = Path.GetFileNameWithoutExtension(savePath);
+
+        if (BuildUnity2019(assetPaths, outputDirectory, bundleName))
+        {
+            BuildUnity6(assetPaths, outputDirectory, bundleName);
         }
     }
 
-    [MenuItem("Parallax/Build Shader Bundles/Unity 2019 (KSP)")]
-    static void BuildUnity2019MenuItem()
+    static string[] GetSelectedShaderPaths()
     {
-        BuildUnity2019();
+        HashSet<string> paths = new HashSet<string>(StringComparer.Ordinal);
+        foreach (UnityEngine.Object obj in Selection.GetFiltered(typeof(UnityEngine.Object), SelectionMode.DeepAssets))
+        {
+            string path = AssetDatabase.GetAssetPath(obj);
+            if (AssetDatabase.IsValidFolder(path))
+            {
+                foreach (string filter in new[] { "t:Shader", "t:ComputeShader" })
+                {
+                    foreach (string guid in AssetDatabase.FindAssets(filter, new[] { path }))
+                    {
+                        paths.Add(AssetDatabase.GUIDToAssetPath(guid));
+                    }
+                }
+            }
+            else if (obj is Shader || obj is ComputeShader)
+            {
+                paths.Add(path);
+            }
+        }
+        return paths.OrderBy(path => path, StringComparer.Ordinal).ToArray();
     }
 
-    [MenuItem("Parallax/Build Shader Bundles/Unity 6 (KSP Retooled)")]
-    static void BuildUnity6MenuItem()
+    static bool BuildUnity2019(string[] assetPaths, string outputDirectory, string bundleName)
     {
-        BuildUnity6();
+        try
+        {
+            BuildBundle(assetPaths, outputDirectory, bundleName);
+            return true;
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+            EditorUtility.DisplayDialog(dialogTitle, "The Unity 2019 build failed: " + e.Message, "OK");
+            return false;
+        }
     }
 
-    [MenuItem("Parallax/Build Shader Bundles/Configure Unity 6 Paths...")]
     static void ConfigureUnity6()
     {
         string editorPath = EditorUtility.OpenFilePanel("Select the Unity 6 editor executable", Path.GetDirectoryName(DefaultEditorPath()) ?? hubEditorDirectory, "exe");
@@ -221,21 +234,6 @@ public static class ShaderBundleBuilder
         EditorPrefs.SetString(editorPathKey, editorPath);
         EditorPrefs.SetString(projectPathKey, projectPath);
         Debug.Log("[Parallax] Unity 6 editor: " + editorPath + ", project: " + projectPath);
-    }
-
-    static bool BuildUnity2019()
-    {
-        try
-        {
-            BuildBundles(OutputDirectory);
-            return true;
-        }
-        catch (Exception e)
-        {
-            Debug.LogException(e);
-            EditorUtility.DisplayDialog("Shader bundle build failed", e.Message, "OK");
-            return false;
-        }
     }
 
     static string DefaultEditorPath()
@@ -289,16 +287,16 @@ public static class ShaderBundleBuilder
         }
     }
 
-    static void BuildUnity6()
+    static void BuildUnity6(string[] assetPaths, string outputDirectory, string bundleName)
     {
         if (!TryGetUnity6Paths(out string editorPath, out string projectPath))
         {
-            EditorUtility.DisplayDialog("Unity 6 shader bundles", "The Unity 6 editor or project path is not set or doesn't exist. Use Parallax > Build Shader Bundles > Configure Unity 6 Paths.", "OK");
+            EditorUtility.DisplayDialog(dialogTitle, "The Unity 2019 bundles were built, but the Unity 6 bundles were skipped because the Unity 6 editor or project path is not set or doesn't exist. Build the bundle again to select them.", "OK");
             return;
         }
         if (IsProjectOpen(projectPath))
         {
-            EditorUtility.DisplayDialog("Unity 6 shader bundles", "The Unity 6 project is open in another editor. Close it and try again.\n\n" + projectPath, "OK");
+            EditorUtility.DisplayDialog(dialogTitle, "The Unity 2019 bundles were built, but the Unity 6 project is open in another editor. Close it and build the bundle again.\n\n" + projectPath, "OK");
             return;
         }
 
@@ -309,15 +307,20 @@ public static class ShaderBundleBuilder
         catch (Exception e)
         {
             Debug.LogException(e);
-            EditorUtility.DisplayDialog("Unity 6 shader bundles", "Failed to copy the shaders to the Unity 6 project: " + e.Message, "OK");
+            EditorUtility.DisplayDialog(dialogTitle, "Failed to copy the shaders to the Unity 6 project: " + e.Message, "OK");
             return;
         }
+
+        string assetListPath = ProjectRoot + "/Temp/ParallaxUnity6ShaderAssets.txt";
+        File.WriteAllLines(assetListPath, assetPaths);
 
         string logPath = ProjectRoot + "/Logs/ParallaxUnity6ShaderBuild.log";
         string arguments = "-batchmode -quit"
             + " -projectPath \"" + projectPath + "\""
             + " -executeMethod " + nameof(ShaderBundleBuilder) + ".BuildFromCommandLine"
-            + " " + outputOption + " \"" + OutputDirectory + "\""
+            + " " + assetsOption + " \"" + assetListPath + "\""
+            + " " + outputOption + " \"" + outputDirectory + "\""
+            + " " + nameOption + " \"" + bundleName + "\""
             + " -logFile \"" + logPath + "\"";
 
         Stopwatch stopwatch = Stopwatch.StartNew();
@@ -328,7 +331,7 @@ public static class ShaderBundleBuilder
             while (!process.WaitForExit(250))
             {
                 float progress = (float)(stopwatch.Elapsed.TotalSeconds % 60.0 / 60.0);
-                if (EditorUtility.DisplayCancelableProgressBar("Building Unity 6 shader bundles", "Running Unity 6 in batch mode (" + stopwatch.Elapsed.ToString(@"mm\:ss") + ")", progress))
+                if (EditorUtility.DisplayCancelableProgressBar("Building Unity 6 shader bundle", "Running Unity 6 in batch mode (" + stopwatch.Elapsed.ToString(@"mm\:ss") + ")", progress))
                 {
                     cancelled = true;
                     process.Kill();
@@ -340,6 +343,7 @@ public static class ShaderBundleBuilder
         finally
         {
             EditorUtility.ClearProgressBar();
+            File.Delete(assetListPath);
         }
 
         if (cancelled)
@@ -350,19 +354,19 @@ public static class ShaderBundleBuilder
 
         if (process.ExitCode == 0)
         {
-            Debug.Log("[Parallax] Unity 6 shader bundles built in " + stopwatch.Elapsed.TotalSeconds.ToString("F1") + " s. Log: " + logPath);
+            Debug.Log("[Parallax] Unity 6 shader bundle " + bundleName + versionInfix + " built in " + stopwatch.Elapsed.TotalSeconds.ToString("F1") + " s. Log: " + logPath);
         }
         else
         {
             string tail = File.Exists(logPath) ? string.Join("\n", File.ReadAllLines(logPath).Reverse().Take(40).Reverse()) : "No log file was written";
             Debug.LogError("[Parallax] Unity 6 shader bundle build failed with exit code " + process.ExitCode + ". Log: " + logPath + "\n" + tail);
-            EditorUtility.DisplayDialog("Unity 6 shader bundles", "The build failed with exit code " + process.ExitCode + ". See the console or " + logPath, "OK");
+            EditorUtility.DisplayDialog(dialogTitle, "The Unity 6 build failed with exit code " + process.ExitCode + ". See the console or " + logPath, "OK");
         }
     }
 
     static void SyncProject(string projectPath)
     {
-        MirrorDirectory(ProjectRoot + "/Assets/Shaders", projectPath + "/Assets/Shaders");
+        MirrorDirectory(ProjectRoot + "/" + syncedFolder, projectPath + "/" + syncedFolder);
 
         string scriptPath = AssetDatabase.FindAssets(nameof(ShaderBundleBuilder) + " t:MonoScript")
             .Select(AssetDatabase.GUIDToAssetPath)
