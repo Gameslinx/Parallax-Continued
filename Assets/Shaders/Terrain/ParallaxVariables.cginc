@@ -13,6 +13,9 @@ sampler2D _BumpMapHigh;
 sampler2D _MainTexSteep;
 sampler2D _BumpMapSteep;
 
+sampler2D _MainTexFade;
+sampler2D _BumpMapFade;
+
 sampler2D _DisplacementMap;
 sampler2D _InfluenceMap;
 
@@ -49,6 +52,7 @@ float2 _MainTex_ST;
 
 float _BiplanarBlendFactor;
 float _Tiling;
+float _FadeTextureStartLevel;
 
 float _DisplacementScale;
 float _DisplacementOffset;

@@ -207,19 +207,31 @@ float GetDisplacementLerpFactor(float heightLerp, float displacement1, float dis
 // When using lighter shader variations these aren't included
 //
 
+#if defined (PARALLAX_FADE_TEXTURES)
+    #define SAMPLE_TERRAIN_TEXTURE(diffuseSampler) SampleBiplanarTextureWithFade(diffuseSampler, _MainTexFade, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend, floorLogDistance)
+    #define SAMPLE_TERRAIN_NORMAL(normalSampler) SampleBiplanarNormalWithFade(normalSampler, _BumpMapFade, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend, floorLogDistance)
+    #define SAMPLE_ZERO_FADE_TEXTURE(texSampler) SampleBiplanarTextureWithZeroFade(texSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend, floorLogDistance)
+    #define SAMPLE_ZERO_FADE_TEXTURE_LOD(texSampler, params, worldPos0, worldPos1, worldNormal, blend) SampleBiplanarTextureLODWithZeroFade(texSampler, params, worldPos0, worldPos1, worldNormal, blend, floorLogDistance)
+#else
+    #define SAMPLE_TERRAIN_TEXTURE(diffuseSampler) SampleBiplanarTexture(diffuseSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend)
+    #define SAMPLE_TERRAIN_NORMAL(normalSampler) SampleBiplanarNormal(normalSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend)
+    #define SAMPLE_ZERO_FADE_TEXTURE(texSampler) SampleBiplanarTexture(texSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend)
+    #define SAMPLE_ZERO_FADE_TEXTURE_LOD(texSampler, params, worldPos0, worldPos1, worldNormal, blend) SampleBiplanarTextureLOD(texSampler, params, worldPos0, worldPos1, worldNormal, blend)
+#endif
+
 #if defined (INFLUENCE_MAPPING)
     #define BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)                                                                                                        \
-        fixed4 diffuseName = SampleBiplanarTexture(diffuseSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);                                                       \
-        NORMAL_FLOAT normalName = SampleBiplanarNormal(normalSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);                                                          \
+        fixed4 diffuseName = SAMPLE_TERRAIN_TEXTURE(diffuseSampler);                                                                                                                           \
+        NORMAL_FLOAT normalName = SAMPLE_TERRAIN_NORMAL(normalSampler);                                                                                                                        \
         float diffuseName##Lum = (diffuseName.r * 0.21f + diffuseName.g * 0.72f + diffuseName.b * 0.07f) + 0.5f;                                                                                \
         diffuseName.rgb = lerp(vertexColor * diffuseName##Lum, diffuseName.rgb, diffuseName##InfluenceValue);
 #else
     #define BIPLANAR_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)                                                                                                        \
-        fixed4 diffuseName = SampleBiplanarTexture(diffuseSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);                                                       \
-        NORMAL_FLOAT normalName = SampleBiplanarNormal(normalSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+        fixed4 diffuseName = SAMPLE_TERRAIN_TEXTURE(diffuseSampler);                                                                                                                           \
+        NORMAL_FLOAT normalName = SAMPLE_TERRAIN_NORMAL(normalSampler);
 #endif
 
-#define BIPLANAR_TEXTURE(texName, texSampler)   fixed4 texName = SampleBiplanarTexture(texSampler, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+#define BIPLANAR_TEXTURE(texName, texSampler)   fixed4 texName = SAMPLE_ZERO_FADE_TEXTURE(texSampler);
 
 #define UNUSED_TEXTURE_SET(diffuseName, normalName, diffuseSampler, normalSampler)  \
     fixed4 diffuseName = 0;                                                         \
@@ -265,7 +277,7 @@ float GetDisplacementLerpFactor(float heightLerp, float displacement1, float dis
 
 // Get global influence texture and values, otherwise declare nothing
 #if defined (INFLUENCE_MAPPING)
-    #define DECLARE_INFLUENCE_TEXTURE float4 globalInfluence = SampleBiplanarTexture(_InfluenceMap, params, worldUVsLevel0, worldUVsLevel1, i.worldNormal, texLevelBlend);
+    #define DECLARE_INFLUENCE_TEXTURE float4 globalInfluence = SAMPLE_ZERO_FADE_TEXTURE(_InfluenceMap);
     #define DECLARE_INFLUENCE_VALUES                                \
         float lowDiffuseInfluenceValue = globalInfluence.r;         \
         float midDiffuseInfluenceValue = globalInfluence.g;         \
