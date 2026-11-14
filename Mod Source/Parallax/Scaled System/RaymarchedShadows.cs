@@ -156,7 +156,7 @@ namespace Parallax.Scaled_System
             distancesDesc.useMipMap = true;
             distancesDesc.autoGenerateMips = true;
 
-            RenderTextureDescriptor depthDesc = new RenderTextureDescriptor(Screen.width, Screen.height, RenderTextureFormat.Depth, 16);
+            RenderTextureDescriptor depthDesc = new RenderTextureDescriptor(Screen.width, Screen.height, RenderTextureFormat.Depth, 24);
             depthDesc.useMipMap = false;
 
             shadowAttenuationRT = new RenderTexture(attenuationDesc);

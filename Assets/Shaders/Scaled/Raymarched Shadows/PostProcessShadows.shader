@@ -50,6 +50,7 @@
             }
 
             #define SHADOW_KERNEL_SPREAD 0.01
+            #define DEPTH_RELATIVE_TOLERANCE 0.02
             fixed4 frag (v2f i) : SV_Target
             {
                 float2 screenUV = i.screenPos.xy / i.screenPos.w;
@@ -62,12 +63,10 @@
                 // Sample shadow caster's depth from the shadow attenuation render texture's depth
                 float shadowCasterDepth = LinearEyeDepth(tex2D(_ShadowDepth, screenUV).r);
                 
-                // Define a depth threshold to avoid z-fighting issues
-                float depthThreshold = 0.001; // Tweak this value for better results
-                
-                if (sceneDepth - shadowCasterDepth < depthThreshold)
+                // Only shadow pixels where the visible surface is the shadow caster itself
+                float depthTolerance = shadowCasterDepth * DEPTH_RELATIVE_TOLERANCE;
+                if (abs(sceneDepth - shadowCasterDepth) > depthTolerance)
                 {
-                    // Discard shadow: return white (no shadow attenuation)
                     return fixed4(1.0, 1.0, 1.0, 1.0);
                 }
                 //return sceneDepth;

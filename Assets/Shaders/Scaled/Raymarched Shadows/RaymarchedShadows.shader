@@ -132,7 +132,6 @@
             {
                 float4 shadowAttenuation : SV_TARGET0;
                 float4 shadowDistance : SV_TARGET1;
-                float depth : DEPTH;
             };
         
             float GetTerrainHeightAt(float3 pos, float3 origin)
@@ -286,12 +285,6 @@
                 output.shadowAttenuation = attenuations;
                 float shadowBlurMaxDistance = 0.05f;
                 output.shadowDistance = saturate(distance(primaryRayEndPos, initialRayPos) / shadowBlurMaxDistance);
-
-                #if defined (SHADER_API_GLCORE) || defined (SHADER_API_OPENGL)
-                output.depth = i.pos.z - 0.001f;
-                #else
-                output.depth = i.pos.z + 0.001f;
-                #endif
 
                 output.shadowAttenuation = saturate(output.shadowAttenuation + (1 - _ScaledPlanetOpacity));
 
