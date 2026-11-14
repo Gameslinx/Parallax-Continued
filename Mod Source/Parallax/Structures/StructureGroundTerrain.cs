@@ -163,6 +163,7 @@ namespace Parallax.Structures
                 System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
                 int appliedCount = 0;
 
+                RegisterCopiedMaterials(mainBody);
                 foreach (KeyValuePair<Material, CelestialBody> groundMaterial in groundMaterials)
                 {
                     if (groundMaterial.Value == mainBody && groundMaterial.Key != null)
@@ -285,6 +286,30 @@ namespace Parallax.Structures
             }
             groundRenderers[renderer] = properties;
             ApplyRendererProperties(renderer, properties);
+        }
+
+        // The KSC facilities can swap their materials for copies after we replace
+        // their shaders. The copies have our shader, but would not otherwise get
+        // our textures. We walk these so they get applied too.
+        void RegisterCopiedMaterials(CelestialBody body)
+        {
+            foreach (var (renderer, props) in groundRenderers)
+            {
+                if (renderer == null || props.body != body)
+                    continue;
+
+                foreach (Material material in renderer.sharedMaterials)
+                {
+                    if (material == null)
+                        continue;
+                    if (material.shader != groundShader)
+                        continue;
+                    if (groundMaterials.ContainsKey(material))
+                        continue;
+
+                    groundMaterials[material] = body;
+                }
+            }
         }
 
         static void BuildPendingTerrainColors(CelestialBody body)
