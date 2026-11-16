@@ -37,7 +37,11 @@ namespace Parallax.Scaled_System
         {
             foreach (ParallaxScaledBody body in ConfigLoader.parallaxScaledBodies.Values)
             {
+                // Planet packs can remove bodies that installed parallax configs still reference
                 CelestialBody kspBody = FlightGlobals.GetBodyByName(body.planetName);
+                if (kspBody == null || kspBody.scaledBody == null)
+                    continue;
+
                 MeshRenderer meshRenderer = kspBody.scaledBody.GetComponent<MeshRenderer>();
 
                 // Set up on demand component for texture loading/unloading
