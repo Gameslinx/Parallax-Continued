@@ -81,8 +81,12 @@ namespace Parallax.Scaled_System
             // Setup
             foreach (KeyValuePair<string, ParallaxScaledBody> pair in ConfigLoader.parallaxScaledBodies)
             {
-                pair.Value.shadowCasterMaterial.SetTexture("_BlueNoise", blueNoiseTexture);
+                // Planet packs can remove bodies that installed parallax configs still reference
                 CelestialBody body = FlightGlobals.GetBodyByName(pair.Value.planetName);
+                if (body == null || body.scaledBody == null)
+                    continue;
+
+                pair.Value.shadowCasterMaterial.SetTexture("_BlueNoise", blueNoiseTexture);
                 scaledBodies.Add(pair.Value);
                 celestialBodies.Add(body);
                 meshRenderers.Add(body.scaledBody.GetComponent<MeshRenderer>());

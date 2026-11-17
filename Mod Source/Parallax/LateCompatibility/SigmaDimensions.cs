@@ -89,6 +89,11 @@ namespace Parallax.LateCompatibility
             foreach (ParallaxScaledBody scaledBody in ConfigLoader.parallaxScaledBodies.Values)
             {
                 CelestialBody cb = FlightGlobals.GetBodyByName(scaledBody.planetName);
+                if (cb == null)
+                {
+                    continue;
+                }
+
                 float resizeValue = (float)cb.Get<double>("resize");
                 float landscapeValue = (float)cb.Get<double>("landscape");
 
@@ -118,6 +123,11 @@ namespace Parallax.LateCompatibility
             foreach (ParallaxTerrainBody terrainBody in ConfigLoader.parallaxTerrainBodies.Values)
             {
                 CelestialBody cb = FlightGlobals.GetBodyByName(terrainBody.planetName);
+                if (cb == null)
+                {
+                    continue;
+                }
+
                 float resizeValue = (float)cb.Get<double>("resize");
                 float landscapeValue = (float)cb.Get<double>("landscape");
 
@@ -134,6 +144,11 @@ namespace Parallax.LateCompatibility
             foreach (ParallaxScatterBody scatterBody in ConfigLoader.parallaxScatterBodies.Values)
             {
                 CelestialBody cb = FlightGlobals.GetBodyByName(scatterBody.planetName);
+                if (cb == null)
+                {
+                    continue;
+                }
+
                 float resizeValue = (float)cb.Get<double>("resize");
                 float landscapeValue = (float)cb.Get<double>("landscape");
                 float densityMultiplier = GetDensityMultiplier(resizeValue);
